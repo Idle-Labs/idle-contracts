@@ -1,6 +1,6 @@
 // require('babel-register');
 // require('babel-polyfill');
-// require('chai/register-should');
+require('chai/register-should');
 const path = require("path");
 require('dotenv').config();
 const mnemonic = process.env.MNENOMIC;
@@ -9,21 +9,21 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!
-  // compilers: {
-  //   solc: {
-  //     version: "0.5.2",
-  //     optimizer: {
-  //       enabled: true,
-  //       runs: 200 // 1 = less size on deploy, 200 or more = less size on calls
-  //     }
-  //   }
-  // },
+  compilers: {
+    solc: {
+      version: "0.5.11",
+      optimizer: {
+        enabled: true,
+        runs: 200 // 1 = less size on deploy, 200 or more = less size on calls
+      }
+    }
+  },
   networks: {
-    development: {
-      host: "127.0.0.1",
-      port: 8545,
-      network_id: "*",
-    },
+    // development: {
+    //   host: "127.0.0.1",
+    //   port: 8545,
+    //   network_id: "*",
+    // },
     ropsten: {
       provider: function() {
         return new HDWalletProvider(mnemonic, 'https://ropsten.infura.io/v3/' + process.env.INFURA_API_KEY)

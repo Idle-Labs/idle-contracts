@@ -1,6 +1,6 @@
-pragma solidity ^0.5.2;
+pragma solidity 0.5.11;
 
-interface iERC20FulcrumFulcrum {
+interface iERC20Fulcrum {
   function mint(
     address receiver,
     uint256 depositAmount)
