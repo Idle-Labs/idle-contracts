@@ -4,7 +4,8 @@
   "description": "OpenZeppelin kit containing React, & OpenZeppelin SDK",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "truffle test",
+    "verify": "yarn run verify"
   },
   "repository": {
     "type": "git",
@@ -32,7 +33,8 @@
     "@openzeppelin/contracts": "^2.3.0",
     "dotenv": "^6.2.0",
     "openzeppelin-eth": "^2.1.3",
-    "truffle-hdwallet-provider": "^1.0.3"
+    "truffle-hdwallet-provider": "^1.0.3",
+    "truffle-security": "^1.5.5"
   },
   "devDependencies": {
     "@openzeppelin/cli": "^2.5.1",
