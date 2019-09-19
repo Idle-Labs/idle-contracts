@@ -37,6 +37,16 @@ interface iERC20Fulcrum {
     view
     returns (uint256);
 
+  function avgBorrowInterestRate()
+    external
+    view
+    returns (uint256);
+
+  function spreadMultiplier()
+    external
+    view
+    returns (uint256);
+
   function totalAssetBorrow()
     external
     view
