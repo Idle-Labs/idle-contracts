@@ -5,8 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "../interfaces/CERC20.sol";
+import "../interfaces/ILendingProtocol.sol";
 
 contract IdleCompound is ILendingProtocol, Ownable {
+  using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
   // protocol token (cToken) address
@@ -63,9 +65,15 @@ contract IdleCompound is ILendingProtocol, Ownable {
   function maxAmountBelowRate()
     external view
     returns (uint256) {}
-  function nextSupplyRate()
+  function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256) {}
+
+  function getPriceInToken()
+    external view
+    returns (uint256) {
+      return CERC20(token).exchangeRateStored();
+  }
 
   function getAPR()
     external view
@@ -73,7 +81,6 @@ contract IdleCompound is ILendingProtocol, Ownable {
     uint256 cRate = CERC20(token).supplyRatePerBlock(); // interest % per block
     apr = cRate.mul(blocksInAYear).mul(100);
   }
-
 
   function mint()
     external
@@ -93,7 +100,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
       require(_cToken.mint(balance) == 0, "Error minting");
       // cTokens are now in this contract
       // transfer them to the caller
-      cTokens = _cToken.balanceOf(address(this));
+      cTokens = IERC20(token).balanceOf(address(this));
       IERC20(token).safeTransfer(msg.sender, cTokens);
       /* // generic solidity formula is exchangeRateMantissa = (underlying / cTokens) * 1e18
       uint256 exchangeRateMantissa = _cToken.exchangeRateStored(); // (exchange_rate * 1e18)
@@ -109,7 +116,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
       CERC20 _cToken = CERC20(token);
       IERC20 _underlying = IERC20(underlying);
       // redeem all underlying sent in this contract
-      require(_cToken.redeem(_cToken.balanceOf(address(this))) == 0, "Something went wrong when redeeming in cTokens");
+      require(_cToken.redeem(IERC20(token).balanceOf(address(this))) == 0, "Something went wrong when redeeming in cTokens");
 
       /* // generic solidity formula is exchangeRateMantissa = (underlying / cTokens) * 1e18
       uint256 exchangeRateMantissa = _cToken.exchangeRateStored(); // exchange_rate * 1e18
