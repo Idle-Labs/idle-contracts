@@ -29,25 +29,13 @@ contract IdleFulcrum is ILendingProtocol {
     external view
     returns (uint256) {}
 
-  function nextSupplyRate(
-    uint256 _amount
-    /* uint256 avgBorrowInterestRate, uint256 totalAssetBorrow, uint256 totalAssetSupply,
-    uint256 spreadMultiplier, uint256 newDAIAmount, uint256 k1 */
-    )
+  function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256 nextRate) {
-    /* const a1 = avgBorrowInterestRate;
-    const b1 = totalAssetBorrow;
-    let s1 = totalAssetSupply;
-    const o1 = spreadMultiplier;
-    const x1 = newDAIAmount;
-    const k1 = BNify('1e20'); */
-    // q = a * (s / (s + x)) * (b / (s + x)) * o / k
-
-    // counting fee (spreadMultiplier)
-    /* nextRate = avgBorrowInterestRate.mul(totalAssetSupply.div(totalAssetSupply.add(newDAIAmount)))
-      .mul(totalAssetBorrow.div(totalAssetSupply.add(newDAIAmount)))
-      .mul(spreadMultiplier).div(10 ** 20); */
+      iERC20Fulcrum iToken = iERC20Fulcrum(token);
+      nextRate = iToken.nextSupplyInterestRate(_amount);
+      // remove 10% mandatory self insurance
+      nextRate = nextRate.mul(iToken.spreadMultiplier()).div(10 ** 20);
   }
 
   function getPriceInToken()

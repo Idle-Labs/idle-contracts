@@ -11,4 +11,5 @@ interface CERC20 {
   function getCash() external view returns (uint256);
   function totalBorrows() external view returns (uint256);
   function reserveFactorMantissa() external view returns (uint256);
+  function interestRateModel() external view returns (address);
 }

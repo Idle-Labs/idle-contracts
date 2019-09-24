@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "../interfaces/CERC20.sol";
 import "../interfaces/ILendingProtocol.sol";
+import "../interfaces/WhitePaperInterestRateModel.sol";
 
 contract IdleCompound is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
@@ -37,14 +38,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
   const x = newDAIAmount;
   const k = BNify(2102400); // blocksInAYear
   const j = BNify(1e18); // oneEth
-  const f = BNify(100); */
-
-  // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate -> this is needed
-
-  /* const targetSupplyRateWithFeeCompoundFoo = x => a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
-      s.plus(x).plus(b).minus(d)
-    ).div(j).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
-
+  const f = BNify(100);
 
   x = (sqrt(a^2 b^2 e^2 f^2 + 2 a b d e f j q + 4 b^2 c e f j q + d^2 j^2 q^2) + a b e f - 2 b j q + d j q - 2 j q s)/(2 j q)
 
@@ -65,9 +59,29 @@ contract IdleCompound is ILendingProtocol, Ownable {
   function maxAmountBelowRate()
     external view
     returns (uint256) {}
+
   function nextSupplyRate(uint256 _amount)
     external view
-    returns (uint256) {}
+    returns (uint256 nextRate) {
+      CERC20 cToken = CERC20(token);
+      WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
+
+      uint256 j = 10 ** 18;
+      uint256 a = white.baseRate(); // from WhitePaper
+      uint256 b = cToken.totalBorrows();
+      uint256 c = white.multiplier(); // from WhitePaper
+      uint256 d = cToken.totalReserves();
+      uint256 e = j.sub(cToken.reserveFactorMantissa());
+      uint256 s = cToken.getCash();
+      uint256 x = _amount;
+      uint256 k = blocksInAYear;
+      uint256 f = 100;
+
+      // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate
+      nextRate = a.add(b.mul(c).div(b.add(s).add(x))).div(k).mul(e).mul(b).div(
+        s.add(x).add(b).sub(d)
+      ).div(j).mul(k).mul(f); // to get the yearly rate
+  }
 
   function getPriceInToken()
     external view
