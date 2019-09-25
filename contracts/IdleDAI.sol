@@ -42,10 +42,6 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     address tokenAddr;
     address protocolAddr;
   }
-  struct TokenProtocolAmount {
-    TokenProtocol tokenProtocol;
-    uint256 amount;
-  }
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
    */
@@ -244,20 +240,23 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     // calcAmounts
     uint256 tokenBalance = IERC20(token).balanceOf(address(this));
     // tokenBalance here has already _newAmount
-    TokenProtocolAmount[] memory protocolsAmounts = _calcAmounts(tokenBalance);
+    (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance);
 
     // remove all elements from `currentTokensUsed`
     delete currentTokensUsed;
 
     // mint for each protocol and update currentTokensUsed
     uint256 currAmount;
-    for (uint8 i = 0; i < protocolsAmounts.length; i++) {
-      currAmount = protocolsAmounts[i].amount;
+    address currAddr;
+    for (uint8 i = 0; i < protocolAmounts.length; i++) {
+      currAmount = protocolAmounts[i];
       if (currAmount == 0) {
         continue;
       }
-      _mintProtocolTokens(protocolsAmounts[i].tokenProtocol.protocolAddr, currAmount);
-      currentTokensUsed.push(protocolsAmounts[i].tokenProtocol.tokenAddr);
+      currAddr = tokenAddresses[i];
+      _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
+      // update current tokens used in storage
+      currentTokensUsed.push(currAddr);
     }
 
     return true; // hasRebalanced
@@ -321,9 +320,9 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
 
   // ##### Internal
   function _calcAmounts(uint256 _amount)
-    internal
-    returns (TokenProtocolAmount[] memory protocolAmounts) {
-      /* return IdleRebalancer(rebalancer).calcRebalanceAmount(_amount); */
+    internal view
+    returns (address[] memory, uint256[] memory) {
+      return IdleRebalancer(rebalancer).calcRebalanceAmounts(_amount);
   }
 
   // Get addresses of current protocols used by iterating through currentTokensUsed

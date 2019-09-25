@@ -16,17 +16,10 @@ contract IdleCompound is ILendingProtocol, Ownable {
   address public token;
   // underlying token (token eg DAI) address
   address public underlying;
-  uint256 public blocksInAYear;
 
   constructor(address _token, address _underlying) public {
     token = _token;
     underlying = _underlying;
-    blocksInAYear = 2102400; // ~15 sec per block
-  }
-
-  function setBlocksInAYear(uint256 _blocks)
-    external onlyOwner {
-      blocksInAYear = _blocks;
   }
   /* const a = BNify(baseRate);
   const b = BNify(totalBorrows);
@@ -74,7 +67,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
       uint256 e = j.sub(cToken.reserveFactorMantissa());
       uint256 s = cToken.getCash();
       uint256 x = _amount;
-      uint256 k = blocksInAYear;
+      uint256 k = cToken.blocksInAYear();
       uint256 f = 100;
 
       // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate
@@ -92,8 +85,9 @@ contract IdleCompound is ILendingProtocol, Ownable {
   function getAPR()
     external view
     returns (uint256 apr) {
-    uint256 cRate = CERC20(token).supplyRatePerBlock(); // interest % per block
-    apr = cRate.mul(blocksInAYear).mul(100);
+    CERC20 cToken = CERC20(token);
+    uint256 cRate = cToken.supplyRatePerBlock(); // interest % per block
+    apr = cRate.mul(cToken.blocksInAYear()).mul(100);
   }
 
   function mint()
