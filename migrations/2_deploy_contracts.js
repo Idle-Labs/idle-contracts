@@ -1,4 +1,4 @@
-var IdleDAI = artifacts.require("./IdleDAI.sol");
+var IdleToken = artifacts.require("./IdleToken.sol");
 var IdleHelp = artifacts.require("./IdleHelp.sol");
 
 const cDAI = {
@@ -53,6 +53,6 @@ module.exports = async function(deployer, network, accounts) {
   console.log('cDAI address: ', cDAI[network]);
   console.log('iDAI address: ', iDAI[network]);
   await deployer.deploy(IdleHelp);
-  await deployer.link(IdleHelp, IdleDAI);
-  await deployer.deploy(IdleDAI, cDAI[network], iDAI[network], DAI[network]);
+  await deployer.link(IdleHelp, IdleToken);
+  await deployer.deploy(IdleToken, cDAI[network], iDAI[network], DAI[network]);
 };

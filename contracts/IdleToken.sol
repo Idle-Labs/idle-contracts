@@ -15,7 +15,7 @@ import "./interfaces/ILendingProtocol.sol";
 import "./IdleRebalancer.sol";
 
 // TODO Ideally this contract should be upgradable (check openzeppelin-zos)
-contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
+contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -48,6 +48,9 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
    * @dev constructor, initialize some variables, mainly addresses of other contracts
    */
   constructor(
+    string memory _name, // eg. IdleDAI
+    string memory _symbol, // eg. IDLEDAI
+    uint8 decimals, // eg. 18
     address _token,
     address _cToken,
     address _iToken,
@@ -55,7 +58,7 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     address _idleCompound,
     address _idleFulcrum)
     public
-    ERC20Detailed("IdleDAI", "IDLEDAI", 18) {
+    ERC20Detailed(_name, _symbol, decimals) {
       token = _token;
       iToken = _iToken; // used for claimITokens and userClaimITokens methods
       rebalancer = _rebalancer;
