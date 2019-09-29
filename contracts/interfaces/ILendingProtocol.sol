@@ -5,6 +5,7 @@ interface ILendingProtocol {
   function redeem(address account) external returns (uint256);
   function maxAmountBelowRate(uint256 targetRate) external view returns (uint256);
   function nextSupplyRate(uint256 amount) external view returns (uint256);
+  function nextSupplyRateWithParams(uint256 amount, uint256[] calldata params) external pure returns (uint256);
   function getAPR() external view returns (uint256);
   function getPriceInToken() external view returns (uint256);
   function token() external view returns (address);

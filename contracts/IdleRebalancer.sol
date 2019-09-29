@@ -13,264 +13,127 @@ contract IdleRebalancer is Ownable {
   using SafeMath for uint256;
   address public cToken;
   address public iToken;
+  address public cWrapper;
+  address public iWrapper;
 
-  constructor(address _cToken, address _iToken) public {
+  constructor(address _cToken, address _iToken, address _cWrapper, address _iWrapper) public {
     cToken = _cToken;
     iToken = _iToken;
+    cWrapper = _cWrapper;
+    iWrapper = _iWrapper;
   }
   // onlyOwner
-  function setCToken(address _cToken)
+  function setCToken(address _cToken, address _cWrapper)
     external onlyOwner {
       cToken = _cToken;
+      cWrapper = _cWrapper;
   }
-  function setIToken(address _iToken)
+  function setIToken(address _iToken, address _iWrapper)
     external onlyOwner {
       iToken = _iToken;
+      iWrapper = _iWrapper;
   }
 
   function calcRebalanceAmounts(uint256 n)
     public view
     returns (address[] memory tokenAddresses, uint256[] memory amounts)
   {
-    /* Compound yearly rate
-    a = baseRate
-    b = totalBorrows
-    c = multiplier
-    d = totalReserves
-    e = 1 - reserveFactor
-    s = getCash
-    x = newDAIAmount
-    k = blocksInAYear; // blocksInAYear
-    j = 1e18; // oneEth
-    f = 100;
-    q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f
+    CERC20 _cToken = CERC20(cToken);
+    WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
 
-    Fulcrum yearly rate
+    uint256[] memory paramsCompound;
+    paramsCompound[0] = 10 ** 18; // j
+    paramsCompound[1] = white.baseRate(); // a
+    paramsCompound[2] = _cToken.totalBorrows(); // b
+    paramsCompound[3] = white.multiplier(); // c
+    paramsCompound[4] = _cToken.totalReserves(); // d
+    paramsCompound[5] = paramsCompound[0].sub(_cToken.reserveFactorMantissa()); // e
+    paramsCompound[6] = _cToken.getCash(); // s
+    paramsCompound[7] = _cToken.blocksInAYear(); // k
+    paramsCompound[8] = 100; // f
 
-    a1 = avgBorrowInterestRate;
-    b1 = totalAssetBorrow;
-    s1 = totalAssetSupply;
-    o1 = spreadMultiplier;
-    x1 = newDAIAmount;
-    k1 = 1e20;
-    q1 = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1
+    iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
 
-    We have
-    n = tot DAI to rebalance
+    uint256[] memory paramsFulcrum;
+    paramsFulcrum[0] = _iToken.avgBorrowInterestRate(); // a1
+    paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
+    paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
+    paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
+    paramsFulcrum[4] = 10 ** 20; // k1
 
-    and in the end q for Compound and q for Fulcrum should be equal
-    we have to solve this for x1 and x
-    / q = q1
-    \ n = x1 + x
+    /* uint256 s1 = paramsFulcrum[2]; */
+    /* uint256 b1 = paramsFulcrum[1] */
+    /* uint256 s = paramsCompound[6]; */
+    /* uint256 b = paramsCompound[2]; */
 
-    a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1 = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f
-    (a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0 -> substitute x1 = n-x
-    (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
+    // Here we are trying to find a good initial guess
+    // so we are relating the 2 protocols using totalAssetSupply
 
-    better rewritten using Wolfram
+    // Stack too deep if using this
+    /* uint256 amountFulcrum = n.mul(paramsFulcrum[2].div(paramsFulcrum[2].add(paramsCompound[6])));
+    uint256 amountCompound = n.sub(amountFulcrum);
+    uint256 tolerance = 10 ** 17; // 0.1% of rate difference
+    uint256 maxIter = 30; // TODO
 
-    f(x) = 0 = (a1 b1 o1 s1)/(k1 * (n + s1 - x)^2) - (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x))
+    amounts = bisection(
+      amountCompound,
+      amountFulcrum,
+      tolerance,
+      maxIter,
+      n,
+      paramsCompound,
+      paramsFulcrum
+    ); // returns [compound, fulcrum] */
 
-    here x rapresents the amount that should be placed in compound
-    n - x the amount of fulcrum
-    the analytical solution is too much complicated for on-chain implementation
-    so we use an interative approach using newton-raphson method
+    uint256 amountFulcrum = n.mul(paramsFulcrum[2].div(paramsFulcrum[2].add(paramsCompound[6])));
 
-    f'(x) = (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x)^2) + (2 a1 b1 o1 s1)/(k1 * (n + s1 - x)^3) + (b^2 c e f)/(j (b + s + x)^2 (b - d + s + x))
+    amounts = bisection(
+      n.sub(amountFulcrum), // amountCompound
+      amountFulcrum,
+      10 ** 17, // 0.1% of rate difference,
+      30, // maxIter
+      n,
+      paramsCompound,
+      paramsFulcrum
+    ); // returns [compound, fulcrum]
 
-    our limits for x are [0, n]
-    if x > n all on compound, if x < 0 all on fulcrum ?
-
-    const fx = x => a1.times(s1.div(s1.plus(n.minus(x))))
-      .times(b1.div(s1.plus(n.minus(x))))
-      .times(o1).div(k1)
-      .minus(
-        a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
-          s.plus(x).plus(b).minus(d)
-        ).div(j).times('2102400').times('100')
-      ).integerValue(BigNumber.ROUND_FLOOR);
-
-    // f'(x) = (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x)^2) + (2 a1 b1 o1 s1)/(k1 * (n + s1 - x)^3) + (b^2 c e f)/(j (b + s + x)^2 (b - d + s + x))
-    const f1x = x => b.times(e).times(f).times(
-      a.plus(b.times(c).div(b.plus(s).plus(x)))
-    ).div(j.times((b.minus(d).plus(s).plus(x)).pow(2))).plus(
-      BNify('2').times(a1).times(b1).times(o1).times(s1).div(
-        k1.times((n.plus(s1).minus(x)).pow(3))
-      )
-    ).plus(
-      b.pow(2).times(c).times(e).times(f).div(
-        j.times((b.plus(s).plus(x)).pow(2)).times(b.minus(d).plus(s).plus(x))
-      )
-    );
-
-    const perc = BNify(0.1); // 0.1%
-        const maxIteration = 20;
-        console.log(`n = ${n.div(1e18)}`)
-        const newtonRaphson = (func, funcDerivative, x_0, maxIter = maxIteration, limitPerc = perc) => {
-          let iter = 0;
-          while (iter++ < maxIter) {
-            const y = func(x_0);
-            const yp = funcDerivative(x_0);
-            // Update the guess:
-            const x_1 = x_0.minus(y.div(yp));
-            // Check for convergence:
-            console.log(`iteration: ${iter} #######`);
-            console.log(`${x_0} x_0`)
-            console.log(`${x_1} x_1`)
-            console.log(`${y} y`)
-            console.log(`${y.div(1e18)} y.div(1e18)`)
-            console.log(`${yp} yp`)
-            // if (targetSupplyRateWithFeeCompoundFoo(x_0).minus(targetSupplyRateWithFeeFulcrumFoo(n.minus(x_0))).abs().lte(BNify(limitPerc).times(1e18))) {
-            // if (x_1.minus(x_0).abs().lte(limitPerc.times(x_1.abs()))) {
-            if (y.div(1e18).abs().lte(limitPerc)) {
-              console.log('Newton-Raphson: converged to x = ' + x_1.div(1e18) + ' after ' + iter + ' iterations');
-              return x_1;
-            }
-
-            // Transfer update to the new guess:
-            x_0 = x_1;
-          }
-          console.log('Newton-Raphson: Maximum iterations reached (' + maxIter + ')');
-          return false;
-        };
-
-        const amountFulcrum = n.times(s1.div(s1.plus(s)));
-        const amountCompound = n.minus(amountFulcrum);
-        console.log(`Initial Guess (Compound) = ${amountCompound.div(1e18)} DAI`)
-        // const resAlgo = newtonRaphson(fx, f1x, n.div(2));
-        const resAlgo = newtonRaphson(fx, f1x, amountCompound); // correct one
-        // const resAlgo = newtonRaphson(fx, f1x, BNify(1e-7));
-        console.log(`${resAlgo.div(1e18).toString()} DAI in compound, ${n.div(1e18).minus(resAlgo.div(1e18)).toString()} DAI fulcrum ####################`);
-        console.log(`${targetSupplyRateWithFeeCompoundFoo(resAlgo).div(1e18).toString()}% target in compound, ${targetSupplyRateWithFeeFulcrumFoo(n.minus(resAlgo)).div(1e18).toString()}% target rate fulcrum ####################`); */
-
-
-        // TODO we have to pass in some way cToken and iToken addresses
-
-
-        // COMPOUND
-        CERC20 _cToken = CERC20(cToken);
-        WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
-
-        /* uint256 j = 10 ** 18;
-        uint256 a = white.baseRate(); // from WhitePaper
-        uint256 b = _cToken.totalBorrows();
-        uint256 c = white.multiplier(); // from WhitePaper
-        uint256 d = _cToken.totalReserves();
-        uint256 e = j.sub(_cToken.reserveFactorMantissa());
-        uint256 s = _cToken.getCash();
-        uint256 k = _cToken.blocksInAYear();
-        uint256 f = 100; */
-
-        // FULCRUM
-        iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
-
-        /* uint256 a1 = _iToken.avgBorrowInterestRate();
-        uint256 b1 = _iToken.totalAssetBorrow();
-        uint256 s1 = _iToken.totalAssetSupply();
-        uint256 o1 = _iToken.spreadMultiplier();
-        uint256 k1 = 10 ** 20; */
-
-        uint256[15] memory params;
-        params[0] = 10 ** 18;
-        params[1] = white.baseRate(); // from WhitePaper
-        params[2] = _cToken.totalBorrows();
-        params[3] = white.multiplier(); // from WhitePaper
-        params[4] = _cToken.totalReserves();
-        params[5] = params[0].sub(_cToken.reserveFactorMantissa());
-        params[6] = _cToken.getCash();
-        params[7] = _cToken.blocksInAYear();
-        params[8] = 100;
-        params[9] = _iToken.avgBorrowInterestRate();
-        params[10] = _iToken.totalAssetBorrow();
-        params[11] = _iToken.totalAssetSupply();
-        params[12] = _iToken.spreadMultiplier();
-        params[13] = 10 ** 20;
-        params[14] = n;
-
-        // n = x + x1 => x = n - x1
-        // f(x) = 0 = (a1 b1 o1 s1)/(k1 * (n + s1 - x)^2) - (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x))
-
-      //
-      return (tokenAddresses, amounts);
+    tokenAddresses[0] = cToken;
+    tokenAddresses[1] = iToken;
+    return (tokenAddresses, amounts);
   }
 
-  function foo(uint256 x, uint256[15] memory params)
-    internal pure
-    returns (uint256) {
-      /* f(x) = (a1 b1 o1 s1)/(k1 * (n + s1 - x)^2) - (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x)) */
-      uint256 j = params[0];
-      uint256 a = params[1];
-      uint256 b = params[2];
-      uint256 c = params[3];
-      uint256 d = params[4];
-      uint256 e = params[5];
-      uint256 s = params[6];
-      uint256 k = params[7];
-      uint256 f = params[8];
-      uint256 a1 = params[9];
-      uint256 b1 = params[10];
-      uint256 s1 = params[11];
-      uint256 o1 = params[12];
-      uint256 k1 = params[13];
-      uint256 n = params[14];
-      return a1.mul(s1.div(s1.add(n.sub(x))))
-        .mul(b1.div(s1.add(n.sub(x))))
-        .mul(o1).div(k1)
-        .sub(
-          a.add(b.mul(c).div(b.add(s).add(x))).div(k).mul(e).mul(b).div(
-            s.add(x).add(b).sub(d)
-          ).div(j).mul(k).mul(f)
-        );
+  function bisection(
+    uint256 amountCompound, uint256 amountFulcrum,
+    uint256 tolerance, uint256 maxIter, uint256 n,
+    uint256[] memory paramsCompound,
+    uint256[] memory paramsFulcrum
+  )
+    internal view
+    returns (uint256[] memory amounts) {
+    // TODO, recursive?
+
+    /* uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(0, paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(0, paramsCompound);
+    bool isOldCompoundBest = currCompRate > currFulcRate;
+
+    uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
+    uint256 fulcNewRate;
+    uint256 compNewRate;
+    bool isCompoundBest; // sign
+    uint8 i = 0;
+    while (
+      (fulcNewRate.add(tolerance) >= compNewRate && isCompoundBest ||
+      (compNewRate.add(tolerance) >= fulcNewRate && !isCompoundBest)) &&
+      i <= maxIter
+    ) {
+      fulcNewRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(amountFulcrum, paramsFulcrum);
+      compNewRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(amountCompound, paramsCompound);
+      isCompoundBest = compNewRate > fulcNewRate;
+      i++;
+    }
+
+    amounts[0] = amountCompound;
+    amounts[1] = amountFulcrum;
+    return amounts; */
   }
-  function foo1(uint256 x, uint256[15] memory params)
-    internal pure
-    returns (uint256) {
-      uint256 j = params[0];
-      uint256 a = params[1];
-      uint256 b = params[2];
-      uint256 c = params[3];
-      uint256 d = params[4];
-      uint256 e = params[5];
-      uint256 s = params[6];
-      /* uint256 k = params[7]; // not needed here  */
-      uint256 f = params[8];
-      uint256 a1 = params[9];
-      uint256 b1 = params[10];
-      uint256 s1 = params[11];
-      uint256 o1 = params[12];
-      uint256 k1 = params[13];
-      uint256 n = params[14];
-
-      // f'(x) = (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x)^2) + (2 a1 b1 o1 s1)/(k1 * (n + s1 - x)^3) + (b^2 c e f)/(j (b + s + x)^2 (b - d + s + x))
-      uint256 _2 = 2;
-      uint256 factor = b.sub(d).add(s).add(x);
-      uint256 factor2 = n.add(s1).sub(x);
-      uint256 factor3 = b.add(s).add(x);
-
-      return b.mul(e).mul(f).mul(
-        a.add(b.mul(c).div(b.add(s).add(x)))
-      ).div(j.mul(factor.mul(factor))).add(
-        _2.mul(a1).mul(b1).mul(o1).mul(s1).div(
-          k1.mul(factor2.mul(factor2).mul(factor2))
-        )
-      ).add(
-        b.mul(b).mul(c).mul(e).mul(f).div(
-          j.mul(factor3.mul(factor3)).mul(b.sub(d).add(s).add(x))
-        )
-      );
-  }
-
-  // from DAI contract
-  // check https://forum.openzeppelin.com/t/does-safemath-library-need-a-safe-power-function/871/9
-  /* function rpow(uint x, uint n) internal pure returns (uint z) {
-      z = n % 2 != 0 ? x : 10**27;
-
-      for (n /= 2; n != 0; n /= 2) {
-          x = rmul(x, x);
-
-          if (n % 2 != 0) {
-              z = rmul(z, x);
-          }
-      }
-  } */
 }

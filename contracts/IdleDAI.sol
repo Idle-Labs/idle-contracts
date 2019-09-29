@@ -14,14 +14,15 @@ import "./interfaces/ILendingProtocol.sol";
 
 import "./IdleRebalancer.sol";
 
+// TODO Ideally this contract should be upgradable (check openzeppelin-zos)
 contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
-  // onlyOwner can change these:
-  // eg. cTokenAddress => IdleCompoundAddress
   // protocolWrappers may be changed/updated/removed do not rely on their
   // addresses to determine where funds are allocated
+
+  // eg. cTokenAddress => IdleCompoundAddress
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
   address public token;
@@ -42,6 +43,7 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     address tokenAddr;
     address protocolAddr;
   }
+
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
    */
@@ -91,7 +93,7 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
 
   // view
   /**
-   * @dev delegate IdleToken price calculation to IdleRebalancer
+   * @dev IdleToken price calculation
    */
   function tokenPrice()
     public view
@@ -113,18 +115,17 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
    * @dev call getAPR of every ILendingProtocol
    */
   function getAPRs()
-    public
-    view
+    public view
     returns (address[] memory addresses, uint256[] memory aprs) {
-    address currToken;
-    for (uint8 i = 0; i < allAvailableTokens.length; i++) {
-      currToken = allAvailableTokens[i];
-      addresses[i] = currToken;
-      aprs[i] = ILendingProtocol(protocolWrappers[currToken]).getAPR();
-    }
+      address currToken;
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        currToken = allAvailableTokens[i];
+        addresses[i] = currToken;
+        aprs[i] = ILendingProtocol(protocolWrappers[currToken]).getAPR();
+      }
   }
 
-  // public
+  // external
   /**
    * @dev User should 'approve' _amount of tokens before calling mintIdleToken
    */
@@ -159,166 +160,152 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256) {
-    uint256 idleSupply = this.totalSupply();
-    require(idleSupply > 0, 'No IDLEDAI have been issued');
+      uint256 idleSupply = this.totalSupply();
+      require(idleSupply > 0, 'No IDLEDAI have been issued');
 
-    address currentToken;
-    uint256 protocolPoolBalance;
-    uint256 toRedeem;
+      address currentToken;
+      uint256 protocolPoolBalance;
+      uint256 toRedeem;
 
-    for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-      currentToken = currentTokensUsed[i];
-      protocolPoolBalance = IERC20(currentToken).balanceOf(address(this));
-      toRedeem = _amount.mul(protocolPoolBalance).div(idleSupply);
-      _redeemProtocolTokens(protocolWrappers[currentToken], currentToken, _amount, msg.sender);
-    }
+      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+        currentToken = currentTokensUsed[i];
+        protocolPoolBalance = IERC20(currentToken).balanceOf(address(this));
+        toRedeem = _amount.mul(protocolPoolBalance).div(idleSupply);
+        _redeemProtocolTokens(protocolWrappers[currentToken], currentToken, _amount, msg.sender);
+      }
 
-    _burn(msg.sender, _amount);
-    rebalance(0);
+      _burn(msg.sender, _amount);
+      rebalance(0);
   }
 
   /**
-   * @dev here we are redeeming unclaimed token (from iToken contract) to this contracts
-   * then converting the claimedTokens in the bestToken after rebalancing
+   * @dev here we are redeeming unclaimed token from iToken contract to this contracts
+   * then allocating claimedTokens with rebalancing
    * Everyone should be incentivized in calling this method
    */
   function claimITokens()
     external
     returns (uint256 claimedTokens) {
       claimedTokens = iERC20Fulcrum(iToken).claimLoanToken();
-      if (claimedTokens == 0) {
-        return claimedTokens;
-      }
-
       rebalance(claimedTokens);
-      return claimedTokens;
   }
 
   /**
-   * @dev here a user can claim tokens that were previously unavailable in Fulcrum
-   * directly to their address via delegatecall
-   */
-  function userClaimITokens()
-    external
-    returns (uint256) {
-      (bool res, bytes memory data) = iToken.delegatecall(abi.encodePacked(bytes4(keccak256("claimLoanToken()"))));
-      require(res, 'Underlying claimITokens failed');
-      return abi.decode(data, (uint256));
-  }
-
-  /**
-   * @dev Convert cToken pool in iToken pool (or the contrary) if needed
+   * @dev Dynamicall allocate all the pool across different lending protocols
+   * if needed
    * Everyone should be incentivized in calling this method
    *
-   * If _amount == 0 then simple rebalance
+   * If _newAmount == 0 then simple rebalance
    * else rebalance (if needed) and mint (always)
    */
 
+  // TODO currentTokensUsed is updated only at the end of this method
+  // what happens the first time? should I set also at the end of the first `if` ?
+  // need to check
   function rebalance(uint256 _newAmount)
     public
     returns (bool) {
-    if (!_rebalanceCheck(_newAmount)) {
-      if (_newAmount > 0) {
-        _mintProtocolTokens(protocolWrappers[currentTokensUsed[0]], _newAmount);
+      if (!_rebalanceCheck(_newAmount)) {
+        if (_newAmount > 0) {
+          _mintProtocolTokens(protocolWrappers[currentTokensUsed[0]], _newAmount);
+        }
+        return false; // hasNotRebalanced
       }
-      return false; // hasNotRebalanced
-    }
 
-    // redeem from every protocol
-    // - get current protocol used
-    TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();
-    // - redeem everything from each protocol
-    for (uint8 i = 0; i < tokenProtocols.length; i++) {
-      _redeemProtocolTokens(
-        tokenProtocols[i].protocolAddr,
-        tokenProtocols[i].tokenAddr,
-        IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)),
-        address(this) // token are now in this contract
-      );
-    }
-
-    // calcAmounts
-    uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-    // tokenBalance here has already _newAmount
-    (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance);
-
-    // remove all elements from `currentTokensUsed`
-    delete currentTokensUsed;
-
-    // mint for each protocol and update currentTokensUsed
-    uint256 currAmount;
-    address currAddr;
-    for (uint8 i = 0; i < protocolAmounts.length; i++) {
-      currAmount = protocolAmounts[i];
-      if (currAmount == 0) {
-        continue;
+      // redeem from every protocol
+      // - get current protocol used
+      TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();
+      // - redeem everything from each protocol
+      for (uint8 i = 0; i < tokenProtocols.length; i++) {
+        _redeemProtocolTokens(
+          tokenProtocols[i].protocolAddr,
+          tokenProtocols[i].tokenAddr,
+          IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)),
+          address(this) // token are now in this contract
+        );
       }
-      currAddr = tokenAddresses[i];
-      _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
-      // update current tokens used in storage
-      currentTokensUsed.push(currAddr);
-    }
 
-    return true; // hasRebalanced
+      // calcAmounts
+      uint256 tokenBalance = IERC20(token).balanceOf(address(this));
+      // tokenBalance here has already _newAmount
+      (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance);
+
+      // remove all elements from `currentTokensUsed`
+      delete currentTokensUsed;
+
+      // mint for each protocol and update currentTokensUsed
+      uint256 currAmount;
+      address currAddr;
+      for (uint8 i = 0; i < protocolAmounts.length; i++) {
+        currAmount = protocolAmounts[i];
+        if (currAmount == 0) {
+          continue;
+        }
+        currAddr = tokenAddresses[i];
+        _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
+        // update current tokens used in storage
+        currentTokensUsed.push(currAddr);
+      }
+
+      return true; // hasRebalanced
   }
 
-  // if there is only one protocol and haas the best rate check the nextRateWithAmount()
+  // if there is only one protocol and has the best rate then check the nextRateWithAmount()
   // if rate is still the highest then put everything there
-  // otherwise rebalance with all amount ??
+  // otherwise rebalance with all amount
   function _rebalanceCheck(uint256 _newAmount)
-    public
-    view
+    public view
     returns (bool) {
-    // if we are invested in more than a single protocol then rebalance
-    if (currentTokensUsed.length > 1) {
-      return true;
-    }
-
-    (address[] memory addresses, uint256[] memory aprs) = getAPRs();
-    if (aprs.length == 0) {
-      return false;
-    }
-
-    // we are trying to find if the currentTokenUsed has still the best APR
-    // and eventually if the nextRateWithAmount is still the best
-    address currTokenUsed = currentTokensUsed[0];
-    uint256 currTokenApr;
-
-    uint256 maxRate = aprs[0];
-    uint256 secondBestRate;
-    uint256 currApr;
-
-    // maybe it's better to have aprs and addresses sorted?
-    for (uint8 i = 1; i < aprs.length; i++) {
-      currApr = aprs[i];
-      if (currTokenUsed == addresses[i]) {
-        currTokenApr = currApr;
-      }
-      if (currApr > maxRate) {
-        secondBestRate = maxRate;
-        maxRate = currApr;
-      } else if (currApr < maxRate && currApr > secondBestRate) {
-        secondBestRate = currApr;
-      }
-    }
-    if (currTokenApr < maxRate) {
-      return true;
-    }
-
-    uint256 nextRate;
-    if (_newAmount > 0) {
-      nextRate = _getProtocolNextRate(protocolWrappers[currTokenUsed], _newAmount);
-      // TODO use minRateDifference
-      /* if (nextRate < secondBestRate || ) { */
-      if (nextRate < secondBestRate) {
+      // if we are invested in more than a single protocol then rebalance
+      if (currentTokensUsed.length > 1) {
         return true;
       }
-    }
 
-    return false;
+      (address[] memory addresses, uint256[] memory aprs) = getAPRs();
+      if (aprs.length == 0) {
+        return false;
+      }
+
+      // we are trying to find if the currentTokenUsed has still the best APR
+      // and eventually if the nextRateWithAmount is still the best
+      address currTokenUsed = currentTokensUsed[0];
+      uint256 currTokenApr;
+
+      uint256 maxRate = aprs[0];
+      uint256 secondBestRate;
+      uint256 currApr;
+
+      // maybe it's better to have aprs and addresses sorted?
+      for (uint8 i = 1; i < aprs.length; i++) {
+        currApr = aprs[i];
+        if (currTokenUsed == addresses[i]) {
+          currTokenApr = currApr;
+        }
+        if (currApr > maxRate) {
+          secondBestRate = maxRate;
+          maxRate = currApr;
+        } else if (currApr < maxRate && currApr > secondBestRate) {
+          secondBestRate = currApr;
+        }
+      }
+      if (currTokenApr < maxRate) {
+        return true;
+      }
+
+      uint256 nextRate;
+      if (_newAmount > 0) {
+        nextRate = _getProtocolNextRate(protocolWrappers[currTokenUsed], _newAmount);
+        // TODO use minRateDifference
+        /* if (nextRate < secondBestRate || ) { */
+        if (nextRate < secondBestRate) {
+          return true;
+        }
+      }
+
+      return false;
   }
 
-  // ##### Internal
+  // internal
   function _calcAmounts(uint256 _amount)
     internal view
     returns (address[] memory, uint256[] memory) {
@@ -327,38 +314,32 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
 
   // Get addresses of current protocols used by iterating through currentTokensUsed
   function _getCurrentProtocols()
-    internal
-    view
+    internal view
     returns (TokenProtocol[] memory currentProtocolsUsed) {
-    for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-      currentProtocolsUsed[i] = TokenProtocol(
-        currentTokensUsed[i],
-        protocolWrappers[currentTokensUsed[i]]
-      );
-    }
+      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+        currentProtocolsUsed[i] = TokenProtocol(
+          currentTokensUsed[i],
+          protocolWrappers[currentTokensUsed[i]]
+        );
+      }
   }
 
   // ### ILendingProtocols calls
 
-  // internal
   // _wrapperAddr is the protocolWrappers address
   function _getProtocolNextRate(address _wrapperAddr, uint256 _amount)
-    internal
-    view
+    internal view
     returns (uint256 apr) {
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       apr = _wrapper.nextSupplyRate(_amount);
   }
-  // internal
   // _wrapperAddr is the protocolWrappers address
   function _getProtocolAPR(address _wrapperAddr)
-    internal
-    view
+    internal view
     returns (uint256 apr) {
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       apr = _wrapper.getAPR();
   }
-  // internal
   // _wrapperAddr is the protocolWrappers address
   function _mintProtocolTokens(address _wrapperAddr, uint256 _amount)
     internal
@@ -368,7 +349,6 @@ contract IdleDAI is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
       IERC20(token).safeTransfer(_wrapperAddr, _amount);
       cTokens = _wrapper.mint();
   }
-  // internal
   // _wrapperAddr is the protocolWrappers address
   // _amount of _token to redeem
   // _token to redeem
