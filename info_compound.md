@@ -1,4 +1,4 @@
-### Compound formula for next rate after supplying `x` amount
+### Compound formula for calculating next rate after supplying `x` amount (with their fee)
 We started from Compound and looked through their contracts (https://etherscan.io/address/0xf5dce57282a584d2746faf1593d3121fcac444dc for cDAI)
 
 ```
@@ -22,7 +22,6 @@ when supplying a new DAI amount `x` we have
 ```
 targetSupplyRate = (baseRate + multiplier * B / (B + S + x)) * (1-reserveFactor) * B / (S + x + B - Res)
 ```
-so this should be solved for `x` in order to get the maxDAIAmount below targetSupplyRate.
 
 Here I just rewrote the shorter version of the formula with some substitution outlined below:
 ```
@@ -49,7 +48,7 @@ q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> r
 ```
 which is the target supply rate of Compound when supplying `x` DAI.
 
-This has been manually tested using a buidler task 
+This has been manually tested using a buidler task
 ```
 npx buidler cDAI:nextRateDataWithAmount --amount xxx
 ```

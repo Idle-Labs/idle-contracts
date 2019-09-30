@@ -1,5 +1,5 @@
-## Rebalance reasoning (used in `IdleRebalancer` contract)
-### Compound
+## Rebalance reasoning for Compound and Fulcrum (used in `IdleRebalancer` contract)
+### Compound nextRate after supplying `x` amount
 ```
 a = baseRate
 b = totalBorrows
@@ -17,7 +17,7 @@ yearly rate
 q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f
 ```
 
-### Fulcrum
+### Fulcrum nextRate after supplying `x1` amount
 ```
 a1 = avgBorrowInterestRate;
 b1 = totalAssetBorrow;
@@ -31,14 +31,14 @@ yearly rate
 q1 = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1
 ```
 
-### Algorithm
+### Algorithm for dynamic funds allocation (DFA)
 We have
 ```
 n = tot DAI to rebalance
 ```
 
-and in the end `q` for Compound and `q1` for Fulcrum should be equal
-we have to solve this system for `x1` and `x`
+and in the end `q` for Compound and `q1` for Fulcrum should be equal (or the rate of one of them is > of the other even after supplying all `n`).
+We have to solve this system for `x1` and `x`
 ```
 / q = q1
 \ n = x1 + x
@@ -50,7 +50,6 @@ a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1 = ((((a + (b*c)/(b + s + x)) 
 (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
 ```
 better rewritten using Wolfram
-
 
 ```
 f(x) = 0 = (a1 b1 o1 s1)/(k1 * (n + s1 - x)^2) - (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x))
@@ -69,5 +68,3 @@ npx buidler idleDAI:rebalanceCalc --amount xxx
 where `xxx` is the amount of DAI to rebalance.
 
 (We tried also with newton-raphson method, task `idleDAI:rebalanceCalcNewton`, and it works but the first derivative calculation it's difficult to implement on-chain and involves signed numbers > 256 bit so for now we are going with bisection).
-
-There are
