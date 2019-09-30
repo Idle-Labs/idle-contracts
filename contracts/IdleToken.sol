@@ -202,9 +202,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
    * else rebalance (if needed) and mint (always)
    */
 
-  // TODO currentTokensUsed is updated only at the end of this method
-  // what happens the first time? should I set also at the end of the first `if` ?
-  // need to check
   function rebalance(uint256 _newAmount)
     public
     returns (bool) {
@@ -335,13 +332,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     returns (uint256 apr) {
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       apr = _wrapper.nextSupplyRate(_amount);
-  }
-  // _wrapperAddr is the protocolWrappers address
-  function _getProtocolAPR(address _wrapperAddr)
-    internal view
-    returns (uint256 apr) {
-      ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
-      apr = _wrapper.getAPR();
   }
   // _wrapperAddr is the protocolWrappers address
   function _mintProtocolTokens(address _wrapperAddr, uint256 _amount)
