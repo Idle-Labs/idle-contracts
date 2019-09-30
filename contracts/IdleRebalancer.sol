@@ -108,8 +108,7 @@ contract IdleRebalancer is Ownable {
     /* uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
     uint256 step = smallerAmount.div(2); */
     uint256 step = amountCompound < amountFulcrum ? amountCompound.div(2) : amountFulcrum.div(2);
-    uint256 newFulcrumAmount;
-    uint256 newCompoundAmount;
+
     // base case
     if (
       (currFulcRate.add(tolerance) >= currCompRate && isCompoundBest ||
@@ -121,17 +120,9 @@ contract IdleRebalancer is Ownable {
       return amounts;
     }
 
-    if (isCompoundBest) {
-      // Compound rate > Fulcrum rate
-      newFulcrumAmount = amountFulcrum.sub(step);
-      newCompoundAmount = amountCompound.add(step);
-    } else {
-      newCompoundAmount = amountCompound.sub(step);
-      newFulcrumAmount = amountFulcrum.add(step);
-    }
-
     return bisectionRec(
-      newCompoundAmount, newFulcrumAmount,
+      isCompoundBest ? amountCompound.add(step) : amountCompound.sub(step),
+      isCompoundBest ? amountFulcrum.sub(step) : amountFulcrum.add(step),
       tolerance, currIter + 1, maxIter, n,
       paramsCompound,
       paramsFulcrum
