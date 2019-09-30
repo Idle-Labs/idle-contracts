@@ -50,7 +50,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   constructor(
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
-    uint8 decimals, // eg. 18
+    uint8 _decimals, // eg. 18
     address _token,
     address _cToken,
     address _iToken,
@@ -58,7 +58,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     address _idleCompound,
     address _idleFulcrum)
     public
-    ERC20Detailed(_name, _symbol, decimals) {
+    ERC20Detailed(_name, _symbol, _decimals) {
       token = _token;
       iToken = _iToken; // used for claimITokens and userClaimITokens methods
       rebalancer = _rebalancer;

@@ -1,4 +1,5 @@
-## Compound
+## Rebalance reasoning (used in `IdleRebalancer` contract)
+### Compound
 ```
 a = baseRate
 b = totalBorrows
@@ -16,7 +17,7 @@ yearly rate
 q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f
 ```
 
-## Fulcrum
+### Fulcrum
 ```
 a1 = avgBorrowInterestRate;
 b1 = totalAssetBorrow;
@@ -30,6 +31,7 @@ yearly rate
 q1 = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1
 ```
 
+### Algorithm
 We have
 ```
 n = tot DAI to rebalance
@@ -54,8 +56,18 @@ better rewritten using Wolfram
 f(x) = 0 = (a1 b1 o1 s1)/(k1 * (n + s1 - x)^2) - (b e f (a + (b c)/(b + s + x)))/(j (b - d + s + x))
 ```
 
-here `x` rapresents the amount that should be placed in compound, `n - x` the amount of fulcrum
-the analytical solution is too much complicated for on-chain implementation see [here](https://www.wolframalpha.com/input/?i=%28a1+*+%28s1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+%28b1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+o1+%2F+k1%29+-+%28%28%28%28a+%2B+%28b*c%29%2F%28b+%2B+s+%2B+x%29%29+%2F+k%29+*+e+*+b+%2F+%28s+%2B+x+%2B+b+-+d%29%29+%2F+j%29+*+k+*+f+%3D+0)
-
-So we are using an interative approach using the bisection method (We tried also with newton-raphson method but the first derivative calculation was difficult to implement and involves signed numbers > 256 bit so for now we are going with bisection).
+here `x` rapresents the amount that should be placed in compound, `n - x` the amount of fulcrum.
 Our limits for `x` are `[0, n]`
+
+The analytical solution is too much complicated for on-chain implementation see [here](https://www.wolframalpha.com/input/?i=%28a1+*+%28s1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+%28b1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+o1+%2F+k1%29+-+%28%28%28%28a+%2B+%28b*c%29%2F%28b+%2B+s+%2B+x%29%29+%2F+k%29+*+e+*+b+%2F+%28s+%2B+x+%2B+b+-+d%29%29+%2F+j%29+*+k+*+f+%3D+0) (Wait for it to calculate until `Solutions for the variable x` appears)
+
+So we are using an interative approach using the bisection method and created a first version of the algo (not optimized) in the task
+
+```
+npx buidler idleDAI:rebalanceCalc --amount xxx
+```
+where `xxx` is the amount of DAI to rebalance.
+
+(We tried also with newton-raphson method, task `idleDAI:rebalanceCalcNewton`, and it works but the first derivative calculation it's difficult to implement on-chain and involves signed numbers > 256 bit so for now we are going with bisection).
+
+There are

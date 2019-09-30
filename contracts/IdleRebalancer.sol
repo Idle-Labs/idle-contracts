@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+// This implementation works with Compound and Fulcrum only
+// when a new protocol will be added this should be replaced
+// in IdleToken with the new IdleRebalancer
 contract IdleRebalancer is Ownable {
   using SafeMath for uint256;
   address public cToken;
@@ -23,17 +26,28 @@ contract IdleRebalancer is Ownable {
     iWrapper = _iWrapper;
   }
   // onlyOwner
-  function setCToken(address _cToken, address _cWrapper)
+  function setCToken(address _cToken)
     external onlyOwner {
       cToken = _cToken;
-      cWrapper = _cWrapper;
   }
-  function setIToken(address _iToken, address _iWrapper)
+  function setIToken(address _iToken)
     external onlyOwner {
       iToken = _iToken;
+  }
+  function setCTokenWrapper(address _cWrapper)
+    external onlyOwner {
+      cWrapper = _cWrapper;
+  }
+  function setITokenWrapper(address _iWrapper)
+    external onlyOwner {
       iWrapper = _iWrapper;
   }
 
+
+  /**
+   * @dev check `info_rebalance.md` for more info
+   * TODO a summary of rebalnce.md should be reported here
+   */
   function calcRebalanceAmounts(uint256 n)
     public view
     returns (address[] memory tokenAddresses, uint256[] memory amounts)
@@ -60,30 +74,6 @@ contract IdleRebalancer is Ownable {
     paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
     paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
     paramsFulcrum[4] = 10 ** 20; // k1
-
-    /* uint256 s1 = paramsFulcrum[2]; */
-    /* uint256 b1 = paramsFulcrum[1] */
-    /* uint256 s = paramsCompound[6]; */
-    /* uint256 b = paramsCompound[2]; */
-
-    // Here we are trying to find a good initial guess
-    // so we are relating the 2 protocols using totalAssetSupply
-
-    // Stack too deep if using this
-    /* uint256 amountFulcrum = n.mul(paramsFulcrum[2].div(paramsFulcrum[2].add(paramsCompound[6])));
-    uint256 amountCompound = n.sub(amountFulcrum);
-    uint256 tolerance = 10 ** 17; // 0.1% of rate difference
-    uint256 maxIter = 30; // TODO
-
-    amounts = bisection(
-      amountCompound,
-      amountFulcrum,
-      tolerance,
-      maxIter,
-      n,
-      paramsCompound,
-      paramsFulcrum
-    ); // returns [compound, fulcrum] */
 
     uint256 amountFulcrum = n.mul(paramsFulcrum[2].div(paramsFulcrum[2].add(paramsCompound[6])));
 

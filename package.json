@@ -37,8 +37,12 @@
     "truffle-security": "^1.5.5"
   },
   "devDependencies": {
+    "@nomiclabs/buidler": "1.0.0-beta.8",
+    "@nomiclabs/buidler-truffle5": "1.0.0-beta.8",
+    "@nomiclabs/buidler-web3": "1.0.0-beta.8",
     "@openzeppelin/cli": "^2.5.1",
     "chai": "^4.2.0",
-    "openzeppelin-test-helpers": "^0.4.0"
+    "openzeppelin-test-helpers": "^0.4.0",
+    "web3": "web3@1.0.0-beta.37"
   }
 }
