@@ -370,7 +370,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
         BNify('2').times(j).times(q).times(s)
       ).div(BNify('2').times(j).times(q));
 
-    const algoRec = (amount, currBestTokenAddr, bestRate, worstRate) => {
+    const algo = (amount, currBestTokenAddr, bestRate, worstRate) => {
       const isCompoundBest = currBestTokenAddr === cDAI.address;
       let maxDAICompound;
       let maxDAIFulcrum;
@@ -412,7 +412,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
 
       const tolerance = BNify('0.1').times(BNify('1e18')); // 0.1%
       let i = 0;
-      const amountSizesCalc = (
+      const amountSizesCalcRec = (
         // compoundAmount = halfAmount,
         // fulcrumAmount = halfAmount,
         compoundAmount = amountCompound,
@@ -441,34 +441,21 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
         if (fulcNewRate.plus(tolerance).gt(compNewRate) && fulcNewRate.lt(compNewRate) ||
             (compNewRate.plus(tolerance).gt(fulcNewRate) && compNewRate.lt(fulcNewRate))) {
           return [compoundAmount, fulcrumAmount];
-        } else if (isCompoundNewBest) {
-          // Compound > Fulcrum
-          if (!isCurrCompoundBest) {
-            // flippening
-            console.log('Flippening: now Compound > Fulcrum (before Fulcrum best) ');
-            newFulcrumAmount = fulcrumAmount.minus(smallerAmount.div(BNify('2')));
-            newCompoundAmount = compoundAmount.plus(smallerAmount.div(BNify('2')))
-          } else {
-            newFulcrumAmount = fulcrumAmount.minus(smallerAmount.div(BNify('2')));
-            newCompoundAmount = compoundAmount.plus(smallerAmount.div(BNify('2')))
-          }
-        } else {
-          // Fulcrum > Compound
-          if (isCurrCompoundBest) {
-            // flippening
-            console.log('Flippening: now Fulcrum > Compound (before Compound best) ');
-            newCompoundAmount = compoundAmount.minus(smallerAmount.div(BNify('2')));
-            newFulcrumAmount = fulcrumAmount.plus(smallerAmount.div(BNify('2')));
-          } else {
-            newCompoundAmount = compoundAmount.minus(smallerAmount.div(BNify('2')));
-            newFulcrumAmount = fulcrumAmount.plus(smallerAmount.div(BNify('2')));
-          }
         }
 
-        return amountSizesCalc(newCompoundAmount, newFulcrumAmount, isCompoundNewBest);
+        if (isCompoundNewBest) {
+          // Compound > Fulcrum
+          newFulcrumAmount = fulcrumAmount.minus(smallerAmount.div(BNify('2')));
+          newCompoundAmount = compoundAmount.plus(smallerAmount.div(BNify('2')))
+        } else {
+          newCompoundAmount = compoundAmount.minus(smallerAmount.div(BNify('2')));
+          newFulcrumAmount = fulcrumAmount.plus(smallerAmount.div(BNify('2')));
+        }
+
+        return amountSizesCalcRec(newCompoundAmount, newFulcrumAmount, isCompoundNewBest);
       };
 
-      let [compAmount, fulcAmount] = amountSizesCalc();
+      let [compAmount, fulcAmount] = amountSizesCalcRec();
       if (maxDAIFulcrum) {
         // add maxDAIFulcrum to s1
         fulcAmount = fulcAmount.plus(maxDAIFulcrum);
@@ -487,7 +474,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     const bestRate = fulcrumCurr.gt(compoundCurr) ? fulcrumCurr : compoundCurr;
     const worstRate = fulcrumCurr.gt(compoundCurr) ? compoundCurr : fulcrumCurr;
 
-    const resAlgo = algoRec(newDAIAmount, currBestAddress, bestRate, worstRate);
+    const resAlgo = algo(newDAIAmount, currBestAddress, bestRate, worstRate);
     console.log(`${resAlgo[0].div(1e18).toString()} DAI in compound, ${resAlgo[1].div(1e18).toString()} DAI fulcrum ####################`);
   });
 

@@ -77,53 +77,73 @@ contract IdleRebalancer is Ownable {
 
     uint256 amountFulcrum = n.mul(paramsFulcrum[2].div(paramsFulcrum[2].add(paramsCompound[6])));
 
-    amounts = bisection(
+    amounts = bisectionRec(
       n.sub(amountFulcrum), // amountCompound
       amountFulcrum,
       10 ** 17, // 0.1% of rate difference,
+      0, // currIter
       30, // maxIter
       n,
       paramsCompound,
       paramsFulcrum
-    ); // returns [compound, fulcrum]
+    ); // returns [compoundAmount, fulcrumAmount]
 
     tokenAddresses[0] = cToken;
     tokenAddresses[1] = iToken;
     return (tokenAddresses, amounts);
   }
 
-  function bisection(
+  function bisectionRec(
     uint256 amountCompound, uint256 amountFulcrum,
-    uint256 tolerance, uint256 maxIter, uint256 n,
+    uint256 tolerance, uint256 currIter, uint256 maxIter, uint256 n,
     uint256[] memory paramsCompound,
     uint256[] memory paramsFulcrum
   )
     internal view
     returns (uint256[] memory amounts) {
-    // TODO, recursive?
 
-    /* uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(0, paramsFulcrum);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(0, paramsCompound);
-    bool isOldCompoundBest = currCompRate > currFulcRate;
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(currIter == 0 ? 0 : amountFulcrum, paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(currIter == 0 ? 0 : amountCompound, paramsCompound);
 
-    uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
-    uint256 fulcNewRate;
-    uint256 compNewRate;
-    bool isCompoundBest; // sign
-    uint8 i = 0;
-    while (
-      (fulcNewRate.add(tolerance) >= compNewRate && isCompoundBest ||
-      (compNewRate.add(tolerance) >= fulcNewRate && !isCompoundBest)) &&
-      i <= maxIter
-    ) {
-      fulcNewRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(amountFulcrum, paramsFulcrum);
-      compNewRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(amountCompound, paramsCompound);
-      isCompoundBest = compNewRate > fulcNewRate;
-      i++;
+    if (currIter = 0) {
+      return bisectionRec(
+        amountCompound, amountFulcrum,
+        tolerance, currIter + 1, maxIter, n,
+        paramsCompound,
+        paramsFulcrum
+      );
     }
 
-    amounts[0] = amountCompound;
-    amounts[1] = amountFulcrum;
-    return amounts; */
+    bool isCompoundNewBest = currCompRate > currFulcRate;
+    uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
+    uint256 step = smallerAmount.div(2);
+    uint256 newFulcrumAmount;
+    uint256 newCompoundAmount;
+    // base case
+    if (
+      (fulcNewRate.add(tolerance) >= compNewRate && isCompoundBest ||
+      (compNewRate.add(tolerance) >= fulcNewRate && !isCompoundBest)) ||
+      i > maxIter
+    ) {
+      amounts[0] = amountCompound;
+      amounts[1] = amountFulcrum;
+      return amounts;
+    }
+
+    if (isCompoundNewBest) {
+      // Compound rate > Fulcrum rate
+      newFulcrumAmount = fulcrumAmount.sub(step);
+      newCompoundAmount = compoundAmount.add(step)
+    } else {
+      newCompoundAmount = compoundAmount.sub(step);
+      newFulcrumAmount = fulcrumAmount.add(step);
+    }
+
+    return bisectionRec(
+      newCompoundAmount, newFulcrumAmount,
+      tolerance, currIter + 1, maxIter, n,
+      paramsCompound,
+      paramsFulcrum
+    );
   }
 }
