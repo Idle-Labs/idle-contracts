@@ -259,8 +259,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   function _rebalanceCheck(uint256 _newAmount)
     public view
     returns (bool) {
-      // if we are invested in more than a single protocol then rebalance
-      if (currentTokensUsed.length > 1) {
+      // if we are invested in more than a single protocol or there are no protocols used (ie afer deploy) then rebalance
+      if (currentTokensUsed.length > 1 || currentTokensUsed.length == 0) {
         return true;
       }
 
