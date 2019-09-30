@@ -86,7 +86,7 @@ contract IdleRebalancer is Ownable {
       n,
       paramsCompound,
       paramsFulcrum
-    ); // returns [compoundAmount, fulcrumAmount]
+    ); // returns [amountCompound, amountFulcrum]
 
     tokenAddresses[0] = cToken;
     tokenAddresses[1] = iToken;
@@ -102,41 +102,32 @@ contract IdleRebalancer is Ownable {
     internal view
     returns (uint256[] memory amounts) {
 
-    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(currIter == 0 ? 0 : amountFulcrum, paramsFulcrum);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(currIter == 0 ? 0 : amountCompound, paramsCompound);
-
-    if (currIter = 0) {
-      return bisectionRec(
-        amountCompound, amountFulcrum,
-        tolerance, currIter + 1, maxIter, n,
-        paramsCompound,
-        paramsFulcrum
-      );
-    }
-
-    bool isCompoundNewBest = currCompRate > currFulcRate;
-    uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
-    uint256 step = smallerAmount.div(2);
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(amountFulcrum, paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(amountCompound, paramsCompound);
+    bool isCompoundBest = currCompRate > currFulcRate;
+    /* uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
+    uint256 step = smallerAmount.div(2); */
+    uint256 step = amountCompound < amountFulcrum ? amountCompound.div(2) : amountFulcrum.div(2);
     uint256 newFulcrumAmount;
     uint256 newCompoundAmount;
     // base case
     if (
-      (fulcNewRate.add(tolerance) >= compNewRate && isCompoundBest ||
-      (compNewRate.add(tolerance) >= fulcNewRate && !isCompoundBest)) ||
-      i > maxIter
+      (currFulcRate.add(tolerance) >= currCompRate && isCompoundBest ||
+      (currCompRate.add(tolerance) >= currFulcRate && !isCompoundBest)) ||
+      currIter > maxIter
     ) {
       amounts[0] = amountCompound;
       amounts[1] = amountFulcrum;
       return amounts;
     }
 
-    if (isCompoundNewBest) {
+    if (isCompoundBest) {
       // Compound rate > Fulcrum rate
-      newFulcrumAmount = fulcrumAmount.sub(step);
-      newCompoundAmount = compoundAmount.add(step)
+      newFulcrumAmount = amountFulcrum.sub(step);
+      newCompoundAmount = amountCompound.add(step);
     } else {
-      newCompoundAmount = compoundAmount.sub(step);
-      newFulcrumAmount = fulcrumAmount.add(step);
+      newCompoundAmount = amountCompound.sub(step);
+      newFulcrumAmount = amountFulcrum.add(step);
     }
 
     return bisectionRec(
