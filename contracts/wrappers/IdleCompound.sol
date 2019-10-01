@@ -22,7 +22,8 @@ contract IdleCompound is ILendingProtocol {
     underlying = _underlying;
   }
 
-  function nextSupplyRate(uint256 _amount)
+  // Stack too deep so check implementation below
+  /* function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256 nextRate) {
       CERC20 cToken = CERC20(token);
@@ -43,8 +44,10 @@ contract IdleCompound is ILendingProtocol {
       nextRate = a.add(b.mul(c).div(b.add(s).add(x))).div(k).mul(e).mul(b).div(
         s.add(x).add(b).sub(d)
       ).div(j).mul(k).mul(f); // to get the yearly rate
-  }
-  function nextSupplyRateWithParams(uint256 _amount, uint256[] calldata params)
+  } */
+
+  // Stack too deep so check implementation below
+  /* function nextSupplyRateWithParams(uint256[] calldata params)
     external pure
     returns (uint256 nextRate) {
       uint256 j = params[0]; // 10 ** 18;
@@ -56,12 +59,46 @@ contract IdleCompound is ILendingProtocol {
       uint256 s = params[6]; // cToken.getCash();
       uint256 k = params[7]; // cToken.blocksInAYear();
       uint256 f = params[8]; // 100;
-      uint256 x = _amount; // _amount;
+      uint256 x = params[9]; // newAmountSupplied;
 
       // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate
       nextRate = a.add(b.mul(c).div(b.add(s).add(x))).div(k).mul(e).mul(b).div(
         s.add(x).add(b).sub(d)
       ).div(j).mul(k).mul(f); // to get the yearly rate
+  } */
+
+  // check implementation above for a better readability
+  function nextSupplyRateWithParams(uint256[] memory params)
+    public pure
+    returns (uint256) {
+      // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate
+      uint256 inter1 = params[2].mul(params[3]).div(params[2].add(params[6]).add(params[9]));
+      uint256 inter2 = params[6].add(params[9]).add(params[2]).sub(params[4]);
+      uint256 inter3 = params[1].add(inter1).div(params[7]).mul(params[5]);
+      return inter3.mul(params[2]).div(inter2).div(10**18).mul(params[7]).mul(100); // to get the yearly rate
+  }
+
+  // check implementation above for a better readability
+  function nextSupplyRate(uint256 _amount)
+    external view
+    returns (uint256 nextRate) {
+      CERC20 cToken = CERC20(token);
+      WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
+      uint256[] memory params;
+
+      params[0] = 10 ** 18; // j
+      params[1] = white.baseRate(); // a
+      params[2] = cToken.totalBorrows(); // b
+      params[3] = white.multiplier(); // c
+      params[4] = cToken.totalReserves(); // d
+      params[5] = params[0].sub(cToken.reserveFactorMantissa()); // e
+      params[6] = cToken.getCash(); // s
+      params[7] = cToken.blocksInAYear(); // k
+      params[8] = 100; // f
+      params[9] = _amount; // x
+
+      // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate
+      return nextSupplyRateWithParams(params);
   }
 
   function getPriceInToken()
@@ -112,7 +149,7 @@ contract IdleCompound is ILendingProtocol {
   }
 
   // TODO (not needed atm)
-  function maxAmountBelowRate()
+  function maxAmountBelowRate(uint256)
     external view
     returns (uint256) {
       /* const a = BNify(baseRate);

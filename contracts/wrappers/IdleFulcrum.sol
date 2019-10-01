@@ -30,7 +30,7 @@ contract IdleFulcrum is ILendingProtocol {
       nextRate = nextRate.mul(iToken.spreadMultiplier()).div(10 ** 20);
   }
 
-  function nextSupplyRateWithParams(uint256 _amount, uint256[] calldata params)
+  function nextSupplyRateWithParams(uint256[] calldata params)
     external pure
     returns (uint256 nextRate) {
       uint256 a1 = params[0]; // _iToken.avgBorrowInterestRate();
@@ -38,7 +38,7 @@ contract IdleFulcrum is ILendingProtocol {
       uint256 s1 = params[2]; // _iToken.totalAssetSupply();
       uint256 o1 = params[3]; // _iToken.spreadMultiplier();
       uint256 k1 = params[4]; // 10 ** 20;
-      uint256 x1 = _amount;
+      uint256 x1 = params[5]; // newAmountSupplied;;
 
       nextRate = a1.mul(s1.div(s1.add(x1)))
         .mul(b1.div(s1.add(x1)))
@@ -83,7 +83,7 @@ contract IdleFulcrum is ILendingProtocol {
   }
 
   // TODO (not needed atm)
-  function maxAmountBelowRate()
+  function maxAmountBelowRate(uint256)
     external view
     returns (uint256) {
       // x = (sqrt(a) sqrt(b) sqrt(o) sqrt(s) - sqrt(k) sqrt(q) s)/(sqrt(k) sqrt(q))

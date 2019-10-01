@@ -102,8 +102,10 @@ contract IdleRebalancer is Ownable {
     internal view
     returns (uint256[] memory amounts) {
 
-    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(amountFulcrum, paramsFulcrum);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(amountCompound, paramsCompound);
+    paramsCompound[9] = amountCompound;
+    paramsFulcrum[5] = amountFulcrum;
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
     /* uint256 smallerAmount = amountCompound < amountFulcrum ? amountCompound : amountFulcrum;
     uint256 step = smallerAmount.div(2); */
