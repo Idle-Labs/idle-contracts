@@ -1,9 +1,7 @@
-// require('babel-register');
-// require('babel-polyfill');
 require('chai/register-should');
 const path = require("path");
 require('dotenv').config();
-const mnemonic = process.env.MNENOMIC;
+const mnemonic = process.env.MAINNET_MNEMONIC;
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
 module.exports = {
@@ -20,11 +18,6 @@ module.exports = {
     }
   },
   networks: {
-    // development: {
-    //   host: "127.0.0.1",
-    //   port: 8545,
-    //   network_id: "*",
-    // },
     ropsten: {
       provider: function() {
         return new HDWalletProvider(mnemonic, 'https://ropsten.infura.io/v3/' + process.env.INFURA_API_KEY)
@@ -42,17 +35,22 @@ module.exports = {
       gasPrice: 10000000000,
     },
     rinkeby: {
-      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://rinkeby.infura.io/v3/" + process.env.INFURA_API_KEY),
+      provider: () => new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/v3/" + process.env.INFURA_API_KEY),
       network_id: 4,
       gas: 3000000,
       gasPrice: 10000000000
     },
     // main ethereum network(mainnet)
     main: {
-      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY),
+      provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY),
       network_id: 1,
       gas: 3000000,
       gasPrice: 10000000000
+    },
+    local: {
+      host: '127.0.0.1',
+      port: 8545,
+      network_id: '*'
     }
   },
   mocha: {
