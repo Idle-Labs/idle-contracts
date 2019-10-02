@@ -2,12 +2,13 @@ pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "../interfaces/CERC20.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
-contract IdleCompound is ILendingProtocol {
+contract IdleCompound is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -16,10 +17,18 @@ contract IdleCompound is ILendingProtocol {
   // underlying token (token eg DAI) address
   address public underlying;
 
-  // TODO add methods for only owner to update token and underlying addresses?
   constructor(address _token, address _underlying) public {
     token = _token;
     underlying = _underlying;
+  }
+  // onlyOwner
+  function setToken(address _token)
+    external onlyOwner {
+      token = _token;
+  }
+  function setUnderlying(address _underlying)
+    external onlyOwner {
+      underlying = _underlying;
   }
 
   // Stack too deep so check implementation below

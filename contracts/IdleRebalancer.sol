@@ -43,7 +43,6 @@ contract IdleRebalancer is Ownable {
       iWrapper = _iWrapper;
   }
 
-
   /**
    * @dev check `info_rebalance.md` for more info
    * TODO a summary of rebalnce.md should be reported here

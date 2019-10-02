@@ -14,7 +14,6 @@ import "./interfaces/ILendingProtocol.sol";
 
 import "./IdleRebalancer.sol";
 
-// TODO Ideally this contract should be upgradable (check openzeppelin-zos)
 contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
@@ -164,7 +163,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
     external nonReentrant
     returns (uint256) {
       uint256 idleSupply = this.totalSupply();
-      require(idleSupply > 0, 'No IDLEDAI have been issued');
+      require(idleSupply > 0, "No IDLEDAI have been issued");
 
       address currentToken;
       uint256 protocolPoolBalance;
