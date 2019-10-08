@@ -13,7 +13,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
     this.someOtherAddr = '0x0000000000000000000000000000000000000002';
 
     this.DAIMock = await DAIMock.new({from: creator});
-    this.iDAIMock = await iDAIMock.new(this.DAIMock.address, someone, {from: creator});
+    this.iDAIMock = await iDAIMock.new(this.DAIMock.address, creator, {from: creator});
 
     this.iDAIWrapper = await IdleFulcrum.new(
       this.iDAIMock.address,
@@ -41,5 +41,75 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
     (await this.iDAIWrapper.underlying()).should.equal(val);
 
     await expectRevert.unspecified(this.iDAIWrapper.setUnderlying(val, { from: nonOwner }));
+  });
+  it('returns next supply rate given amount (counting fee ie spreadMultiplier)', async function () {
+    const val = BNify(10**18);
+    const res = await this.iDAIWrapper.nextSupplyRate.call(val, { from: nonOwner });
+
+    const nextSupplyInterestRateFulcrum = await this.iDAIMock.nextSupplyInterestRate.call(val);
+    const spreadMultiplier = await this.iDAIMock.spreadMultiplier.call();
+    const expectedRes = BNify(nextSupplyInterestRateFulcrum).mul(BNify(spreadMultiplier)).div(BNify(10**20));
+    res.should.be.bignumber.equal(expectedRes);
+  });
+  it('returns next supply rate given params (counting fee ie spreadMultiplier)', async function () {
+    // tested with data and formula from task iDAI:manualNextRateData
+    const val = [
+      BNify("16089452222034747442"), // a, avgBorrowInterestRate
+      BNify("419766782897339371903563"), // b, totalAssetBorrow
+      BNify("995495112439158951883651"), // s, totalAssetSupply
+      BNify("90000000000000000000"), // o, spreadMultiplier
+      BNify(10**20), // k, 10 ** 20
+      BNify(10**23) //  x, _amount
+    ];
+    const res = await this.iDAIWrapper.nextSupplyRateWithParams.call(val, { from: nonOwner });
+    console.log(res.toString());
+    // const expectedRes = val[0].mul(val[2].mul(10**18).div(val[2].add(val[5]))).mul(val[1].mul(10**18).div(val[2].add(val[5]))).mul(val[3]).div(val[4].mul(10**36));
+    // console.log(expectedRes.toString());
+    const expectedRes2 = val[0].mul(val[1]).mul(val[3]).mul(val[2]).div(val[4].mul(val[2].add(val[5]).mul(val[2].add(val[5]))));
+    console.log(expectedRes2.toString());
+    res.should.not.be.bignumber.equal(BNify(0));
+    res.should.be.bignumber.equal(expectedRes2);
+  });
+  it('getPriceInToken returns iToken price', async function () {
+    const res = await this.iDAIWrapper.getPriceInToken.call({ from: nonOwner });
+    const expectedRes = BNify(await this.iDAIMock.tokenPrice.call());
+    res.should.be.bignumber.equal(expectedRes);
+    res.should.be.bignumber.equal('1100000000000000000');
+  });
+  it('getAPR returns current yearly rate (counting fee ie spreadMultiplier)', async function () {
+    const res = await this.iDAIWrapper.getAPR.call({ from: nonOwner });
+
+    const currSupplyInterestRateFulcrum = await this.iDAIMock.supplyInterestRate.call();
+    const spreadMultiplier = await this.iDAIMock.spreadMultiplier.call();
+    const expectedRes = BNify(currSupplyInterestRateFulcrum).mul(BNify(spreadMultiplier)).div(BNify(10**20));
+    res.should.be.bignumber.equal(expectedRes);
+  });
+  it('mint returns 0 if no tokens are presenti in this contract', async function () {
+    const res = await this.iDAIWrapper.mint.call({ from: nonOwner });
+    res.should.be.bignumber.equal(BNify(0));
+  });
+  it('mint creates iTokens and it sends them to msg.sender', async function () {
+    // deposit 100 DAI in iDAIWrapper
+    await this.DAIMock.transfer(this.iDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
+    // mints in Fulcrum with 100 DAI
+    const callRes = await this.iDAIWrapper.mint.call({ from: nonOwner });
+    // check return value
+    BNify(callRes).should.be.bignumber.equal(BNify('90909090909090909090'));
+    // do the effective tx
+    await this.iDAIWrapper.mint({ from: nonOwner });
+    (await this.iDAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('90909090909090909090'));
+  });
+  it('redeem creates iTokens and it sends them to msg.sender', async function () {
+    // fund iDAIMock with 110 DAI
+    await this.DAIMock.transfer(this.iDAIMock.address, BNify('110').mul(this.one), {from: creator});
+    // deposit 100 iDAI in iDAIWrapper
+    await this.iDAIMock.transfer(this.iDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
+    // redeem in Fulcrum with 100 iDAI * 1.1 (price) = 110 DAI
+    const callRes = await this.iDAIWrapper.redeem.call(nonOwner, { from: nonOwner });
+    // check return value
+    BNify(callRes).should.be.bignumber.equal(BNify('110').mul(this.one));
+    // do the effective tx
+    await this.iDAIWrapper.redeem(nonOwner, { from: nonOwner });
+    (await this.DAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('110').mul(this.one));
   });
 });
