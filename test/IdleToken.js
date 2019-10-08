@@ -4,6 +4,7 @@ const IdleToken = artifacts.require('IdleToken');
 const IdleRebalancer = artifacts.require('IdleRebalancer');
 const IdleCompound = artifacts.require('IdleCompound');
 const IdleFulcrum = artifacts.require('IdleFulcrum');
+const WhitePaperMock = artifacts.require('WhitePaperMock');
 const cDAIMock = artifacts.require('cDAIMock');
 const iDAIMock = artifacts.require('iDAIMock');
 const DAIMock = artifacts.require('DAIMock');
@@ -17,8 +18,9 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     this.someOtherAddr = '0x0000000000000000000000000000000000000002';
 
     this.DAIMock = await DAIMock.new({from: creator});
-    this.cDAIMock = await cDAIMock.new(this.DAIMock.address, someone, {from: creator});
-    this.iDAIMock = await iDAIMock.new(this.DAIMock.address, someone, {from: creator});
+    this.WhitePaperMock = await WhitePaperMock.new({from: creator});
+    this.cDAIMock = await cDAIMock.new(this.DAIMock.address, creator, this.WhitePaperMock.address, {from: creator});
+    this.iDAIMock = await iDAIMock.new(this.DAIMock.address, creator, {from: creator});
 
     this.cDAIWrapper = await IdleCompound.new(
       this.cDAIMock.address,
