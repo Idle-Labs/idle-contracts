@@ -62,11 +62,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
       BNify(10**23) //  x, _amount
     ];
     const res = await this.iDAIWrapper.nextSupplyRateWithParams.call(val, { from: nonOwner });
-    console.log(res.toString());
-    // const expectedRes = val[0].mul(val[2].mul(10**18).div(val[2].add(val[5]))).mul(val[1].mul(10**18).div(val[2].add(val[5]))).mul(val[3]).div(val[4].mul(10**36));
-    // console.log(expectedRes.toString());
     const expectedRes2 = val[0].mul(val[1]).mul(val[3]).mul(val[2]).div(val[4].mul(val[2].add(val[5]).mul(val[2].add(val[5]))));
-    console.log(expectedRes2.toString());
     res.should.not.be.bignumber.equal(BNify(0));
     res.should.be.bignumber.equal(expectedRes2);
   });

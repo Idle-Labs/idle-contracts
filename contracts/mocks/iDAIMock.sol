@@ -14,6 +14,10 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
   uint256 public price;
   uint256 public spreadMultiplier;
 
+  uint256 public _avgBorrowRate;
+  uint256 public _totalAssetBorrow;
+  uint256 public _totalAssetSupply;
+
   constructor(address _dai, address _someone)
     ERC20()
     ERC20Detailed('iDAI', 'iDAI', 18) public {
@@ -40,6 +44,12 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
   function claimLoanToken() external returns (uint256)  {
     require(this.transfer(msg.sender, toTransfer), "Error during transfer"); // 1 DAI
     return toTransfer;
+  }
+  function setParams(uint256[] memory params) public {
+    _avgBorrowRate = params[0];
+    _totalAssetBorrow = params[1];
+    _totalAssetSupply = params[2];
+    spreadMultiplier = params[3];
   }
   function tokenPrice() external view returns (uint256)  {
     return price;
@@ -76,17 +86,23 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
   function avgBorrowInterestRate()
     external
     view
-    returns (uint256) {}
+    returns (uint256) {
+    return _avgBorrowRate;
+  }
 
   function totalAssetBorrow()
     external
     view
-    returns (uint256) {}
+    returns (uint256) {
+      return _totalAssetBorrow;
+  }
 
   function totalAssetSupply()
     external
     view
-    returns (uint256) {}
+    returns (uint256) {
+    return _totalAssetSupply;
+  }
 
   function nextSupplyInterestRate(uint256)
     external

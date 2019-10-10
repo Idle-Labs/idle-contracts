@@ -74,44 +74,27 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
    * on calculations.
    *
    * @param params : array with all params needed for calculation (see below)
-   * @return nextRate : yearly net rate
+   * @return : yearly net rate
    */
   function nextSupplyRateWithParams(uint256[] calldata params)
     external pure
-    returns (uint256 nextRate) {
-      uint256 a1 = params[0]; // avgBorrowInterestRate;
-      uint256 b1 = params[1]; // totalAssetBorrow;
-      uint256 s1 = params[2]; // totalAssetSupply;
-      uint256 o1 = params[3]; // spreadMultiplier;
-      uint256 k1 = params[4]; // 10 ** 20;
-      uint256 x1 = params[5]; // _amount;
+    returns (uint256) {
+      /*
+        uint256 a1 = params[0]; // avgBorrowInterestRate;
+        uint256 b1 = params[1]; // totalAssetBorrow;
+        uint256 s1 = params[2]; // totalAssetSupply;
+        uint256 o1 = params[3]; // spreadMultiplier;
+        uint256 k1 = params[4]; // 10 ** 20;
+        uint256 x1 = params[5]; // _amount;
+      */
 
-      /* q = a * (s / (s + x)) * (b / (s + x)) * o / k */
-      /* nextRate = a1.mul(s1.div(s1.add(x1)))
-        .mul(b1.div(s1.add(x1)))
-        .mul(o1).div(k1); // counting fee (spreadMultiplier) */
-      /* nextRate = a1.mul(s1.div(s1.add(x1)))
-        .mul(b1.div(s1.add(x1)))
-        .mul(o1).div(k1); // counting fee (spreadMultiplier) */
-
-      /* z = multiplier = 1e18 */
-
-      // max_a = 1e20
-      // max_b = 1e30
-      // max_s = 1e30
-      // max_o = 1e20
-      // max_k = 1e20
-      // max_x = 1e30
-
-      /* q = a * (s / (s + x)) * (b / (s + x)) * o / k */
-
-      /* nextRate = a1.mul(s1.mul(10**18).div(s1.add(x1)))
-        .mul(b1.div(s1.mul(10**18).add(x1)))
-        .mul(o1).div(k1); // counting fee (spreadMultiplier) */
-
-      /* rewritten */
-      /* q = (a b o s)/(k (s + x)^2) */
-      nextRate = a1.mul(b1).mul(o1).mul(s1).div(k1.mul(s1.add(x1).mul(s1.add(x1)))); // counting fee (spreadMultiplier)
+      // The initial formula is the following
+      // q = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x)1) * o1 / k1
+      // We rewrote it in this way to avoid intermediate overflows
+      // q = (a1 * s1 / (s1 + x1) * b1) / (s1 + x1) * o1 / k1
+      return params[0].mul(params[2]).div(params[2].add(params[5]))
+        .mul(params[1]).div(params[2].add(params[5]))
+        .mul(params[3]).div(params[4]); // counting fee (spreadMultiplier)
   }
 
   /**

@@ -81,4 +81,53 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     await expectRevert.unspecified(this.IdleRebalancer.setITokenWrapper(val, { from: nonOwner }));
   });
+  it('allows onlyOwner to setMaxIterations', async function () {
+    const val = BNify('50');
+    await this.IdleRebalancer.setMaxIterations(val, { from: creator });
+    (await this.IdleRebalancer.maxIterations()).should.be.bignumber.equal(val);
+
+    await expectRevert.unspecified(this.IdleRebalancer.setMaxIterations(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setMaxRateDifference', async function () {
+    const val = BNify('50');
+    await this.IdleRebalancer.setMaxRateDifference(val, { from: creator });
+    (await this.IdleRebalancer.maxRateDifference()).should.be.bignumber.equal(val);
+
+    await expectRevert.unspecified(this.IdleRebalancer.setMaxRateDifference(val, { from: nonOwner }));
+  });
+
+  it('calcRebalanceAmounts', async function () {
+    const newDAIAmount = BNify('100000000').mul(this.one); // 100.000.000 DAI
+
+    // set Params for cDAIMock
+    const val = [];
+    val[0] = BNify('1000000000000000000'), // 10 ** 18;
+    val[1] = BNify('50000000000000000'), // white.baseRate();
+    val[2] = BNify('23226177266611090600484812'), // cToken.totalBorrows();
+    val[3] = BNify('120000000000000000'), // white.multiplier();
+    val[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
+    val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
+    val[6] = BNify('12471299241106729195006665'), // cToken.getCash();
+    val[7] = BNify('2102400'), // cToken.blocksInAYear();
+    val[8] = BNify('100'), // 100;
+
+    // set mock data in cDAIMock
+    await this.cDAIMock.setParams(val);
+
+    // set Params for iDAIMock
+    const valFulcrum = [];
+    valFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    valFulcrum[1] = BNify('126330399262842122707083'), // totalAssetBorrow;
+    valFulcrum[2] = BNify('838941079486105304319308'), // totalAssetSupply();
+    valFulcrum[3] = BNify('90000000000000000000'), // spreadMultiplier();
+
+    // set mock data in cDAIMock
+    await this.iDAIMock.setParams(valFulcrum);
+    const res = await this.IdleRebalancer.calcRebalanceAmounts(newDAIAmount, { from: creator });
+
+    res.tokenAddresses[0].should.be.equal(this.cDAIMock.address);
+    res.tokenAddresses[1].should.be.equal(this.iDAIMock.address);
+    res.amounts[0].should.be.bignumber.equal(BNify('99697793203834249560105414')); // 99704548 DAI compound
+    res.amounts[1].should.be.bignumber.equal(BNify('302206796165750439894586')); // 295451 DAI fulcrum
+  });
 });
