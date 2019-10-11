@@ -46,6 +46,16 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
 
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
+   *
+   * @param _name : IdleToken name
+   * @param _symbol : IdleToken symbol
+   * @param _decimals : IdleToken decimals
+   * @param _token : underlying token address
+   * @param _cToken : cToken address
+   * @param _iToken : iToken address
+   * @param _rebalancer : Idle Rebalancer address
+   * @param _idleCompound : Idle Compound address
+   * @param _idleFulcrum : Idle Fulcrum address
    */
   constructor(
     string memory _name, // eg. IdleDAI

@@ -1,3 +1,8 @@
+/**
+ * @title: Idle Factory contract
+ * @summary: Used for deploying and keeping track of IdleTokens instances
+ * @author: William Bergamo, idle.finance
+ */
 pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
@@ -6,8 +11,26 @@ import "./IdleToken.sol";
 contract IdleFactory is Ownable {
   // tokenAddr (eg. DAI add) => idleTokenAddr (eg. idleDAI)
   mapping (address => address) public underlyingToIdleTokenMap;
+  // array of underlying token addresses (eg. [DAIAddr, USDCAddr])
   address[] public tokensSupported;
 
+
+  /**
+   * Used to deploy new instances of IdleTokens, only callable by owner
+   * Ownership of IdleToken is then transferred to msg.sender. Same for Pauser role
+   *
+   * @param _name : IdleToken name
+   * @param _symbol : IdleToken symbol
+   * @param _decimals : IdleToken decimals
+   * @param _token : underlying token address
+   * @param _cToken : cToken address
+   * @param _iToken : iToken address
+   * @param _rebalancer : Idle Rebalancer address
+   * @param _idleCompound : Idle Compound address
+   * @param _idleFulcrum : Idle Fulcrum address
+   *
+   * @return : newly deployed IdleToken address
+   */
   function newIdleToken(
     string calldata _name, // eg. IdleDAI
     string calldata _symbol, // eg. IDLEDAI
@@ -42,6 +65,9 @@ contract IdleFactory is Ownable {
     return address(idleToken);
   }
 
+  /**
+  * @return : array of supported underlying tokens
+  */
   function supportedTokens() external view returns(address[] memory) {
     return tokensSupported;
   }
