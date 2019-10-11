@@ -2,6 +2,7 @@ var IdleToken = artifacts.require("./IdleToken.sol");
 var IdleRebalancer = artifacts.require("./IdleRebalancer.sol");
 var IdleCompound = artifacts.require("./IdleCompound.sol");
 var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
+var IdleFactory = artifacts.require("./IdleFactory.sol");
 
 const cDAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
@@ -33,7 +34,8 @@ module.exports = async function(deployer, network, accounts) {
     cDAI[network], iDAI[network],
     IdleCompound.address, IdleFulcrum.address
   );
-  await deployer.deploy(IdleToken,
+  const Factory = await deployer.deploy(IdleFactory);
+  await Factory.newIdleToken(
     'IdleDAI',
     'IDLEDAI',
     18,

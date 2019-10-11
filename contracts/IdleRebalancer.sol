@@ -55,6 +55,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       cToken = _cToken;
   }
+
   /**
    * sets iToken address
    * @param _iToken : iToken address
@@ -63,6 +64,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       iToken = _iToken;
   }
+
   /**
    * sets cToken wrapper address
    * @param _cWrapper : cToken wrapper address
@@ -71,6 +73,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       cWrapper = _cWrapper;
   }
+
   /**
    * sets iToken wrapper address
    * @param _iWrapper : iToken wrapper address
@@ -79,6 +82,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       iWrapper = _iWrapper;
   }
+
   /**
    * sets maxIterations for bisection recursive calls
    * @param _maxIterations : max rate difference in percentage scaled by 10**18
@@ -87,6 +91,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       maxIterations = _maxIterations;
   }
+
   /**
    * sets maxRateDifference
    * @param _maxDifference : max rate difference in percentage scaled by 10**18
@@ -95,7 +100,7 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       maxRateDifference = _maxDifference;
   }
-
+  // end onlyOwner
 
   /**
    * Used by IdleToken contract to calculate the amount to be lended
@@ -149,7 +154,6 @@ contract IdleRebalancer is Ownable {
       n : (totC + totF) = x : totF
       x = n * totF / (totC + totF)
     */
-
 
     uint256 amountFulcrum = n.mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
       paramsFulcrum[2].add(paramsFulcrum[1]).add(paramsCompound[6].add(paramsCompound[2]).add(paramsCompound[2]))
@@ -215,7 +219,7 @@ contract IdleRebalancer is Ownable {
     if (
       ((currFulcRate.add(tolerance) >= currCompRate && isCompoundBest) ||
       (currCompRate.add(tolerance) >= currFulcRate && !isCompoundBest)) ||
-      currIter > maxIter
+      currIter >= maxIter
     ) {
       amounts = new uint256[](2);
       amounts[0] = amountCompound;

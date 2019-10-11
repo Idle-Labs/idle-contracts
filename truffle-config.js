@@ -11,9 +11,11 @@ module.exports = {
   compilers: {
     solc: {
       version: "0.5.11",
-      optimizer: {
-        enabled: true,
-        runs: 200 // 1 = less size on deploy, 200 or more = less size on calls
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200   // Optimize for how many times you intend to run the code
+        }
       }
     }
   },

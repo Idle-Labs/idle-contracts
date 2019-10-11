@@ -4,6 +4,7 @@ const IdleToken = artifacts.require('IdleToken');
 const IdleRebalancer = artifacts.require('IdleRebalancer');
 const IdleCompound = artifacts.require('IdleCompound');
 const IdleFulcrum = artifacts.require('IdleFulcrum');
+const IdleFactory = artifacts.require('IdleFactory');
 const WhitePaperMock = artifacts.require('WhitePaperMock');
 const cDAIMock = artifacts.require('cDAIMock');
 const iDAIMock = artifacts.require('iDAIMock');
@@ -40,19 +41,26 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       this.iDAIWrapper.address,
       { from: creator }
     );
-
-    this.token = await IdleToken.new(
+    this.Factory = await IdleFactory.new({ from: creator });
+    this.idleTokenAddr = await this.Factory.newIdleToken.call(
       'IdleDAI',
       'IDLEDAI',
       18,
-      this.DAIMock.address,
-      this.cDAIMock.address,
-      this.iDAIMock.address,
+      this.DAIMock.address, this.cDAIMock.address, this.iDAIMock.address,
       this.IdleRebalancer.address,
-      this.cDAIWrapper.address,
-      this.iDAIWrapper.address,
+      this.cDAIWrapper.address, this.iDAIWrapper.address,
       { from: creator }
     );
+    const res = await this.Factory.newIdleToken(
+      'IdleDAI',
+      'IDLEDAI',
+      18,
+      this.DAIMock.address, this.cDAIMock.address, this.iDAIMock.address,
+      this.IdleRebalancer.address,
+      this.cDAIWrapper.address, this.iDAIWrapper.address,
+      { from: creator }
+    );
+    this.token = await IdleToken.at(this.idleTokenAddr);
   });
 
   it('constructor set a name', async function () {

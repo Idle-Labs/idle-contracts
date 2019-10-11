@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/lifecycle/Pausable.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -14,7 +15,7 @@ import "./interfaces/ILendingProtocol.sol";
 
 import "./IdleRebalancer.sol";
 
-contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
+contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -128,11 +129,15 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
   }
 
   // external
+  // TODO add event here? a mint event is already raised from erc20 mint
+  // maybe for rebalance?
+  // We should save the amount one has deposited to calc interests
+
   /**
    * @dev User should 'approve' _amount of tokens before calling mintIdleToken
    */
   function mintIdleToken(uint256 _amount)
-    external nonReentrant
+    external nonReentrant whenNotPaused
     returns (uint256 mintedTokens) {
       require(_amount > 0, "Amount is not > 0");
 
@@ -186,7 +191,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
    * Everyone should be incentivized in calling this method
    */
   function claimITokens()
-    external
+    external whenNotPaused
     returns (uint256 claimedTokens) {
       claimedTokens = iERC20Fulcrum(iToken).claimLoanToken();
       rebalance(claimedTokens);
@@ -202,7 +207,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable {
    */
 
   function rebalance(uint256 _newAmount)
-    public
+    public whenNotPaused
     returns (bool) {
       if (!_rebalanceCheck(_newAmount)) {
         if (_newAmount > 0) {
