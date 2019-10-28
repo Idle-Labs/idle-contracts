@@ -111,6 +111,11 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   function tokenPrice()
     public view
     returns (uint256 price) {
+      uint256 totalSupply = this.totalSupply();
+      if (totalSupply == 0) {
+        return 10**18;
+      }
+
       uint256 currPrice;
       uint256 currNav;
       uint256 totNav;
@@ -121,7 +126,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
         totNav = totNav.add(currNav);
       }
 
-      price = totNav.div(this.totalSupply()); // idleToken price in token wei
+      price = totNav.div(totalSupply); // idleToken price in token wei
   }
 
   /**
@@ -131,6 +136,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
     public view
     returns (address[] memory addresses, uint256[] memory aprs) {
       address currToken;
+      addresses = new address[](allAvailableTokens.length);
+      aprs = new uint256[](allAvailableTokens.length);
       for (uint8 i = 0; i < allAvailableTokens.length; i++) {
         currToken = allAvailableTokens[i];
         addresses[i] = currToken;
@@ -149,21 +156,10 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   function mintIdleToken(uint256 _amount)
     external nonReentrant whenNotPaused
     returns (uint256 mintedTokens) {
-      require(_amount > 0, "Amount is not > 0");
-
       // Get current IdleToken price
-      uint256 idlePrice = 10**18;
-      uint256 totalSupply = this.totalSupply();
-
-      if (totalSupply != 0) {
-        idlePrice = tokenPrice();
-      }
-
-      // get a handle for the underlying asset contract
-      IERC20 underlying = IERC20(token);
-      // transfer to this contract
-      underlying.safeTransferFrom(msg.sender, address(this), _amount);
-
+      uint256 idlePrice = tokenPrice();
+      // transfer tokens to this contract
+      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
       // Rebalance the current pool if needed and mint new supplyied amount
       rebalance(_amount);
 
@@ -208,7 +204,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
-   * @dev Dynamicall allocate all the pool across different lending protocols
+   * @dev Dynamic allocate all the pool across different lending protocols
    * if needed
    * Everyone should be incentivized in calling this method
    *
@@ -241,7 +237,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
 
       // calcAmounts
       uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-      // tokenBalance here has already _newAmount
+      // tokenBalance here has already _newAmount counted
       (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance);
 
       // remove all elements from `currentTokensUsed`
@@ -257,7 +253,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
         }
         currAddr = tokenAddresses[i];
         _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
-        // update current tokens used in storage
+        // update current tokens used in IdleToken storage
         currentTokensUsed.push(currAddr);
       }
 
@@ -289,8 +285,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       uint256 secondBestRate;
       uint256 currApr;
 
-      // maybe it's better to have aprs and addresses sorted?
-      for (uint8 i = 1; i < aprs.length; i++) {
+      for (uint8 i = 0; i < aprs.length; i++) {
         currApr = aprs[i];
         if (currTokenUsed == addresses[i]) {
           currTokenApr = currApr;
@@ -330,6 +325,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   function _getCurrentProtocols()
     internal view
     returns (TokenProtocol[] memory currentProtocolsUsed) {
+      currentProtocolsUsed = new TokenProtocol[](currentTokensUsed.length);
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
         currentProtocolsUsed[i] = TokenProtocol(
           currentTokensUsed[i],

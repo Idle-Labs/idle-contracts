@@ -56,6 +56,9 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
   function exchangeRateStored() external view returns (uint256) {
     return _exchangeRate;
   }
+  function _setExchangeRateStored(uint256 _rate) external returns (uint256) {
+    _exchangeRate = _rate;
+  }
   function supplyRatePerBlock() external view returns (uint256) {
     return _supplyRate;
   }
