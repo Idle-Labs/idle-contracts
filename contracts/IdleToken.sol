@@ -178,13 +178,16 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
 
       address currentToken;
       uint256 protocolPoolBalance;
-      uint256 toRedeem;
 
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
         currentToken = currentTokensUsed[i];
         protocolPoolBalance = IERC20(currentToken).balanceOf(address(this));
-        toRedeem = _amount.mul(protocolPoolBalance).div(idleSupply);
-        _redeemProtocolTokens(protocolWrappers[currentToken], currentToken, _amount, msg.sender);
+        _redeemProtocolTokens(
+          protocolWrappers[currentToken],
+          currentToken,
+          _amount.mul(protocolPoolBalance).div(idleSupply), // amount to redeem
+          msg.sender
+        );
       }
 
       _burn(msg.sender, _amount);
@@ -231,7 +234,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
           tokenProtocols[i].protocolAddr,
           tokenProtocols[i].tokenAddr,
           IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)),
-          address(this) // token are now in this contract
+          address(this) // tokens are now in this contract
         );
       }
 
@@ -346,11 +349,14 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   // _wrapperAddr is the protocolWrappers address
   function _mintProtocolTokens(address _wrapperAddr, uint256 _amount)
     internal
-    returns (uint256 cTokens) {
+    returns (uint256 tokens) {
+      if (_amount == 0) {
+        return tokens;
+      }
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       // Transfer _amount underlying token (eg. DAI) to _wrapperAddr
       IERC20(token).safeTransfer(_wrapperAddr, _amount);
-      cTokens = _wrapper.mint();
+      tokens = _wrapper.mint();
   }
   // _wrapperAddr is the protocolWrappers address
   // _amount of _token to redeem
@@ -359,6 +365,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   function _redeemProtocolTokens(address _wrapperAddr, address _token, uint256 _amount, address _account)
     internal
     returns (uint256 tokens) {
+      if (_amount == 0) {
+        return tokens;
+      }
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       // Transfer _amount of _protocolToken (eg. cDAI) to _wrapperAddr
       IERC20(_token).safeTransfer(_wrapperAddr, _amount);

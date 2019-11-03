@@ -63,8 +63,8 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
   function setPriceForTest(uint256 _price) external {
     price = _price;
   }
-  function setSpreadMultiplierForTest(uint256 _price) external {
-    price = _price;
+  function setSpreadMultiplierForTest(uint256 _spreadMultiplier) external {
+    spreadMultiplier = _spreadMultiplier;
   }
   function setToTransfer(uint256 _toTransfer) external {
     toTransfer = _toTransfer;
