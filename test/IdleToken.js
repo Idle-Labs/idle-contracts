@@ -627,23 +627,94 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
     res.should.be.equal(true);
   });
-  // it('_rebalanceCheck when one protocol is used', async function () {
-  //   // If there is more than one protocol used then returns true
-  //   await this.IdleRebalancer._setCalcAmounts(
-  //     [this.cDAIMock.address, this.iDAIMock.address],
-  //     [BNify('10').mul(this.one), BNify('0').mul(this.one)]
-  //   );
-  //   // Approve and Mint 10 DAI for nonOwner all on Compound
-  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-  //
-  //   // TODO
-  //   //   // Prepare fake data for rebalanceCheck
-  //   //   await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
-  //   //   await this.iDAIWrapper._setAPR(BNify('1100000000000000000')); // 1.1%
-  //   //   await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
-  //   //   // everything will go to Compound because next supply rate of compound is > of current Fulcrum rate
-  //
-  //   // const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
-  //   // res.should.be.equal(true);
-  // });
+  it('_rebalanceCheck when one protocol is used and curr protocol has not the best rate', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+    await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
+  });
+  it('_rebalanceCheck when one protocol is used and curr protocol has the best rate (even with _newAmount)', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('1900000000000000000')); // 1.9%
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(false);
+    await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
+  });
+  it('_rebalanceCheck when one protocol is used and curr protocol has the best rate (no _newAmount)', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    // await this.cDAIWrapper._setNextSupplyRate(BNify('1900000000000000000')); // 1.9%
+
+    const res = await this.token._rebalanceCheck.call(BNify('0').mul(this.one), { from: creator });
+    res.should.be.equal(false);
+    await this.token._rebalanceCheck(BNify('0').mul(this.one), { from: creator });
+  });
+  it('_rebalanceCheck when one protocol is used and curr protocol has not the best rate when _newAmount is supplied', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('900000000000000000')); // 0.9%
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+    await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
+  });
+  it('_rebalanceCheck when one protocol is used and curr protocol has not the best rate', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+    await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
+  });
+
+  // internal methods have been "indirectly" tested through tests of public methods
 });
