@@ -513,4 +513,137 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     const resBalanceDAI3 = await this.DAIMock.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceDAI3.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45
   });
+  it('claimITokens and rebalances', async function () {
+    await this.iDAIMock.setToTransfer(BNify('2').mul(this.one), {from: creator});
+    await this.DAIMock.transfer(this.iDAIMock.address, BNify('2').mul(this.one), { from: creator });
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('0'), BNify('0')]
+    );
+
+    const res = await this.token.claimITokens.call({from: creator});
+    res.should.be.bignumber.equal(BNify('2').mul(this.one));
+
+    await this.token.claimITokens({from: creator});
+  });
+  it('rebalances when _newAmount == 0 and no currentTokensUsed', async function () {
+    // Initially when no one has minted `currentTokensUsed` is empty
+    // so _rebalanceCheck would return true
+
+    const res = await this.token.rebalance.call(BNify('0').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+    await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
+  });
+  it('rebalances when _newAmount > 0 and only one protocol is used', async function () {
+    // Initially when no one has minted `currentTokensUsed` is empty
+    // so _rebalanceCheck would return true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+
+    // Approve and Mint 10 DAI for nonOwner, everything on Compound
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('1100000000000000000')); // 1.1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+    // everything will go to Compound because next supply rate of compound is > of current Fulcrum rate
+    // so _rebalanceCheck would return true
+
+    await this.DAIMock.transfer(this.token.address, BNify('10').mul(this.one), { from: creator });
+
+    const res = await this.token.rebalance.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(false);
+    // it should mint 10 / 0.02 = 500cDAI
+    // plus 500 cDAI from before
+    await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
+
+    const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance.should.be.bignumber.equal(BNify('1000').mul(this.oneCToken));
+
+    const resFirstToken = await this.token.currentTokensUsed.call(0);
+    resFirstToken.should.be.equal(this.cDAIMock.address);
+
+    // there is only one token (invalid opcode)
+    await expectRevert.assertion(this.token.currentTokensUsed(1));
+  });
+  it('rebalances and multiple protocols are used', async function () {
+    // update prices
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.025
+    await this.cDAIMock._setExchangeRateStored(BNify('200000000000000000000000000')); // 0.025 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1250000000000000000')); // 1.25 DAI
+    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25 DAI
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('2').mul(this.one), BNify('8').mul(this.one)]
+    );
+
+    const res = await this.token.rebalance.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+    await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
+
+    // IdleToken should have 2 / 0.02 = 100cDAI
+    const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance.should.be.bignumber.equal(BNify('100').mul(this.oneCToken));
+    // IdleToken should have 8 / 1.25 = 6.4 iDAI
+    const resBalanceIDAI = await this.iDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalanceIDAI.should.be.bignumber.equal(BNify('6400000000000000000'));
+
+    const resFirstToken = await this.token.currentTokensUsed.call(0);
+    resFirstToken.should.be.equal(this.cDAIMock.address);
+    const resSecondToken = await this.token.currentTokensUsed.call(1);
+    resSecondToken.should.be.equal(this.iDAIMock.address);
+
+    // there is only 2 tokens (invalid opcode)
+    await expectRevert.assertion(this.token.currentTokensUsed(2));
+  });
+  it('_rebalanceCheck when no protocol is used', async function () {
+    // Initially when no one has minted `currentTokensUsed` is empty
+    // so _rebalanceCheck would return true
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+  });
+  it('_rebalanceCheck when no protocol is used', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(true);
+  });
+  // it('_rebalanceCheck when one protocol is used', async function () {
+  //   // If there is more than one protocol used then returns true
+  //   await this.IdleRebalancer._setCalcAmounts(
+  //     [this.cDAIMock.address, this.iDAIMock.address],
+  //     [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+  //   );
+  //   // Approve and Mint 10 DAI for nonOwner all on Compound
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //
+  //   // TODO
+  //   //   // Prepare fake data for rebalanceCheck
+  //   //   await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+  //   //   await this.iDAIWrapper._setAPR(BNify('1100000000000000000')); // 1.1%
+  //   //   await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+  //   //   // everything will go to Compound because next supply rate of compound is > of current Fulcrum rate
+  //
+  //   // const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+  //   // res.should.be.equal(true);
+  // });
 });

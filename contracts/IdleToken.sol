@@ -219,6 +219,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
     public whenNotPaused
     returns (bool) {
       if (!_rebalanceCheck(_newAmount)) {
+        // only one protocol is currently used
         if (_newAmount > 0) {
           _mintProtocolTokens(protocolWrappers[currentTokensUsed[0]], _newAmount);
         }
