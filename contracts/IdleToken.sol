@@ -1,3 +1,10 @@
+/**
+ * @title: Idle Token main contract
+ * @summary: ERC20 that holds pooled user funds together
+ *           Each token rapresent a share of the underlying pools
+ *           and with each token user have the right to redeem a portion of these pools
+ * @author: William Bergamo, idle.finance
+ */
 pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -79,18 +86,39 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   // onlyOwner
+  /**
+   * It allows owner to set the underlying token address
+   *
+   * @param _token : underlying token address tracked by this contract (eg DAI address)
+   */
   function setToken(address _token)
     external onlyOwner {
       token = _token;
   }
+  /**
+   * It allows owner to set the iToken (Fulcrum) address
+   *
+   * @param _iToken : iToken address
+   */
   function setIToken(address _iToken)
     external onlyOwner {
       iToken = _iToken;
   }
+  /**
+   * It allows owner to set the IdleRebalancer address
+   *
+   * @param _rebalancer : current IdleRebalancer address
+   */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
       rebalancer = _rebalancer;
   }
+  /**
+   * It allows owner to set a protocol wrapper address
+   *
+   * @param _token : underlying token address (eg. DAI)
+   * @param _wrapper : Idle protocol wrapper address
+   */
   function setProtocolWrapper(address _token, address _wrapper)
     external onlyOwner {
       // update allAvailableTokens if needed
@@ -99,6 +127,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       }
       protocolWrappers[_token] = _wrapper;
   }
+
+  // TODO remove this?
   function setMinRateDifference(uint256 _rate)
     external onlyOwner {
       minRateDifference = _rate;
@@ -106,7 +136,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
 
   // view
   /**
-   * @dev IdleToken price calculation
+   * IdleToken price calculation, in underlying
+   *
+   * @return : price in underlying token
    */
   function tokenPrice()
     public view
@@ -130,7 +162,10 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
-   * @dev call getAPR of every ILendingProtocol
+   * Get APR of every ILendingProtocol
+   *
+   * @return addresses: array of token addresses
+   * @return aprs: array of aprs (ordered in respect to the `addresses` array)
    */
   function getAPRs()
     public view
@@ -146,12 +181,16 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   // external
-  // TODO add event here? a mint event is already raised from erc20 mint
-  // maybe for rebalance?
   // We should save the amount one has deposited to calc interests
 
   /**
-   * @dev User should 'approve' _amount of tokens before calling mintIdleToken
+   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * This method triggers a rebalance of the pools if needed
+   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
+   * NOTE 2: this method can be paused
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @return mintedTokens : amount of IdleTokens minted
    */
   function mintIdleToken(uint256 _amount)
     external nonReentrant whenNotPaused
@@ -168,11 +207,16 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
-   * @dev here we calc the pool share of the cTokens | iTokens one can withdraw
+   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+   * This method triggers a rebalance of the pools if needed
+   * NOTE: if the contract is paused no rebalance happens
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   * @return redeemedTokens : amount of underlying tokens redeemed
    */
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
-    returns (uint256) {
+    returns (uint256 redeemedTokens) {
       uint256 idleSupply = this.totalSupply();
       require(idleSupply > 0, "No IDLEDAI have been issued");
 
@@ -182,22 +226,31 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
         currentToken = currentTokensUsed[i];
         protocolPoolBalance = IERC20(currentToken).balanceOf(address(this));
-        _redeemProtocolTokens(
+        redeemedTokens = redeemedTokens.add(_redeemProtocolTokens(
           protocolWrappers[currentToken],
           currentToken,
           _amount.mul(protocolPoolBalance).div(idleSupply), // amount to redeem
           msg.sender
-        );
+        ));
       }
 
       _burn(msg.sender, _amount);
+
+      // Do not rebalance if contract is paused
+      if (this.paused()) {
+        return redeemedTokens;
+      }
+
       rebalance(0);
   }
 
   /**
-   * @dev here we are redeeming unclaimed token from iToken contract to this contracts
+   * Here we are redeeming unclaimed token from iToken contract to this contracts
    * then allocating claimedTokens with rebalancing
    * Everyone should be incentivized in calling this method
+   * NOTE: this method can be paused
+   *
+   * @return claimedTokens : amount of underlying tokens claimed
    */
   function claimITokens()
     external whenNotPaused
@@ -207,12 +260,15 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
-   * @dev Dynamic allocate all the pool across different lending protocols
-   * if needed
+   * Dynamic allocate all the pool across different lending protocols if needed
    * Everyone should be incentivized in calling this method
    *
    * If _newAmount == 0 then simple rebalance
    * else rebalance (if needed) and mint (always)
+   * NOTE: this method can be paused
+   *
+   * @param _newAmount : amount of underlying tokens that needs to be minted with this rebalance
+   * @return : whether has rebalanced or not
    */
 
   function rebalance(uint256 _newAmount)
@@ -264,13 +320,20 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       return true; // hasRebalanced
   }
 
-  // if there is only one protocol and has the best rate then check the nextRateWithAmount()
-  // if rate is still the highest then put everything there
-  // otherwise rebalance with all amount
+  /**
+   * Check if a rebalance is needed
+   * if there is only one protocol and has the best rate then check the nextRateWithAmount()
+   * if rate is still the highest then put everything there
+   * otherwise rebalance with all amount
+   *
+   * @param _newAmount : amount of underlying tokens that needs to be added to the current pools NAV
+   * @return : whether should rebalanced or not
+   */
+
   function _rebalanceCheck(uint256 _newAmount)
     public view
     returns (bool) {
-      // if we are invested in more than a single protocol or there are no protocols used (ie afer deploy) then rebalance
+      // if we are invested in more than a single protocol or there are no protocols used (ie after first deploy) then rebalance
       if (currentTokensUsed.length > 1 || currentTokensUsed.length == 0) {
         return true;
       }
@@ -319,13 +382,24 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   }
 
   // internal
+  /**
+   * Calls IdleRebalancer `calcRebalanceAmounts` method
+   *
+   * @param _amount : amount of underlying tokens that needs to be allocated on lending protocols
+   * @return tokenAddresses : array with all token addresses used,
+   * @return amounts : array with all amounts for each protocol in order,
+   */
   function _calcAmounts(uint256 _amount)
     internal view
     returns (address[] memory, uint256[] memory) {
       return IdleRebalancer(rebalancer).calcRebalanceAmounts(_amount);
   }
 
-  // Get addresses of current protocols used by iterating through currentTokensUsed
+  /**
+   * Get addresses of current tokens and protocol wrappers used
+   *
+   * @return currentProtocolsUsed : array of `TokenProtocol` (currentToken address, protocolWrapper address)
+   */
   function _getCurrentProtocols()
     internal view
     returns (TokenProtocol[] memory currentProtocolsUsed) {
@@ -338,16 +412,28 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       }
   }
 
-  // ### ILendingProtocols calls
-
-  // _wrapperAddr is the protocolWrappers address
+  // ILendingProtocols calls
+  /**
+   * Get next rate of a lending protocol given an amount to be lended
+   *
+   * @param _wrapperAddr : address of protocol wrapper
+   * @param _amount : amount of underlying to be lended
+   * @return apr : new apr one will get after lending `_amount`
+   */
   function _getProtocolNextRate(address _wrapperAddr, uint256 _amount)
     internal view
     returns (uint256 apr) {
       ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       apr = _wrapper.nextSupplyRate(_amount);
   }
-  // _wrapperAddr is the protocolWrappers address
+
+  /**
+   * Mint protocol tokens through protocol wrapper
+   *
+   * @param _wrapperAddr : address of protocol wrapper
+   * @param _amount : amount of underlying to be lended
+   * @return tokens : new tokens minted
+   */
   function _mintProtocolTokens(address _wrapperAddr, uint256 _amount)
     internal
     returns (uint256 tokens) {
@@ -359,10 +445,16 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       IERC20(token).safeTransfer(_wrapperAddr, _amount);
       tokens = _wrapper.mint();
   }
-  // _wrapperAddr is the protocolWrappers address
-  // _amount of _token to redeem
-  // _token to redeem
-  // _account should be msg.sender when rebalancing and final user when redeeming
+
+  /**
+   * Redeem underlying tokens through protocol wrapper
+   *
+   * @param _wrapperAddr : address of protocol wrapper
+   * @param _amount : amount of `_token` to redeem
+   * @param _token : protocol token address
+   * @param _account : should be msg.sender when rebalancing and final user when redeeming
+   * @return tokens : new tokens minted
+   */
   function _redeemProtocolTokens(address _wrapperAddr, address _token, uint256 _amount, address _account)
     internal
     returns (uint256 tokens) {
