@@ -32,6 +32,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^2.3.0",
     "dotenv": "^6.2.0",
+    "solidity-coverage": "^0.6.7",
     "truffle-hdwallet-provider": "^1.0.3",
     "truffle-security": "^1.5.5"
   },

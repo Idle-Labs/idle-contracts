@@ -8,18 +8,21 @@ const cDAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
+  'coverage': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
 };
 
 const iDAI = {
   'live': '0x14094949152eddbfcd073717200da82fed8dc960',
   'live-fork': '0x14094949152eddbfcd073717200da82fed8dc960', // needed for truffle
   'test': '0x14094949152eddbfcd073717200da82fed8dc960',
+  'coverage': '0x14094949152eddbfcd073717200da82fed8dc960',
 };
 
 const DAI = {
   'live': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'live-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359', // needed for truffle
   'test': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
+  'coverage': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
 };
 
 module.exports = async function(deployer, network, accounts) {
