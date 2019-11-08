@@ -46,6 +46,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
 
+  event Rebalance(uint256 amount);
   struct TokenProtocol {
     address tokenAddr;
     address protocolAddr;
@@ -316,6 +317,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
         // update current tokens used in IdleToken storage
         currentTokensUsed.push(currAddr);
       }
+
+      emit Rebalance(tokenBalance);
 
       return true; // hasRebalanced
   }

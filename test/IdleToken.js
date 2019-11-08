@@ -1,4 +1,4 @@
-const { expectEvent, singletons, constants, BN, expectRevert } = require('openzeppelin-test-helpers');
+const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleToken = artifacts.require('IdleToken');
 const IdleRebalancerMock = artifacts.require('IdleRebalancerMock');
@@ -621,7 +621,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
 
     const res = await this.token.rebalance.call(BNify('0').mul(this.one), { from: creator });
     res.should.be.equal(true);
-    await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
+    const receipt = await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
   });
   it('rebalances when _newAmount > 0 and only one protocol is used', async function () {
     // Initially when no one has minted `currentTokensUsed` is empty
@@ -648,7 +648,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res.should.be.equal(false);
     // it should mint 10 / 0.02 = 500cDAI
     // plus 500 cDAI from before
-    await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
+    const receipt = await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
 
     const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
     resBalance.should.be.bignumber.equal(BNify('1000').mul(this.oneCToken));
