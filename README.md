@@ -24,14 +24,14 @@ Info for on-chain calculations of the rebalance process can be found in:
 - [info_rebalance.md](info_rebalance.md)
 
 ### Contracts:
-There are currently 4 contracts.
+There are currently 5 contracts.
 `IdleToken` contract is the main one, it's an ERC20, which contains all the data and all pooled funds.
 `IdleRebalancer` is used to calculate amounts for the rebalance process.
 There are also different `ILendingProtocol` wrappers (currently 2 one for Fulcrum `IdleFulcrum` and one for Compound `IdleCompound`) used to interact with lending providers.
 In `IdleToken` we (the owners) can set the implementation for `IdleRebalancer`, `IdleFulcrum`, `IdleCompound` (so they are "upgradable").
 
 In the future, more wrappers should be added and `IdleRebalancer` should be updated with new calculations.
-`IdleToken` contract should be used to create multiple tokens (IdleDAI, IdleUSDC, ...) so maybe a Factory/Registry should be used
+`IdleFactory` is used to create new `IdleToken` contracts (IdleDAI, IdleUSDC, ...) and as a registry of the deployed contracts.
 
 ### Interactions
 
