@@ -22,7 +22,6 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   address public token;
   // underlying token (eg DAI) address
   address public underlying;
-
   /**
    * @param _token : iToken address
    * @param _underlying : underlying token (eg DAI) address
@@ -149,6 +148,10 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   function redeem(address _account)
     external
     returns (uint256 tokens) {
-      tokens = iERC20Fulcrum(token).burn(_account, IERC20(token).balanceOf(address(this)));
+      uint256 balance = IERC20(token).balanceOf(address(this));
+      uint256 expectedAmount = balance.mul(iERC20Fulcrum(token).tokenPrice()).div(10**18);
+
+      tokens = iERC20Fulcrum(token).burn(_account, balance);
+      require(tokens >= expectedAmount, "Not enough liquidity on Fulcrum");
   }
 }

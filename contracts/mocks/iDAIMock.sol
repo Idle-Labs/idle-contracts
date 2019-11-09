@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/iERC20Fulcrum.sol";
 
 contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
+  bool public isUsingFakeBurn;
   address public dai;
   uint256 public exchangeRate;
   uint256 public toTransfer;
@@ -21,6 +22,7 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
   constructor(address _dai, address _someone)
     ERC20()
     ERC20Detailed('iDAI', 'iDAI', 18) public {
+    isUsingFakeBurn = false;
     dai = _dai;
     toTransfer = 10**18;
     supplyRate = 3000000000000000000; // 3%
@@ -36,6 +38,9 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     return (amount * 10**18)/price;
   }
   function burn(address receiver, uint256 amount) external returns (uint256) {
+    if (isUsingFakeBurn) {
+      return 1000000000000000000; // 10 DAI
+    }
     _burn(msg.sender, amount);
     require(IERC20(dai).transfer(receiver, amount * price / 10**18), "Error during transfer"); // 1 DAI
     return amount * price / 10**18;
@@ -50,6 +55,9 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     _totalAssetBorrow = params[1];
     _totalAssetSupply = params[2];
     spreadMultiplier = params[3];
+  }
+  function setFakeBurn() public {
+    isUsingFakeBurn = true;
   }
   function tokenPrice() external view returns (uint256)  {
     return price;

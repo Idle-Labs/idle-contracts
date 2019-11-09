@@ -1,4 +1,4 @@
-const { expectEvent, singletons, constants, BN, expectRevert } = require('openzeppelin-test-helpers');
+const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleFulcrum = artifacts.require('IdleFulcrum');
 const iDAIMock = artifacts.require('iDAIMock');
@@ -107,5 +107,19 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
     // do the effective tx
     await this.iDAIWrapper.redeem(nonOwner, { from: nonOwner });
     (await this.DAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('110').mul(this.one));
+  });
+  it('redeem reverts if not all amount is available', async function () {
+    // fund iDAIMock with only 10 DAI (not enough to redeem everything)
+    await this.DAIMock.transfer(this.iDAIMock.address, BNify('10').mul(this.one), {from: creator});
+    // deposit 100 iDAI in iDAIWrapper
+    await this.iDAIMock.transfer(this.iDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
+    // redeem in Fulcrum with 100 iDAI * 1.1 (price) = 110 DAI
+    // not all DAI are present
+    await this.iDAIMock.setFakeBurn({ from: nonOwner });
+
+    await expectRevert(
+      this.iDAIWrapper.redeem(nonOwner, { from: nonOwner }),
+      'Not enough liquidity on Fulcrum'
+    );
   });
 });
