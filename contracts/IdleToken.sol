@@ -21,6 +21,7 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 
 import "./IdleRebalancer.sol";
+import "./IdlePriceCalculator.sol";
 
 contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   using SafeERC20 for IERC20;
@@ -39,6 +40,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   uint256 public minRateDifference;
   // Idle rebalancer current implementation address
   address public rebalancer;
+  // Idle rebalancer current implementation address
+  address public priceCalculator;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -73,6 +76,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
     address _cToken,
     address _iToken,
     address _rebalancer,
+    address _priceCalculator,
     address _idleCompound,
     address _idleFulcrum)
     public
@@ -80,6 +84,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       token = _token;
       iToken = _iToken; // used for claimITokens and userClaimITokens methods
       rebalancer = _rebalancer;
+      priceCalculator = _priceCalculator;
       protocolWrappers[_cToken] = _idleCompound;
       protocolWrappers[_iToken] = _idleFulcrum;
       allAvailableTokens = [_cToken, _iToken];
@@ -108,11 +113,20 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   /**
    * It allows owner to set the IdleRebalancer address
    *
-   * @param _rebalancer : current IdleRebalancer address
+   * @param _rebalancer : new IdleRebalancer address
    */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
       rebalancer = _rebalancer;
+  }
+  /**
+   * It allows owner to set the IdlePriceCalculator address
+   *
+   * @param _priceCalculator : new IdlePriceCalculator address
+   */
+  function setPriceCalculator(address _priceCalculator)
+    external onlyOwner {
+      priceCalculator = _priceCalculator;
   }
   /**
    * It allows owner to set a protocol wrapper address
@@ -144,22 +158,13 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   function tokenPrice()
     public view
     returns (uint256 price) {
-      uint256 totalSupply = this.totalSupply();
-      if (totalSupply == 0) {
-        return 10**18;
-      }
-
-      uint256 currPrice;
-      uint256 currNav;
-      uint256 totNav;
+      address[] memory protocolWrappersAddresses = new address[](currentTokensUsed.length);
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currPrice = ILendingProtocol(protocolWrappers[currentTokensUsed[i]]).getPriceInToken();
-        // NAV = price * poolSupply
-        currNav = currPrice.mul(IERC20(currentTokensUsed[i]).balanceOf(address(this)));
-        totNav = totNav.add(currNav);
+        protocolWrappersAddresses[i] = protocolWrappers[currentTokensUsed[i]];
       }
-
-      price = totNav.div(totalSupply); // idleToken price in token wei
+      price = IdlePriceCalculator(priceCalculator).tokenPrice(
+        this.totalSupply(), address(this), currentTokensUsed, protocolWrappersAddresses
+      );
   }
 
   /**

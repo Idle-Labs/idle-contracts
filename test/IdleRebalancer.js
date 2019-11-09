@@ -1,4 +1,4 @@
-const { expectEvent, singletons, constants, BN, expectRevert } = require('openzeppelin-test-helpers');
+const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleRebalancer = artifacts.require('IdleRebalancer');
 const IdleCompound = artifacts.require('IdleCompound');

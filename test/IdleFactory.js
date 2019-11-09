@@ -1,7 +1,8 @@
-const { expectEvent, singletons, constants, BN, expectRevert } = require('openzeppelin-test-helpers');
+const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleToken = artifacts.require('IdleToken');
 const IdleRebalancer = artifacts.require('IdleRebalancer');
+const IdlePriceCalculator = artifacts.require('IdlePriceCalculator');
 const IdleCompound = artifacts.require('IdleCompound');
 const IdleFulcrum = artifacts.require('IdleFulcrum');
 const IdleFactory = artifacts.require('IdleFactory');
@@ -41,6 +42,7 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
       this.iDAIWrapper.address,
       { from: creator }
     );
+    this.IdlePriceCalculator = await IdlePriceCalculator.new({ from: creator });
     this.Factory = await IdleFactory.new({ from: creator });
     // Params for new IdleToken
     this.params = [
@@ -49,6 +51,7 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
       18,
       this.DAIMock.address, this.cDAIMock.address, this.iDAIMock.address,
       this.IdleRebalancer.address,
+      this.IdlePriceCalculator.address,
       this.cDAIWrapper.address, this.iDAIWrapper.address
     ];
 

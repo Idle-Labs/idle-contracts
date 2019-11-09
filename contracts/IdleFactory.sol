@@ -14,7 +14,6 @@ contract IdleFactory is Ownable {
   // array of underlying token addresses (eg. [DAIAddr, USDCAddr])
   address[] public tokensSupported;
 
-
   /**
    * Used to deploy new instances of IdleTokens, only callable by owner
    * Ownership of IdleToken is then transferred to msg.sender. Same for Pauser role
@@ -39,6 +38,7 @@ contract IdleFactory is Ownable {
     address _cToken,
     address _iToken,
     address _rebalancer,
+    address _priceCalculator,
     address _idleCompound,
     address _idleFulcrum
   ) external onlyOwner returns(address) {
@@ -50,6 +50,7 @@ contract IdleFactory is Ownable {
       _cToken,
       _iToken,
       _rebalancer,
+      _priceCalculator,
       _idleCompound,
       _idleFulcrum
     );

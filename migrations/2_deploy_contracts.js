@@ -1,5 +1,6 @@
 var IdleToken = artifacts.require("./IdleToken.sol");
 var IdleRebalancer = artifacts.require("./IdleRebalancer.sol");
+var IdlePriceCalculator = artifacts.require("./IdlePriceCalculator.sol");
 var IdleCompound = artifacts.require("./IdleCompound.sol");
 var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
 var IdleFactory = artifacts.require("./IdleFactory.sol");
@@ -37,6 +38,7 @@ module.exports = async function(deployer, network, accounts) {
     cDAI[network], iDAI[network],
     IdleCompound.address, IdleFulcrum.address
   );
+  const PriceCalculator = await deployer.deploy(IdlePriceCalculator);
   const Factory = await deployer.deploy(IdleFactory);
   await Factory.newIdleToken(
     'IdleDAI',
@@ -44,6 +46,7 @@ module.exports = async function(deployer, network, accounts) {
     18,
     DAI[network], cDAI[network], iDAI[network],
     IdleRebalancer.address,
+    PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address
   );
 };

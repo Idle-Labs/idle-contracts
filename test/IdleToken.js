@@ -1,6 +1,7 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleToken = artifacts.require('IdleToken');
+const IdlePriceCalculator = artifacts.require('IdlePriceCalculator');
 const IdleRebalancerMock = artifacts.require('IdleRebalancerMock');
 const IdleFactory = artifacts.require('IdleFactory');
 const WhitePaperMock = artifacts.require('WhitePaperMock');
@@ -46,6 +47,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       this.iDAIWrapper.address,
       { from: creator }
     );
+    this.PriceCalculator = await IdlePriceCalculator.new({ from: creator });
     this.Factory = await IdleFactory.new({ from: creator });
     this.idleTokenAddr = await this.Factory.newIdleToken.call(
       'IdleDAI',
@@ -53,6 +55,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       18,
       this.DAIMock.address, this.cDAIMock.address, this.iDAIMock.address,
       this.IdleRebalancer.address,
+      this.PriceCalculator.address,
       this.cDAIWrapper.address, this.iDAIWrapper.address,
       { from: creator }
     );
@@ -62,6 +65,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       18,
       this.DAIMock.address, this.cDAIMock.address, this.iDAIMock.address,
       this.IdleRebalancer.address,
+      this.PriceCalculator.address,
       this.cDAIWrapper.address, this.iDAIWrapper.address,
       { from: creator }
     );
@@ -93,6 +97,9 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('constructor set a rebalance address', async function () {
     (await this.token.rebalancer()).should.equal(this.IdleRebalancer.address);
+  });
+  it('constructor set a rebalance address', async function () {
+    (await this.token.priceCalculator()).should.equal(this.PriceCalculator.address);
   });
   it('constructor set a protocolWrapper for cToken', async function () {
     (await this.token.protocolWrappers(this.cDAIMock.address)).should.equal(this.cDAIWrapper.address);
@@ -127,6 +134,13 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     (await this.token.rebalancer()).should.be.equal(val);
 
     await expectRevert.unspecified(this.token.setRebalancer(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setPriceCalculator', async function () {
+    const val = this.someAddr;
+    await this.token.setPriceCalculator(val, { from: creator });
+    (await this.token.priceCalculator()).should.be.equal(val);
+
+    await expectRevert.unspecified(this.token.setPriceCalculator(val, { from: nonOwner }));
   });
   it('allows onlyOwner to setProtocolWrapper', async function () {
     const _token = this.someAddr;

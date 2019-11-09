@@ -1,4 +1,4 @@
-const { expectEvent, singletons, constants, BN, expectRevert } = require('openzeppelin-test-helpers');
+const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const IdleCompound = artifacts.require('IdleCompound');
 const WhitePaperMock = artifacts.require('WhitePaperMock');
