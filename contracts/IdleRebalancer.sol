@@ -207,7 +207,13 @@ contract IdleRebalancer is Ownable {
     paramsFulcrum[5] = amountFulcrum;
 
     // calculate next rates with amountCompound and amountFulcrum
-    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+
+    // For Fulcrum see https://github.com/bZxNetwork/bZx-monorepo/blob/development/packages/contracts/extensions/loanTokenization/contracts/LoanToken/LoanTokenLogicV3.sol#L1418
+    // fulcrumUtilRate = fulcrumBorrow.mul(10**20).div(assetSupply);
+    uint256 currFulcRate = (paramsFulcrum[1].mul(10**20).div(paramsFulcrum[2])) > 90 ether ?
+      ILendingProtocol(iWrapper).nextSupplyRate(amountFulcrum) :
+      ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+
     uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
 

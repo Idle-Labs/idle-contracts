@@ -115,7 +115,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
       apr = iToken.supplyInterestRate(); // APR in wei 18 decimals
       // remove Mandatory self-insurance of Fulcrum from iApr
       // apr * spreadMultiplier / (100 * 1e18)
-      apr = apr.mul(iToken.spreadMultiplier()).div(10 ** 20);
+      apr = apr.mul(iToken.spreadMultiplier()).div(10**20);
   }
 
   /**
