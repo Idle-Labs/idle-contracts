@@ -42,6 +42,11 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   address public rebalancer;
   // Idle rebalancer current implementation address
   address public priceCalculator;
+  // Last iToken price, used to pause contract in case of a black swan event
+  uint256 public lastITokenPrice;
+  // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
+  // return to the normal level
+  bool public manualPlay = false;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -49,11 +54,12 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
 
-  event Rebalance(uint256 amount);
   struct TokenProtocol {
     address tokenAddr;
     address protocolAddr;
   }
+
+  event Rebalance(uint256 amount);
 
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
@@ -89,6 +95,20 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       protocolWrappers[_iToken] = _idleFulcrum;
       allAvailableTokens = [_cToken, _iToken];
       minRateDifference = 100000000000000000; // 0.1% min
+  }
+
+  modifier whenITokenPriceHasNotDecreased() {
+    uint256 iTokenPrice = iERC20Fulcrum(iToken).tokenPrice();
+    require(
+      iTokenPrice >= lastITokenPrice || manualPlay,
+      "Paused: iToken price decreased"
+    );
+
+    _;
+
+    if (iTokenPrice > lastITokenPrice) {
+      lastITokenPrice = iTokenPrice;
+    }
   }
 
   // onlyOwner
@@ -148,6 +168,15 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
     external onlyOwner {
       minRateDifference = _rate;
   }
+  /**
+   * It allows owner to unpause the contract when iToken price decreased and didn't return to the expected level
+   *
+   * @param _manualPlay : new IdleRebalancer address
+   */
+  function setManualPlay(bool _manualPlay)
+    external onlyOwner {
+      manualPlay = _manualPlay;
+  }
 
   // view
   /**
@@ -199,7 +228,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * @return mintedTokens : amount of IdleTokens minted
    */
   function mintIdleToken(uint256 _amount)
-    external nonReentrant whenNotPaused
+    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
       uint256 idlePrice = tokenPrice();
@@ -215,7 +244,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
    * This method triggers a rebalance of the pools if needed
-   * NOTE: if the contract is paused no rebalance happens
+   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
+   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
+   *         Ideally one should wait until the black swan event is terminated
    *
    * @param _amount : amount of IdleTokens to be burned
    * @return redeemedTokens : amount of underlying tokens redeemed
@@ -242,8 +273,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
 
       _burn(msg.sender, _amount);
 
-      // Do not rebalance if contract is paused
-      if (this.paused()) {
+      // Do not rebalance if contract is paused or iToken price has decreased
+      if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice) {
         return redeemedTokens;
       }
 
@@ -259,7 +290,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * @return claimedTokens : amount of underlying tokens claimed
    */
   function claimITokens()
-    external whenNotPaused
+    external whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 claimedTokens) {
       claimedTokens = iERC20Fulcrum(iToken).claimLoanToken();
       rebalance(claimedTokens);
@@ -278,7 +309,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    */
 
   function rebalance(uint256 _newAmount)
-    public whenNotPaused
+    public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       if (!_rebalanceCheck(_newAmount)) {
         // only one protocol is currently used
