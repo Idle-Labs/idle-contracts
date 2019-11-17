@@ -163,7 +163,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       protocolWrappers[_token] = _wrapper;
   }
 
-  // TODO remove this?
   function setMinRateDifference(uint256 _rate)
     external onlyOwner {
       minRateDifference = _rate;
@@ -415,9 +414,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       uint256 nextRate;
       if (_newAmount > 0) {
         nextRate = _getProtocolNextRate(protocolWrappers[currTokenUsed], _newAmount);
-        // TODO use minRateDifference
-        /* if (nextRate < secondBestRate || ) { */
-        if (nextRate < secondBestRate) {
+        if (nextRate.add(minRateDifference) < secondBestRate) {
           return true;
         }
       }
