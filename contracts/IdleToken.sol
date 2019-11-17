@@ -225,9 +225,10 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * NOTE 2: this method can be paused
    *
    * @param _amount : amount of underlying token to be lended
+   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount)
+  function mintIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts)
     external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
@@ -235,7 +236,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       // transfer tokens to this contract
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
       // Rebalance the current pool if needed and mint new supplyied amount
-      rebalance(_amount);
+      rebalance(_amount, _clientProtocolAmounts);
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
       _mint(msg.sender, mintedTokens);
@@ -249,26 +250,28 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    *         Ideally one should wait until the black swan event is terminated
    *
    * @param _amount : amount of IdleTokens to be burned
+   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount)
+  function redeemIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts)
     external nonReentrant
     returns (uint256 redeemedTokens) {
       uint256 idleSupply = this.totalSupply();
       require(idleSupply > 0, "No IDLEDAI have been issued");
 
       address currentToken;
-      uint256 protocolPoolBalance;
 
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
         currentToken = currentTokensUsed[i];
-        protocolPoolBalance = IERC20(currentToken).balanceOf(address(this));
-        redeemedTokens = redeemedTokens.add(_redeemProtocolTokens(
-          protocolWrappers[currentToken],
-          currentToken,
-          _amount.mul(protocolPoolBalance).div(idleSupply), // amount to redeem
-          msg.sender
-        ));
+        redeemedTokens = redeemedTokens.add(
+          _redeemProtocolTokens(
+            protocolWrappers[currentToken],
+            currentToken,
+            // _amount * protocolPoolBalance / idleSupply
+            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply), // amount to redeem
+            msg.sender
+          )
+        );
       }
 
       _burn(msg.sender, _amount);
@@ -278,7 +281,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
         return redeemedTokens;
       }
 
-      rebalance(0);
+      rebalance(0, _clientProtocolAmounts);
   }
 
   /**
@@ -287,13 +290,14 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * Everyone should be incentivized in calling this method
    * NOTE: this method can be paused
    *
+   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return claimedTokens : amount of underlying tokens claimed
    */
-  function claimITokens()
+  function claimITokens(uint256[] calldata _clientProtocolAmounts)
     external whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 claimedTokens) {
       claimedTokens = iERC20Fulcrum(iToken).claimLoanToken();
-      rebalance(claimedTokens);
+      rebalance(claimedTokens, _clientProtocolAmounts);
   }
 
   /**
@@ -305,10 +309,11 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * NOTE: this method can be paused
    *
    * @param _newAmount : amount of underlying tokens that needs to be minted with this rebalance
+   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return : whether has rebalanced or not
    */
 
-  function rebalance(uint256 _newAmount)
+  function rebalance(uint256 _newAmount, uint256[] memory _clientProtocolAmounts)
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       if (!_rebalanceCheck(_newAmount)) {
@@ -335,7 +340,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
       // calcAmounts
       uint256 tokenBalance = IERC20(token).balanceOf(address(this));
       // tokenBalance here has already _newAmount counted
-      (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance);
+      (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance, _clientProtocolAmounts);
 
       // remove all elements from `currentTokensUsed`
       delete currentTokensUsed;
@@ -428,10 +433,17 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable {
    * @return tokenAddresses : array with all token addresses used,
    * @return amounts : array with all amounts for each protocol in order,
    */
-  function _calcAmounts(uint256 _amount)
+  function _calcAmounts(uint256 _amount, uint256[] memory _clientProtocolAmounts)
     internal view
     returns (address[] memory, uint256[] memory) {
-      return IdleRebalancer(rebalancer).calcRebalanceAmounts(_amount);
+      uint256[] memory paramsRebalance = new uint256[](_clientProtocolAmounts.length + 1);
+      paramsRebalance[0] = _amount;
+
+      for (uint8 i = 1; i < _clientProtocolAmounts.length; i++) {
+        paramsRebalance[i] = _clientProtocolAmounts[i-1];
+      }
+
+      return IdleRebalancer(rebalancer).calcRebalanceAmounts(paramsRebalance);
   }
 
   /**

@@ -18,6 +18,7 @@ contract iDAIWrapperMock is ILendingProtocol, Ownable {
   uint256 public price;
   uint256 public apr;
   uint256 public nextSupplyRateLocal;
+  uint256 public nextSupplyRateWithParamsLocal;
 
   constructor(address _token, address _underlying) public {
     token = _token;
@@ -43,7 +44,11 @@ contract iDAIWrapperMock is ILendingProtocol, Ownable {
   function _setNextSupplyRate(uint256 _nextSupplyRate) external returns (uint256) {
     nextSupplyRateLocal = _nextSupplyRate;
   }
+  function _setNextSupplyRateWithParams(uint256 _nextSupplyRate) external returns (uint256) {
+    nextSupplyRateWithParamsLocal = _nextSupplyRate;
+  }
   function nextSupplyRateWithParams(uint256[] calldata params) external pure returns (uint256) {
+    return 2850000000000000000;
   }
   function getAPR() external view returns (uint256) {
     return apr;

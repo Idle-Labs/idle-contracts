@@ -1,7 +1,7 @@
 /**
  * @title: Idle Rebalancer contract
  * @summary: Used for calculating amounts to lend on each implemented protocol.
- *           This implementation works with Compound and Fulcrum only
+ *           This implementation works with Compound and Fulcrum only,
  *           when a new protocol will be added this should be replaced
  * @author: William Bergamo, idle.finance
  */
@@ -27,7 +27,9 @@ contract IdleRebalancer is Ownable {
   // iToken protocol wrapper IdleFulcrum
   address public iWrapper;
   // max % difference between next supply rate of Fulcrum and Compound
-  uint256 public maxRateDifference;
+  uint256 public maxRateDifference; // 10**17 -> 0.1 %
+  // max % difference between off-chain user supplied params for rebalance and actual amount to be rebalanced
+  uint256 public maxSupplyedParamsDifference; // 100000 -> 0.001%
   // max number of recursive calls for bisection algorithm
   uint256 public maxIterations;
 
@@ -43,6 +45,7 @@ contract IdleRebalancer is Ownable {
     cWrapper = _cWrapper;
     iWrapper = _iWrapper;
     maxRateDifference = 10**17; // 0.1%
+    maxSupplyedParamsDifference = 100000; // 0.001%
     maxIterations = 30;
   }
 
@@ -100,19 +103,29 @@ contract IdleRebalancer is Ownable {
     external onlyOwner {
       maxRateDifference = _maxDifference;
   }
+
+  /**
+   * sets maxSupplyedParamsDifference
+   * @param _maxSupplyedParamsDifference : max rate difference in percentage scaled by 10**18
+   */
+  function setMaxSupplyedParamsDifference(uint256 _maxSupplyedParamsDifference)
+    external onlyOwner {
+      maxSupplyedParamsDifference = _maxSupplyedParamsDifference;
+  }
   // end onlyOwner
 
   /**
    * Used by IdleToken contract to calculate the amount to be lended
    * on each protocol in order to get the best available rate for all funds.
    *
-   * @param n : amount of underlying tokens (eg. DAI) to rebalance
+   * @param _rebalanceParams : first param is the total amount to be rebalanced,
+   *                           all other elements are client side calculated amounts to put on each lending protocol
    * @return tokenAddresses : array with all token addresses used,
    *                          currently [cTokenAddress, iTokenAddress]
    * @return amounts : array with all amounts for each protocol in order,
    *                   currently [amountCompound, amountFulcrum]
    */
-  function calcRebalanceAmounts(uint256 n)
+  function calcRebalanceAmounts(uint256[] calldata _rebalanceParams)
     external view
     returns (address[] memory tokenAddresses, uint256[] memory amounts)
   {
@@ -139,6 +152,18 @@ contract IdleRebalancer is Ownable {
     paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
     paramsFulcrum[4] = 10**20; // k1
 
+    tokenAddresses = new address[](2);
+    tokenAddresses[0] = cToken;
+    tokenAddresses[1] = iToken;
+
+    // _rebalanceParams should be [totAmountToRebalance, amountCompound, amountFulcrum];
+    if (_rebalanceParams.length == 3) {
+      (bool amountsAreCorrect, uint256[] memory checkedAmounts) = checkRebalanceAmounts(_rebalanceParams, paramsCompound, paramsFulcrum);
+      if (amountsAreCorrect) {
+        return (tokenAddresses, checkedAmounts);
+      }
+    }
+
     // Initial guess for shrinking initial bisection interval
     /*
       Compound: (getCash returns the available supply only, not the borrowed one)
@@ -155,26 +180,87 @@ contract IdleRebalancer is Ownable {
       x = n * totF / (totC + totF)
     */
 
-    uint256 amountFulcrum = n.mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
+    uint256 amountFulcrum = _rebalanceParams[0].mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
       paramsFulcrum[2].add(paramsFulcrum[1]).add(paramsCompound[6].add(paramsCompound[2]).add(paramsCompound[2]))
     );
 
     // Recursive bisection algorithm
     amounts = bisectionRec(
-      n.sub(amountFulcrum), // amountCompound
+      _rebalanceParams[0].sub(amountFulcrum), // amountCompound
       amountFulcrum,
       maxRateDifference, // 0.1% of rate difference,
       0, // currIter
       maxIterations, // maxIter
-      n,
+      _rebalanceParams[0],
       paramsCompound,
       paramsFulcrum
     ); // returns [amountCompound, amountFulcrum]
 
-    tokenAddresses = new address[](2);
-    tokenAddresses[0] = cToken;
-    tokenAddresses[1] = iToken;
     return (tokenAddresses, amounts);
+  }
+  /**
+   * Used by IdleToken contract to check if provided amounts
+   * causes the rates of Fulcrum and Compound to be balanced
+   * (counting a tolerance)
+   *
+   * @param rebalanceParams : first element is the total amount to be rebalanced,
+   *                   the rest is an array with all amounts for each protocol in order,
+   *                   currently [amountCompound, amountFulcrum]
+   * @param paramsCompound : array with all params (except for the newDAIAmount)
+   *                          for calculating next supply rate of Compound
+   * @param paramsFulcrum : array with all params (except for the newDAIAmount)
+   *                          for calculating next supply rate of Fulcrum
+   * @return bool : if provided amount correctly rebalances the pool
+   */
+  function checkRebalanceAmounts(
+    uint256[] memory rebalanceParams,
+    uint256[] memory paramsCompound,
+    uint256[] memory paramsFulcrum
+  )
+    internal view
+    returns (bool, uint256[] memory checkedAmounts)
+  {
+    // This is the amount that should be rebalanced no more no less
+    uint256 actualAmountToBeRebalanced = rebalanceParams[0]; // n
+    // interest is earned between when tx was submitted and when it is mined so params sent by users
+    // should always be slightly less than what should be rebalanced
+    uint256 totAmountSentByUser;
+    for (uint8 i = 1; i < rebalanceParams.length; i++) {
+      totAmountSentByUser = totAmountSentByUser.add(rebalanceParams[i]);
+    }
+
+    // check if amounts sent from user are less than actualAmountToBeRebalanced and
+    // at most `actualAmountToBeRebalanced - 0.001% of (actualAmountToBeRebalanced)`
+    if (totAmountSentByUser > actualAmountToBeRebalanced ||
+        totAmountSentByUser.add(totAmountSentByUser.div(maxSupplyedParamsDifference)) < actualAmountToBeRebalanced) {
+      return (false, new uint256[](2));
+    }
+
+    uint256 interestToBeSplitted = actualAmountToBeRebalanced.sub(totAmountSentByUser);
+
+    // sets newDAIAmount for each protocol
+    paramsCompound[9] = rebalanceParams[1].add(interestToBeSplitted.div(2));
+    paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.div(2));
+
+    // calculate next rates with amountCompound and amountFulcrum
+
+    // For Fulcrum see https://github.com/bZxNetwork/bZx-monorepo/blob/development/packages/contracts/extensions/loanTokenization/contracts/LoanToken/LoanTokenLogicV3.sol#L1418
+    // fulcrumUtilRate = fulcrumBorrow.mul(10**20).div(assetSupply);
+    uint256 currFulcRate = (paramsFulcrum[1].mul(10**20).div(paramsFulcrum[2])) > 90 ether ?
+      ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[5]) :
+      ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
+    bool isCompoundBest = currCompRate > currFulcRate;
+    // |fulcrumRate - compoundRate| <= tolerance
+    bool areParamsOk =
+      (currFulcRate.add(maxRateDifference) >= currCompRate && isCompoundBest) ||
+      (currCompRate.add(maxRateDifference) >= currFulcRate && !isCompoundBest);
+
+    uint256[] memory actualParams = new uint256[](2);
+    actualParams[0] = paramsCompound[9];
+    actualParams[1] = paramsFulcrum[5];
+
+    return (areParamsOk, actualParams);
   }
 
   /**

@@ -76,7 +76,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       // Give DAI to `who`
       await this.DAIMock.transfer(who, amount, { from: creator });
       await this.DAIMock.approve(this.token.address, amount, { from: who });
-      await this.token.mintIdleToken(amount, { from: who });
+      await this.token.mintIdleToken(amount, [], { from: who });
     };
   });
 
@@ -435,10 +435,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.token.pause({from: creator});
     await this.DAIMock.transfer(nonOwner, BNify('10').mul(this.one), { from: creator });
     await this.DAIMock.approve(this.token.address, BNify('10').mul(this.one), { from: nonOwner });
-    await expectRevert.unspecified(this.token.mintIdleToken(BNify('10').mul(this.one), { from: nonOwner }));
+    await expectRevert.unspecified(this.token.mintIdleToken(BNify('10').mul(this.one), [], { from: nonOwner }));
   });
   it('does not redeem if idleToken total supply is 0', async function () {
-    await expectRevert.unspecified(this.token.redeemIdleToken(BNify('10').mul(this.one), { from: nonOwner }));
+    await expectRevert.unspecified(this.token.redeemIdleToken(BNify('10').mul(this.one), [], { from: nonOwner }));
   });
   it('redeems idle tokens', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
@@ -472,10 +472,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('10').mul(this.one));
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle2 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle2.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -563,10 +563,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -647,10 +647,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.token.pause({from: creator});
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -733,10 +733,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -765,10 +765,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       [BNify('0'), BNify('0')]
     );
 
-    const res = await this.token.claimITokens.call({from: creator});
+    const res = await this.token.claimITokens.call([], {from: creator});
     res.should.be.bignumber.equal(BNify('2').mul(this.one));
 
-    await this.token.claimITokens({from: creator});
+    await this.token.claimITokens([], {from: creator});
   });
   it('cannot claimITokens if iToken price has decreased', async function () {
     await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
@@ -776,7 +776,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
 
     await expectRevert(
-      this.token.claimITokens({from: creator}),
+      this.token.claimITokens([], {from: creator}),
       'Paused: iToken price decreased'
     );
   });
@@ -794,7 +794,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     await this.token.setManualPlay(true, { from: creator });
-    await this.token.claimITokens({from: creator});
+    await this.token.claimITokens([], {from: creator});
   });
   it('after claimITokens lastITokenPrice is updated if it has increased', async function () {
     await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
@@ -809,32 +809,32 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       [BNify('0'), BNify('0')]
     );
 
-    const res = await this.token.claimITokens.call({from: creator});
+    const res = await this.token.claimITokens.call([], {from: creator});
     res.should.be.bignumber.equal(BNify('2').mul(this.one));
 
     await this.token.setManualPlay(true, { from: creator });
-    await this.token.claimITokens({from: creator});
+    await this.token.claimITokens([], {from: creator});
     const price = await this.token.lastITokenPrice.call();
     price.should.be.bignumber.equal(BNify('1500000000000000000'));
   });
   it('cannot rebalance when paused', async function () {
     await this.token.pause({from: creator});
-    await expectRevert.unspecified(this.token.rebalance(BNify('0').mul(this.one), { from: nonOwner }));
+    await expectRevert.unspecified(this.token.rebalance(BNify('0').mul(this.one), [], { from: nonOwner }));
   });
   it('rebalances when _newAmount == 0 and no currentTokensUsed', async function () {
     // Initially when no one has minted `currentTokensUsed` is empty
     // so _rebalanceCheck would return true
 
-    const res = await this.token.rebalance.call(BNify('0').mul(this.one), { from: creator });
+    const res = await this.token.rebalance.call(BNify('0').mul(this.one), [], { from: creator });
     res.should.be.equal(true);
-    const receipt = await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
+    const receipt = await this.token.rebalance(BNify('0').mul(this.one), [], { from: creator });
   });
   it('cannot rebalance if iToken price has decreased', async function () {
     await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
     await this.mintIdle(BNify('10').mul(this.one), nonOwner);
     await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
     await expectRevert(
-      this.token.rebalance(BNify('0').mul(this.one), { from: creator }),
+      this.token.rebalance(BNify('0').mul(this.one), [], { from: creator }),
       'Paused: iToken price decreased'
     );
   });
@@ -843,7 +843,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.mintIdle(BNify('10').mul(this.one), nonOwner);
     await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
     await this.token.setManualPlay(true, { from: creator });
-    await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
+    await this.token.rebalance(BNify('0').mul(this.one), [], { from: creator });
   });
   it('after rebalance lastITokenPrice is updated if it has increased', async function () {
     await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
@@ -852,7 +852,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     price.should.be.bignumber.equal(BNify('1300000000000000000'));
 
     await this.iDAIMock.setPriceForTest(BNify('1500000000000000000')); // 1.30DAI
-    await this.token.rebalance(BNify('0').mul(this.one), { from: creator });
+    await this.token.rebalance(BNify('0').mul(this.one), [], { from: creator });
     const price2 = await this.token.lastITokenPrice.call();
     price2.should.be.bignumber.equal(BNify('1500000000000000000'));
   });
@@ -877,11 +877,11 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
 
     await this.DAIMock.transfer(this.token.address, BNify('10').mul(this.one), { from: creator });
 
-    const res = await this.token.rebalance.call(BNify('10').mul(this.one), { from: creator });
+    const res = await this.token.rebalance.call(BNify('10').mul(this.one), [], { from: creator });
     res.should.be.equal(false);
     // it should mint 10 / 0.02 = 500cDAI
     // plus 500 cDAI from before
-    const receipt = await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
+    const receipt = await this.token.rebalance(BNify('10').mul(this.one), [], { from: creator });
 
     const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
     resBalance.should.be.bignumber.equal(BNify('1000').mul(this.oneCToken));
@@ -911,9 +911,9 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       [BNify('2').mul(this.one), BNify('8').mul(this.one)]
     );
 
-    const res = await this.token.rebalance.call(BNify('10').mul(this.one), { from: creator });
+    const res = await this.token.rebalance.call(BNify('10').mul(this.one), [], { from: creator });
     res.should.be.equal(true);
-    await this.token.rebalance(BNify('10').mul(this.one), { from: creator });
+    await this.token.rebalance(BNify('10').mul(this.one), [], { from: creator });
 
     // IdleToken should have 2 / 0.02 = 100cDAI
     const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });

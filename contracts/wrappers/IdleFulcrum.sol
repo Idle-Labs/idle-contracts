@@ -64,7 +64,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
       iERC20Fulcrum iToken = iERC20Fulcrum(token);
       nextRate = iToken.nextSupplyInterestRate(_amount);
       // remove 10% mandatory self insurance
-      nextRate = nextRate.mul(iToken.spreadMultiplier()).div(10 ** 20);
+      nextRate = nextRate.mul(iToken.spreadMultiplier()).div(10**20);
   }
 
   /**
