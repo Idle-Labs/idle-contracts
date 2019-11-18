@@ -69,6 +69,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       this.cDAIWrapper.address, this.iDAIWrapper.address,
       { from: creator }
     );
+    await this.Factory.setTokenOwnershipAndPauser(this.idleTokenAddr, {from: creator});
     this.token = await IdleToken.at(this.idleTokenAddr);
 
     // helper methods
@@ -1042,12 +1043,12 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   // #################################
   // Tests with live ganache fork of mainnet
 
-  it('mints idle tokens', async function () {
-    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
-    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
-
-    // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
-    // tokenPrice is 1 here
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-  });
+  // it('mints idle tokens', async function () {
+  //   await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+  //   await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
+  //
+  //   // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
+  //   // tokenPrice is 1 here
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  // });
 });
