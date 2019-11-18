@@ -1038,4 +1038,16 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
 
   // internal methods have been "indirectly" tested through tests of public methods
+
+  // #################################
+  // Tests with live ganache fork of mainnet
+
+  it('mints idle tokens', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
+
+    // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  });
 });

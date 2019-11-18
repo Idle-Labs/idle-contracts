@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/OpenZeppelin/starter-kit/blob/stable/README.md",
   "dependencies": {
-    "@openzeppelin/contracts": "^2.3.0",
+    "@openzeppelin/contracts": "^2.4.0",
     "@openzeppelin/test-helpers": "^0.5.3",
     "dotenv": "^6.2.0",
     "solidity-coverage": "^0.6.7",

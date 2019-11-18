@@ -59,11 +59,19 @@ contract IdleFactory is Ownable {
     }
     underlyingToIdleTokenMap[_token] = address(idleToken);
 
+    return address(idleToken);
+  }
+
+  /**
+  * Used to transfer ownership and the ability to pause from IdleFactory to owner
+  *
+  * @param _idleToken : idleToken address who needs to change owner and pauser
+  */
+  function setTokenOwnershipAndPauser(address _idleToken) external onlyOwner {
+    IdleToken idleToken = IdleToken(_idleToken);
     idleToken.transferOwnership(msg.sender);
     idleToken.addPauser(msg.sender);
     idleToken.renouncePauser();
-
-    return address(idleToken);
   }
 
   /**

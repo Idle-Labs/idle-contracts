@@ -56,9 +56,10 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
     ];
 
     this.idleTokenAddr = await this.Factory.newIdleToken.call(...this.params, { from: creator });
+    await this.Factory.newIdleToken(...this.params, { from: creator });
   });
 
-  it('allows onlyOwner to set newIdleToken, also owner and pauser are set to msg.sender', async function () {
+  it('allows onlyOwner to set newIdleToken', async function () {
     // get return value of a call
     const res = await this.Factory.newIdleToken.call(...this.params, { from: creator });
     // Do the actual tx
@@ -67,8 +68,18 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
     (await this.Factory.underlyingToIdleTokenMap(this.DAIMock.address)).should.be.equal(res);
     // Check that _token address
     (await this.Factory.tokensSupported(0)).should.be.equal(this.DAIMock.address);
+    // Revert if called by non owner
+    await expectRevert.unspecified(this.Factory.newIdleToken(...this.params, { from: nonOwner }));
+  });
 
-    const token = await IdleToken.at(res);
+  it('allows onlyOwner to set setTokenOwnershipAndPauser', async function () {
+    // get return value of a call
+    const IdleDAIAddress = await this.Factory.newIdleToken.call(...this.params, { from: creator });
+    // Do the actual tx
+    await this.Factory.newIdleToken(...this.params, { from: creator });
+    await this.Factory.setTokenOwnershipAndPauser(IdleDAIAddress, { from: creator });
+
+    const token = await IdleToken.at(IdleDAIAddress);
     // Owner of the newly deployed IdleToken should be creator not factory.address
     (await token.owner.call()).should.be.equal(creator);
     // Pauser of the newly deployed IdleToken should be creator not factory.address
@@ -76,7 +87,7 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
     (await token.isPauser.call(this.Factory.address)).should.be.equal(false);
 
     // Revert if called by non owner
-    await expectRevert.unspecified(this.Factory.newIdleToken(...this.params, { from: nonOwner }));
+    await expectRevert.unspecified(this.Factory.setTokenOwnershipAndPauser(IdleDAIAddress, { from: nonOwner }));
   });
 
   it('supportedTokens returns an array of all supported tokens', async function () {

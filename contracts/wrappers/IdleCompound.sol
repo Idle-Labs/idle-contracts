@@ -1,6 +1,6 @@
 /**
  * @title: Compound wrapper
- * @summary: Used for interacting with Fulcrum. Has
+ * @summary: Used for interacting with Compound. Has
  *           a common interface with all other protocol wrappers.
  *           This contract holds assets only during a tx, after tx it should be empty
  * @author: William Bergamo, idle.finance

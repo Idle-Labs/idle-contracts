@@ -126,8 +126,7 @@ contract IdleRebalancerMock is Ownable {
    *                   currently [amountCompound, amountFulcrum]
    */
   function calcRebalanceAmounts(uint256[] calldata _rebalanceParams)
-    /* external view */
-    external
+    external view
     returns (address[] memory tokenAddresses, uint256[] memory amounts)
   {
     // Get all params for calculating Compound nextSupplyRateWithParams
@@ -339,7 +338,7 @@ contract IdleRebalancerMock is Ownable {
     uint256[] memory paramsCompound,
     uint256[] memory paramsFulcrum
   )
-    public
+    public view
     returns (uint256[] memory)
   {
     return bisectionRec(
@@ -355,7 +354,7 @@ contract IdleRebalancerMock is Ownable {
     uint256[] memory paramsCompound,
     uint256[] memory paramsFulcrum
   )
-    public
+    public view
     returns (bool, uint256[] memory)
   {
     return checkRebalanceAmounts(

@@ -8,6 +8,8 @@ var IdleFactory = artifacts.require("./IdleFactory.sol");
 const cDAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
+  'local': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
+  'local-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'coverage': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
 };
@@ -15,6 +17,8 @@ const cDAI = {
 const iDAI = {
   'live': '0x14094949152eddbfcd073717200da82fed8dc960',
   'live-fork': '0x14094949152eddbfcd073717200da82fed8dc960', // needed for truffle
+  'local': '0x14094949152eddbfcd073717200da82fed8dc960',
+  'local-fork': '0x14094949152eddbfcd073717200da82fed8dc960',
   'test': '0x14094949152eddbfcd073717200da82fed8dc960',
   'coverage': '0x14094949152eddbfcd073717200da82fed8dc960',
 };
@@ -22,6 +26,8 @@ const iDAI = {
 const DAI = {
   'live': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'live-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359', // needed for truffle
+  'local': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
+  'local-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'test': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
   'coverage': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
 };
@@ -39,7 +45,29 @@ module.exports = async function(deployer, network, accounts) {
     IdleCompound.address, IdleFulcrum.address
   );
   const PriceCalculator = await deployer.deploy(IdlePriceCalculator);
+  console.log('Pre IdleFactory deploy');
   const Factory = await deployer.deploy(IdleFactory);
+  console.log('Owner:', accounts[0]);
+  console.log('IdleFactory data',
+    DAI[network],
+    cDAI[network],
+    iDAI[network],
+    IdleRebalancer.address,
+    PriceCalculator.address,
+    IdleCompound.address,
+    IdleFulcrum.address
+  );
+
+  const IdleDAIAddress = await Factory.newIdleToken.call(
+    'IdleDAI',
+    'IDLEDAI',
+    18,
+    DAI[network], cDAI[network], iDAI[network],
+    IdleRebalancer.address,
+    PriceCalculator.address,
+    IdleCompound.address, IdleFulcrum.address
+  );
+  console.log('IdleDAIAddress', IdleDAIAddress);
   await Factory.newIdleToken(
     'IdleDAI',
     'IDLEDAI',
@@ -49,4 +77,7 @@ module.exports = async function(deployer, network, accounts) {
     PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address
   );
+  console.log('IdleDAI creted');
+  await Factory.setTokenOwnershipAndPauser(IdleDAIAddress);
+  console.log('Ownership transferred to: ', accounts[0]);
 };
