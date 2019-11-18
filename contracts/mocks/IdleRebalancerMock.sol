@@ -32,6 +32,8 @@ contract IdleRebalancerMock is Ownable {
   uint256 public maxSupplyedParamsDifference; // 100000 -> 0.001%
   // max number of recursive calls for bisection algorithm
   uint256 public maxIterations;
+  address[] public _tokenAddresses;
+  uint256[] public _amounts;
 
   /**
    * @param _cToken : cToken address
@@ -118,85 +120,17 @@ contract IdleRebalancerMock is Ownable {
    * Used by IdleToken contract to calculate the amount to be lended
    * on each protocol in order to get the best available rate for all funds.
    *
-   * @param _rebalanceParams : first param is the total amount to be rebalanced,
-   *                           all other elements are client side calculated amounts to put on each lending protocol
    * @return tokenAddresses : array with all token addresses used,
    *                          currently [cTokenAddress, iTokenAddress]
    * @return amounts : array with all amounts for each protocol in order,
    *                   currently [amountCompound, amountFulcrum]
    */
-  function calcRebalanceAmounts(uint256[] calldata _rebalanceParams)
+  function calcRebalanceAmounts(uint256[] calldata)
     external view
-    returns (address[] memory tokenAddresses, uint256[] memory amounts)
+    returns (address[] memory, uint256[] memory)
   {
-    // Get all params for calculating Compound nextSupplyRateWithParams
-    CERC20 _cToken = CERC20(cToken);
-    WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
-    uint256[] memory paramsCompound = new uint256[](10);
-    paramsCompound[0] = 10**18; // j
-    paramsCompound[1] = white.baseRate(); // a
-    paramsCompound[2] = _cToken.totalBorrows(); // b
-    paramsCompound[3] = white.multiplier(); // c
-    paramsCompound[4] = _cToken.totalReserves(); // d
-    paramsCompound[5] = paramsCompound[0].sub(_cToken.reserveFactorMantissa()); // e
-    paramsCompound[6] = _cToken.getCash(); // s
-    paramsCompound[7] = _cToken.blocksInAYear(); // k
-    paramsCompound[8] = 100; // f
 
-    // Get all params for calculating Fulcrum nextSupplyRateWithParams
-    iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
-    uint256[] memory paramsFulcrum = new uint256[](6);
-    paramsFulcrum[0] = _iToken.avgBorrowInterestRate(); // a1
-    paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
-    paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
-    paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
-    paramsFulcrum[4] = 10**20; // k1
-
-    tokenAddresses = new address[](2);
-    tokenAddresses[0] = cToken;
-    tokenAddresses[1] = iToken;
-
-    // _rebalanceParams should be [totAmountToRebalance, amountCompound, amountFulcrum];
-    if (_rebalanceParams.length == 3) {
-      (bool amountsAreCorrect, uint256[] memory checkedAmounts) = checkRebalanceAmounts(_rebalanceParams, paramsCompound, paramsFulcrum);
-      if (amountsAreCorrect) {
-        return (tokenAddresses, checkedAmounts);
-      }
-    }
-
-    // Initial guess for shrinking initial bisection interval
-    /*
-      Compound: (getCash returns the available supply only, not the borrowed one)
-      getCash + totalBorrows = totalSuppliedCompound
-
-      Fulcrum:
-      totalSupply = totalSuppliedFulcrum
-
-      we try to correlate borrow and supply on both markets
-      totC = totalSuppliedCompound + totalBorrowsCompound
-      totF = totalSuppliedFulcrum + totalBorrowsFulcrum
-
-      n : (totC + totF) = x : totF
-      x = n * totF / (totC + totF)
-    */
-
-    uint256 amountFulcrum = _rebalanceParams[0].mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
-      paramsFulcrum[2].add(paramsFulcrum[1]).add(paramsCompound[6].add(paramsCompound[2]).add(paramsCompound[2]))
-    );
-
-    // Recursive bisection algorithm
-    amounts = bisectionRec(
-      _rebalanceParams[0].sub(amountFulcrum), // amountCompound
-      amountFulcrum,
-      maxRateDifference, // 0.1% of rate difference,
-      0, // currIter
-      maxIterations, // maxIter
-      _rebalanceParams[0],
-      paramsCompound,
-      paramsFulcrum
-    ); // returns [amountCompound, amountFulcrum]
-
-    return (tokenAddresses, amounts);
+    return (_tokenAddresses, _amounts);
   }
   /**
    * Used by IdleToken contract to check if provided amounts
@@ -330,6 +264,10 @@ contract IdleRebalancerMock is Ownable {
   }
 
 
+  function _setCalcAmounts(address[] memory _tokenAddressesLocal, uint256[] memory _amountsLocal) public {
+    _tokenAddresses = _tokenAddressesLocal;
+    _amounts = _amountsLocal;
+  }
 
   // Fake method to make bisectionRec public and testable
   function bisectionRecPublic(

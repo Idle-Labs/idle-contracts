@@ -1014,10 +1014,28 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     // Prepare fake data for rebalanceCheck
     await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
-    await this.cDAIWrapper._setNextSupplyRate(BNify('900000000000000000')); // 0.9%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('800000000000000000')); // 0.9%
 
     const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
     res.should.be.equal(true);
+    await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
+  });
+  it('_rebalanceCheck when one protocol is used and curr protocol nextRate is within maxRateDifference', async function () {
+    // If there is more than one protocol used then returns true
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('0').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner all on Compound
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('900000000000000000')); // 0.9%
+
+    const res = await this.token._rebalanceCheck.call(BNify('10').mul(this.one), { from: creator });
+    res.should.be.equal(false);
     await this.token._rebalanceCheck(BNify('10').mul(this.one), { from: creator });
   });
   it('_rebalanceCheck when one protocol is used and curr protocol has not the best rate', async function () {
