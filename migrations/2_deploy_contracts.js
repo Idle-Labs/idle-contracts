@@ -58,26 +58,26 @@ module.exports = async function(deployer, network, accounts) {
     IdleFulcrum.address
   );
 
-  const IdleDAIAddress = await Factory.newIdleToken.call(
-    'IdleDAI',
-    'IDLEDAI',
+  const IdleSAIAddress = await Factory.newIdleToken.call(
+    'IdleSAI',
+    'IDLESAI',
     18,
     DAI[network], cDAI[network], iDAI[network],
     IdleRebalancer.address,
     PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address
   );
-  console.log('IdleDAIAddress', IdleDAIAddress);
+  console.log('IdleSAIAddress', IdleSAIAddress);
   await Factory.newIdleToken(
-    'IdleDAI',
-    'IDLEDAI',
+    'IdleSAI',
+    'IDLESAI',
     18,
     DAI[network], cDAI[network], iDAI[network],
     IdleRebalancer.address,
     PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address
   );
-  console.log('IdleDAI creted');
-  await Factory.setTokenOwnershipAndPauser(IdleDAIAddress);
-  console.log('Ownership transferred to: ', accounts[0]);
+  console.log('IdleSAI creted');
+  await Factory.setTokenOwnershipAndPauser(IdleSAIAddress);
+  console.log('Ownership and pauser ability transferred to: ', accounts[0]);
 };
