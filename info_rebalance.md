@@ -8,7 +8,7 @@ d = totalReserves
 e = 1 - reserveFactor
 s = getCash
 x = newDAIAmount
-k = blocksInAYear; // blocksInAYear
+k = blocksPerYear; // blocksPerYear
 j = 1e18; // oneEth
 f = 100;
 ```

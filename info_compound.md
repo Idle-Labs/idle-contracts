@@ -39,7 +39,7 @@ e = 1 - reserveFactor
 s = getCash
 x = maxDAIAmount
 q = targetSupplyRate
-k = 2102400; // blocksInAYear
+k = 2102400; // blocksPerYear
 j = 1e18; // oneEth
 f = 100;
 

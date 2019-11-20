@@ -75,7 +75,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
         uint256 d = params[4]; // cToken.totalReserves();
         uint256 e = params[5]; // j.sub(cToken.reserveFactorMantissa());
         uint256 s = params[6]; // cToken.getCash();
-        uint256 k = params[7]; // cToken.blocksInAYear();
+        uint256 k = params[7]; // white.blocksPerYear();
         uint256 f = params[8]; // 100;
         uint256 x = params[9]; // newAmountSupplied;
 
@@ -115,7 +115,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
       params[4] = cToken.totalReserves(); // d
       params[5] = params[0].sub(cToken.reserveFactorMantissa()); // e
       params[6] = cToken.getCash(); // s
-      params[7] = cToken.blocksInAYear(); // k
+      params[7] = white.blocksPerYear(); // k
       params[8] = 100; // f
       params[9] = _amount; // x
 
@@ -139,8 +139,9 @@ contract IdleCompound is ILendingProtocol, Ownable {
     external view
     returns (uint256 apr) {
       CERC20 cToken = CERC20(token);
+      WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
       uint256 cRate = cToken.supplyRatePerBlock(); // interest % per block
-      apr = cRate.mul(cToken.blocksInAYear()).mul(100);
+      apr = cRate.mul(white.blocksPerYear()).mul(100);
   }
 
   /**

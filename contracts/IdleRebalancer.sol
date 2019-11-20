@@ -140,7 +140,7 @@ contract IdleRebalancer is Ownable {
     paramsCompound[4] = _cToken.totalReserves(); // d
     paramsCompound[5] = paramsCompound[0].sub(_cToken.reserveFactorMantissa()); // e
     paramsCompound[6] = _cToken.getCash(); // s
-    paramsCompound[7] = _cToken.blocksInAYear(); // k
+    paramsCompound[7] = white.blocksPerYear(); // k
     paramsCompound[8] = 100; // f
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams

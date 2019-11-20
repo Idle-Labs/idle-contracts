@@ -152,7 +152,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     val[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
     val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     val[6] = BNify('12471299241106729195006665'), // cToken.getCash();
-    val[7] = BNify('2102400'), // cToken.blocksInAYear();
+    val[7] = BNify('2102400'), // white.blocksPerYear();
     val[8] = BNify('100'), // 100;
 
     // set mock data in cDAIMock
@@ -186,7 +186,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     val[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
     val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     val[6] = BNify('12471299241106729195006665'), // cToken.getCash();
-    val[7] = BNify('2102400'), // cToken.blocksInAYear();
+    val[7] = BNify('2102400'), // white.blocksPerYear();
     val[8] = BNify('100'), // 100;
 
     // set mock data in cDAIMock
@@ -230,7 +230,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     val[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
     val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     val[6] = BNify('12471299241106729195006665'), // cToken.getCash();
-    val[7] = BNify('2102400'), // cToken.blocksInAYear();
+    val[7] = BNify('2102400'), // white.blocksPerYear();
     val[8] = BNify('100'), // 100;
 
     // set mock data in cDAIMock
@@ -275,7 +275,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     paramsCompound[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
     paramsCompound[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     paramsCompound[6] = BNify('12471299241106729195006665'), // cToken.getCash();
-    paramsCompound[7] = BNify('2102400'), // cToken.blocksInAYear();
+    paramsCompound[7] = BNify('2102400'), // white.blocksPerYear();
     paramsCompound[8] = BNify('100'); // 100;
     // fake param to get array with length == 10
     paramsCompound[9] = BNify('10');
@@ -339,7 +339,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     paramsCompound[4] = BNify('108083361138278343025995'), // cToken.totalReserves();
     paramsCompound[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     paramsCompound[6] = BNify('12471299241106729195006665'), // cToken.getCash();
-    paramsCompound[7] = BNify('2102400'), // cToken.blocksInAYear();
+    paramsCompound[7] = BNify('2102400'), // white.blocksPerYear();
     paramsCompound[8] = BNify('100'); // 100;
     // fake param to get array with length == 10
     paramsCompound[9] = BNify('10');
