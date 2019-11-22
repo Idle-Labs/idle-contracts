@@ -80,4 +80,12 @@ contract IdleFactory is Ownable {
   function supportedTokens() external view returns(address[] memory) {
     return tokensSupported;
   }
+
+  /**
+  * @param _underlying : token address which maps to IdleToken address
+  * @return : IdleToken address for that _underlying
+  */
+  function getIdleTokenAddress(address _underlying) external view returns(address) {
+    return underlyingToIdleTokenMap[_underlying];
+  }
 }
