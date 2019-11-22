@@ -201,6 +201,9 @@ task("iDAI:manualAmountToRate", "iDAI calculate max amount lendable with a min t
 task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
   .addParam("amount", "The amount provided, eg '100000' for 100000 DAI ")
   .setAction(async taskArgs => {
+    const getBlockNumber = await web3.eth.getBlockNumber();
+    console.log('BLOCK NUMBER: ', getBlockNumber.toString());
+
     const ERC20 = artifacts.require('ERC20');
     const iERC20Fulcrum = artifacts.require('iERC20Fulcrum');
     const iDAI = await iERC20Fulcrum.at('0x14094949152eddbfcd073717200da82fed8dc960'); // mainnet
@@ -213,10 +216,11 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
       iDAI.totalAssetBorrow.call(),
       iDAI.spreadMultiplier.call(),
       iDAI.nextSupplyInterestRate.call(web3.utils.toBN(newDAIAmount)),
+      iDAI.tokenPrice.call(),
     ];
 
     const res = await Promise.all(promises);
-    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate] = res;
+    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice] = res;
 
     supplyRate = BNify(supplyRate);
     borrowRate = BNify(borrowRate);
@@ -224,6 +228,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     totalAssetBorrow = BNify(totalAssetBorrow);
     spreadMultiplier = BNify(spreadMultiplier);
     autoNextRate = BNify(autoNextRate);
+    tokenPrice = BNify(tokenPrice);
 
     const utilizationRate = BNify(totalAssetBorrow).div(BNify(totalAssetSupply));
 
@@ -236,6 +241,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     console.log(`${utilizationRate.toString()} utilizationRate`);
     // console.log(`${newDAIAmount.div(1e18).toString()} newDAIAmount`);
     console.log(`${autoNextRate.div(1e18).toString()}% autoNextRate`);
+    console.log(`${tokenPrice.div(1e18).toString()} DAI tokenPrice`);
     // console.log(`##############`);
 
     const a1 = borrowRate;
@@ -319,7 +325,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     console.log(`${BNify(supplyRatePerYear).div(1e18).toString()}% supplyRatePerYear`);
     // console.log(`${BNify(totalReserves).div(1e18).toString()} totalReserves`)
     // console.log(`${BNify(totalSupply).div(1e8).toString()} totalSupply`)
-    // console.log(`${BNify(exchangeRateStored).toString()} exchangeRateStored`)
+    console.log(`${BNify(exchangeRateStored).div(1e20).toString()} exchangeRateStored`)
     // console.log(`${BNify(reserveFactorMantissa).toString()} reserveFactorMantissa`)
     // console.log(`${BNify(baseRate).toString()} baseRate`)
     // console.log(`${BNify(multiplier).toString()} multiplier`)
@@ -347,6 +353,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     console.log(`k = ${BNify(2102400)}`);
     console.log(`f = ${BNify(100)}`);
     console.log(`x = ${newDAIAmount}`);
+    console.log(`exchangeRateStored = ${exchangeRateStored}`);
 
     // q = (((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j -> to the block rate
     // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate -> this is needed
@@ -495,6 +502,8 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
 
     const resAlgo = algo(newDAIAmount, currBestAddress, bestRate, worstRate);
     console.log(`${resAlgo[0].div(1e18).toString()} DAI in compound, ${resAlgo[1].div(1e18).toString()} DAI fulcrum ####################`);
+    const rateOfOneDAIInCDAI = BNify(1e18).div(BNify(exchangeRateStored).div(1e18)).div(1e8)
+    console.log(`${resAlgo[0].div(1e18).times(rateOfOneDAIInCDAI).toString()} cDAI generated, ${resAlgo[1].div(1e18).times(tokenPrice).div(1e18).toString()} iDAI generated ####################`);
   });
 
 task("idleDAI:rebalanceCalcTest", "idleDAI rebalance calculations")
