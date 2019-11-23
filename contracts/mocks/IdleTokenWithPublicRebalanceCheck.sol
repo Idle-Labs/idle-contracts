@@ -17,14 +17,14 @@ import "@openzeppelin/contracts/lifecycle/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./interfaces/iERC20Fulcrum.sol";
-import "./interfaces/ILendingProtocol.sol";
-import "./interfaces/IIdleToken.sol";
+import "../interfaces/iERC20Fulcrum.sol";
+import "../interfaces/ILendingProtocol.sol";
+import "../interfaces/IIdleToken.sol";
 
-import "./IdleRebalancer.sol";
-import "./IdlePriceCalculator.sol";
+import "../IdleRebalancer.sol";
+import "../IdlePriceCalculator.sol";
 
-contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
+contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -397,7 +397,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    */
 
   function _rebalanceCheck(uint256 _amount, address currentToken)
-    internal view
+    public view
     returns (bool, address) {
       (address[] memory addresses, uint256[] memory aprs) = getAPRs();
       if (aprs.length == 0) {
