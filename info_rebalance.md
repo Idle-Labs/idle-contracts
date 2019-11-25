@@ -60,10 +60,10 @@ Our limits for `x` are `[0, n]`
 
 The analytical solution is too much complicated for on-chain implementation see [here](https://www.wolframalpha.com/input/?i=%28a1+*+%28s1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+%28b1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+o1+%2F+k1%29+-+%28%28%28%28a+%2B+%28b*c%29%2F%28b+%2B+s+%2B+x%29%29+%2F+k%29+*+e+*+b+%2F+%28s+%2B+x+%2B+b+-+d%29%29+%2F+j%29+*+k+*+f+%3D+0) (Wait for it to calculate until `Solutions for the variable x` appears)
 
-So we are using an interative approach using the bisection method and created a first version of the algo (not optimized) in the task
+So we are using an interative approach using the bisection method and created a version of the algo in the task
 
 ```
-npx buidler idleDAI:rebalanceCalc --amount xxx
+npx buidler idleDAI:rebalanceCalcV2 --amount xxx
 ```
 where `xxx` is the amount of DAI to rebalance.
 
