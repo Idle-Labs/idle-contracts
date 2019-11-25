@@ -690,16 +690,17 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
       let maxDAICompound;
       let maxDAIFulcrum;
       amount = BNify(amount);
+      const tolerance = BNify('0.1').times(BNify('1e18')); // 0.1%
 
       if (isCompoundBest) {
         console.log('Trying to make all on compound')
-        if (targetSupplyRateWithFeeCompoundFoo(amount).gt(worstRate)) {
+        if (targetSupplyRateWithFeeCompoundFoo(amount).plus(tolerance).gt(worstRate)) {
           // All on Compound
           return [amount, BNify(0)];
         }
       } else {
         console.log('Trying to make all on fulcrum')
-        if (targetSupplyRateWithFeeFulcrumFoo(amount).gt(worstRate)) {
+        if (targetSupplyRateWithFeeFulcrumFoo(amount).plus(tolerance).gt(worstRate)) {
           console.log('all on fulcrum')
           // All on Fulcrum
           return [BNify(0), amount];
@@ -726,7 +727,6 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
       );
       const amountCompound = amount.minus(amountFulcrum);
 
-      const tolerance = BNify('0.1').times(BNify('1e18')); // 0.1%
       let i = 0;
       const amountSizesCalcRec = (
         compoundAmount = amountCompound,
