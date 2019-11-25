@@ -691,6 +691,21 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
       let maxDAIFulcrum;
       amount = BNify(amount);
 
+      if (isCompoundBest) {
+        console.log('Trying to make all on compound')
+        if (targetSupplyRateWithFeeCompoundFoo(amount).gt(worstRate)) {
+          // All on Compound
+          return [amount, BNify(0)];
+        }
+      } else {
+        console.log('Trying to make all on fulcrum')
+        if (targetSupplyRateWithFeeFulcrumFoo(amount).gt(worstRate)) {
+          console.log('all on fulcrum')
+          // All on Fulcrum
+          return [BNify(0), amount];
+        }
+      }
+
       /*
         Compound: (getCash returns the available supply only, not the borrowed one)
         getCash + totalBorrows = totalSuppliedCompound
