@@ -240,7 +240,7 @@ contract IdleRebalancer is Ownable {
 
     // sets newDAIAmount for each protocol
     paramsCompound[9] = rebalanceParams[1].add(interestToBeSplitted.div(2));
-    paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.div(2));
+    paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
 
     // calculate next rates with amountCompound and amountFulcrum
 
