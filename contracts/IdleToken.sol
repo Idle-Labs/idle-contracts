@@ -351,7 +351,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
       // tokenBalance here has already _newAmount counted
       uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-
+      if (tokenBalance == 0) {
+        return false;
+      }
       // (we are re-fetching aprs because after redeeming they changed)
       (shouldRebalance, bestToken) = _rebalanceCheck(tokenBalance, address(0));
 
@@ -452,7 +454,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       uint256[] memory paramsRebalance = new uint256[](_clientProtocolAmounts.length + 1);
       paramsRebalance[0] = _amount;
 
-      for (uint8 i = 1; i < _clientProtocolAmounts.length; i++) {
+      for (uint8 i = 1; i <= _clientProtocolAmounts.length; i++) {
         paramsRebalance[i] = _clientProtocolAmounts[i-1];
       }
 
