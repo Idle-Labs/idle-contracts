@@ -7,6 +7,8 @@ var IdleCompound = artifacts.require("./IdleCompound.sol");
 var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
 var IdleFactory = artifacts.require("./IdleFactory.sol");
 var IERC20 = artifacts.require("./IERC20Mintable.sol");
+var CERC20 = artifacts.require("./CERC20.sol");
+var iERC20Fulcrum = artifacts.require("./iERC20Fulcrum.sol");
 var ForceSend = artifacts.require("./ForceSend.sol");
 
 const BNify = s => new BigNumber(String(s));
@@ -55,6 +57,7 @@ module.exports = async function(deployer, network, accounts) {
   console.log('IdleCompound', IdleCompound.address);
   console.log('IdleFulcrum', IdleFulcrum.address);
   console.log('Owner', accounts[0]);
+  console.log('Other minter', accounts[1]);
 
   const one = BNify('1000000000000000000');
   const oneCToken = BNify('100000000');
@@ -63,43 +66,69 @@ module.exports = async function(deployer, network, accounts) {
   const cSAIAddr = cDAI[network];
 
   const SAI = await IERC20.at(SAIAddr);
-  const iSAI = await IERC20.at(iSAIAddr);
-  const cSAI = await IERC20.at(cSAIAddr);
+  const iSAI = await iERC20Fulcrum.at(iSAIAddr);
+  const cSAI = await CERC20.at(cSAIAddr);
+  const iSAIERC20 = await IERC20.at(iSAIAddr);
+  const cSAIERC20 = await IERC20.at(cSAIAddr);
 
   const idleFactoryInstance = await IdleFactory.at(IdleFactory.address);
   const idleSAIAddr = await idleFactoryInstance.getIdleTokenAddress.call(SAIAddr);
   const IdleSAI = await IdleToken.at(idleSAIAddr);
 
-  const toMint = BNify('1').times(one);
+  const toMint = BNify('1000000').times(one); // 1M SAI
+
+  // give SAI to accounts[0]
   await SAI.mint(accounts[0], toMint, { from: SAIAddr });
 
   console.log('IdleSAI.address', IdleSAI.address);
   console.log('##################################');
-
-  console.log('SAI balance of accounts[0]',
-    (await SAI.balanceOf.call(accounts[0])).toString());
-
-  await SAI.approve(IdleSAI.address, BNify('-1'));
-
-  console.log('SAI allowance for IdleSAI',
-    (await SAI.allowance.call(accounts[0], idleSAIAddr)).toString());
+  // Approve IdleSAI as accounts[0] SAI spender
+  await SAI.approve(IdleSAI.address, BNify('-1'), { from: accounts[0] });
 
   const tokenPrice = await IdleSAI.tokenPrice.call();
-  console.log('IdleSAI tokenPrice',
-    BNify(tokenPrice).div(one).toString());
+  console.log('IdleSAI current tokenPrice', BNify(tokenPrice).div(one).toString());
 
-  const receipt = await IdleSAI.mintIdleToken(toMint, []);
+  // Actual test of IdleSAI mint with `toMint` amount
+  const txMint = await IdleSAI.mintIdleToken(toMint, []);
+  const logContractDatas = async (type, tx, account) => {
+    console.log(`@@@@@@@@@@ [${account}] START LOG FOR: -------------------- ${type} --------------------`);
 
-  console.log('SAIBalance of IdleSAI (should be 0)',
-    BNify(await SAI.balanceOf.call(idleSAIAddr)).div(one).toString());
-  console.log('SAIBalance of IdleCompound wrapper (should be 0)',
-    BNify(await SAI.balanceOf.call(IdleCompound.address)).div(one).toString());
-  console.log('SAIBalance of IdleFulcrum wrapper (should be 0)',
-    BNify(await SAI.balanceOf.call(IdleFulcrum.address)).div(one).toString());
-  console.log('IdleSAIBalance of accounts[0]',
-    BNify(await IdleSAI.balanceOf.call(accounts[0])).div(one).toString());
-  console.log('cSAIBalance of IdleSAI',
-    BNify(await cSAI.balanceOf.call(idleSAIAddr)).div(oneCToken).toString());
-  console.log('iSAIBalance of IdleSAI',
-    BNify(await iSAI.balanceOf.call(idleSAIAddr)).div(one).toString());
+    const IdleSAIBalanceMinter = BNify(await IdleSAI.balanceOf.call(accounts[0]));
+    console.log('IdleSAIBalance of accounts[0]', IdleSAIBalanceMinter.div(one).toString());
+
+    const IdleSAISupply = BNify(await IdleSAI.totalSupply.call());
+    console.log('IdleSAI totalSupply', IdleSAISupply.div(one).toString());
+
+    const tokenPriceAfter = BNify(await IdleSAI.tokenPrice.call());
+    console.log('IdleSAI tokenPrice after mint', tokenPriceAfter.div(one).toString());
+
+    console.log('cSAI #####################');
+    const cSAIBalanceIdleSAI = BNify(await cSAIERC20.balanceOf.call(idleSAIAddr));
+    console.log('cSAIBalance of IdleSAI', cSAIBalanceIdleSAI.div(oneCToken).toString());
+    const cSAIPrice = BNify(await cSAI.exchangeRateStored.call());
+    const cSAIPoolValue = cSAIBalanceIdleSAI.times(cSAIPrice.div(one));
+    console.log('cSAI pool VALUE: ', cSAIPoolValue.div(one).toString());
+
+    console.log('iSAI #####################');
+    const iSAIBalanceIdleSAI = BNify(await iSAIERC20.balanceOf.call(idleSAIAddr));
+    console.log('iSAIBalance of IdleSAI', iSAIBalanceIdleSAI.div(one).toString());
+    const iSAIPrice = BNify(await iSAI.tokenPrice.call());
+    const iSAIPoolValue = iSAIBalanceIdleSAI.times(iSAIPrice.div(one));
+    console.log('iSAI pool VALUE: ', iSAIPoolValue.div(one).toString());
+    console.log('##########################');
+
+    const totPoolValue = cSAIPoolValue.plus(iSAIPoolValue);
+    console.log('IdleSAI pool value: ', totPoolValue.div(one).toString());
+    const idealTokenPrice = totPoolValue.div(IdleSAISupply);
+    console.log('IdleSAI ideal price: ', idealTokenPrice.toString());
+    console.log(`@@@@@@@@@@ [${account}] END LOG FOR: -------------------- ${type} --------------------`);
+    return IdleSAIBalanceMinter;
+  }
+
+  const IdleSAIBalanceMinter = await logContractDatas('MINT', txMint, 'Owner');
+
+  // we are redeeming half
+  const txRedeem = await IdleSAI.redeemIdleToken(BNify(IdleSAIBalanceMinter).div(BNify('2')), false, [], { from: accounts[0]});
+
+  await logContractDatas('REDEEM', txRedeem, 'Owner');
 };
