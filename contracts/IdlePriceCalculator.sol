@@ -1,6 +1,7 @@
 /**
- * @title: Idle Factory contract
- * @summary: Used for deploying and keeping track of IdleTokens instances
+ * @title: Idle Price Calculator contract
+ * @summary: Used for calculating the current IdleToken price in underlying (eg. DAI)
+ *          price is: Net Asset Value / totalSupply
  * @author: William Bergamo, idle.finance
  */
 pragma solidity 0.5.11;
@@ -14,7 +15,7 @@ import "./interfaces/ILendingProtocol.sol";
 contract IdlePriceCalculator {
   using SafeMath for uint256;
   /**
-   * IdleToken price calculation, in underlying
+   * IdleToken price calculation, in underlying (eg. DAI)
    *
    * @return : price in underlying token
    */
