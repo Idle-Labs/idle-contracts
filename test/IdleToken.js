@@ -74,6 +74,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       { from: creator }
     );
     await this.Factory.setTokenOwnershipAndPauser(this.idleTokenAddr, {from: creator});
+    await this.IdleRebalancer.setIdleToken(this.idleTokenAddr, {from: creator});
+
     this.token = await IdleToken.at(this.idleTokenAddr);
 
     // Fake Factory which uses IdleTokenWithPublicRebalanceCheck for testing rebalanceCheck
@@ -1192,6 +1194,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
 
   // ###################### _rebalanceCheck tests #################################
   it('_rebalanceCheck when no currentToken is given and the best protocol cannot sustain all the liquidity provided', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
     await this.cDAIWrapper._setNextSupplyRate(BNify('1500000000000000000')); // 1.5%
@@ -1202,6 +1206,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res[1].should.be.equal(this.cDAIMock.address);
   });
   it('_rebalanceCheck when no currentToken is given and the best protocol can sustain all the liquidity provided', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
     await this.cDAIWrapper._setNextSupplyRate(BNify('2100000000000000000')); // 2.1%
@@ -1212,6 +1218,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res[1].should.be.equal(this.cDAIMock.address);
   });
   it('_rebalanceCheck when no currentToken is given and the best protocol cannot sustain all the liquidity but the new rate is within a minRateDifference', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
     await this.cDAIWrapper._setNextSupplyRate(BNify('1900000000000000000')); // 1.9%
@@ -1222,6 +1230,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res[1].should.be.equal(this.cDAIMock.address);
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has not the best rate', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
 
@@ -1234,6 +1244,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res[1].should.be.equal(this.iDAIMock.address);
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has the best rate (even with _newAmount)', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
     await this.cDAIWrapper._setNextSupplyRate(BNify('1900000000000000000')); // 1.9%
@@ -1248,6 +1260,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     res[1].should.be.equal(this.cDAIMock.address);
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has not the best rate but is within a minRateDifference', async function () {
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
     await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.iDAIWrapper._setAPR(BNify('1900000000000000000')); // 1.9%
     await this.cDAIWrapper._setNextSupplyRate(BNify('1800000000000000000')); // 1.8%

@@ -94,6 +94,7 @@ For `IdleToken`:
 - If `iToken` price has decreased (for a black swan event) the contract will not accept new deposits and `rebalance` cannot be called, we added a flag, `manualPlay`, that can unlock the contract
 
 For `IdleRebalancer`:
+- `calcRebalanceAmounts` can only be called by `IdleToken` contract
 - `cToken` can be updated
 - `iToken` can be updated
 - `cWrapper` can be updated

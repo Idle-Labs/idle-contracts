@@ -18,6 +18,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract IdleRebalancerMock is Ownable {
   using SafeMath for uint256;
+  address public idleToken;
   // protocol token (cToken) address
   address public cToken;
   // protocol token (iToken) address
@@ -49,6 +50,24 @@ contract IdleRebalancerMock is Ownable {
     maxRateDifference = 10**17; // 0.1%
     maxSupplyedParamsDifference = 100000; // 0.001%
     maxIterations = 30;
+  }
+
+  /**
+   * Throws if called by any account other than IdleToken contract.
+   */
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    _;
+  }
+
+  // onlyOwner
+  /**
+   * sets idleToken address
+   * @param _idleToken : idleToken address
+   */
+  function setIdleToken(address _idleToken)
+    external onlyOwner {
+      idleToken = _idleToken;
   }
 
   // onlyOwner
@@ -126,7 +145,7 @@ contract IdleRebalancerMock is Ownable {
    *                   currently [amountCompound, amountFulcrum]
    */
   function calcRebalanceAmounts(uint256[] calldata)
-    external view
+    external view onlyIdle
     returns (address[] memory, uint256[] memory)
   {
 

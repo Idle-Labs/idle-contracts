@@ -68,6 +68,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
       this.iDAIWrapperMock.address,
       { from: creator }
     );
+
+    await this.IdleRebalancer.setIdleToken(creator, {from: creator});
   });
 
   it('constructor set a token (DAI) address', async function () {
