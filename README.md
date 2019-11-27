@@ -103,9 +103,14 @@ For `IdleRebalancer`:
 - `maxSupplyedParamsDifference` can be updated
 - `maxIterations` can be updated
 
+For each `ILendingProtocol`:
+- `token` can be updated (ie cToken, iToken address)
+- `underlying` can be updated (eg DAI address)
+
 ### Invariants
 - Users should always be able to redeem funds (except when there is no liquidity available on the underlying protocols which are currently used by Idle)
-- Funds should always be only in IdleToken contract and in no other Idle contract
+- Funds (cTokens, iTokens, ...) should always be only in IdleToken contract and in no other Idle contract
+- No Underlying (eg. DAI) should be in the `IdleToken` at the end of a tx, only cTokens, iTokens, ...
 - A user should always be able to redeem more DAI then what he lended (except when he decides to redeem funds during a black swan event)
 
 ### Edge cases
