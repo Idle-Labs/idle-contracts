@@ -250,15 +250,14 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    *         Ideally one should wait until the black swan event is terminated
    *
    * @param _amount : amount of IdleTokens to be burned
+   * @param _skipRebalance : whether to skip the rebalance process or not
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts)
+
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata _clientProtocolAmounts)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-      uint256 idleSupply = this.totalSupply();
-      require(idleSupply > 0, "No IDLEDAI have been issued");
-
       address currentToken;
 
       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
@@ -268,7 +267,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
             protocolWrappers[currentToken],
             currentToken,
             // _amount * protocolPoolBalance / idleSupply
-            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply), // amount to redeem
+            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(this.totalSupply()), // amount to redeem
             msg.sender
           )
         );
@@ -277,11 +276,34 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       _burn(msg.sender, _amount);
 
       // Do not rebalance if contract is paused or iToken price has decreased
-      if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice) {
+      if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice || _skipRebalance) {
         return redeemedTokens;
       }
 
       rebalance(0, _clientProtocolAmounts);
+  }
+
+  /**
+   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+   * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.
+   * Underlying (eg. DAI) is not redeemed here.
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   */
+  function redeemInterestBearingTokens(uint256 _amount)
+    external nonReentrant {
+      uint256 idleSupply = this.totalSupply();
+      address currentToken;
+
+      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+        currentToken = currentTokensUsed[i];
+        IERC20(currentToken).safeTransfer(
+          msg.sender,
+          _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply) // amount to redeem
+        );
+      }
+
+      _burn(msg.sender, _amount);
   }
 
   /**

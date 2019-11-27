@@ -47,7 +47,16 @@ interface IIdleToken {
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts) external returns (uint256 redeemedTokens);
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata _clientProtocolAmounts) external returns (uint256 redeemedTokens);
+
+  /**
+   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+   * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.
+   * Underlying (eg. DAI) is not redeemed here.
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   */
+  function redeemInterestBearingTokens(uint256 _amount) external;
 
   /**
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol

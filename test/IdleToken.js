@@ -501,7 +501,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await expectRevert.unspecified(this.token.mintIdleToken(BNify('10').mul(this.one), [], { from: nonOwner }));
   });
   it('does not redeem if idleToken total supply is 0', async function () {
-    await expectRevert.unspecified(this.token.redeemIdleToken(BNify('10').mul(this.one), [], { from: nonOwner }));
+    await expectRevert.unspecified(this.token.redeemIdleToken(BNify('10').mul(this.one), false, [], { from: nonOwner }));
   });
   it('redeems idle tokens', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
@@ -541,10 +541,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), false, [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('10').mul(this.one));
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), false, [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle2 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle2.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -636,10 +636,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), false, [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), false, [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -724,10 +724,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.token.pause({from: creator});
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), false, [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), false, [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -814,10 +814,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
 
     // Redeems 10 IdleDAI
-    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), [], {from: nonOwner});
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), false, [], {from: nonOwner});
     redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
 
-    await this.token.redeemIdleToken(BNify('10').mul(this.one), [], {from: nonOwner});
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), false, [], {from: nonOwner});
     // so nonOwner has no IdleDAI
     const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -836,6 +836,151 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     // there are cDAI in Idle contract
     const resBalance3 = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
     resBalance3.should.be.bignumber.equal(BNify('400').mul(this.oneCToken));
+  });
+  it('redeems idle tokens and does not rebalances if _skipRebalance is true', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.cDAIMock._setExchangeRateStored(BNify('200000000000000000000000000')); // 0.02 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1250000000000000000')); // 1.25DAI
+    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 1.1%
+
+    // First mint with tokenPrice = 1
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+
+    // Approve and Mint 10 DAI for nonOwner,
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // so 10 IdleDAI will be minted to nonOwner
+    const resBalanceIdle = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIdle.should.be.bignumber.equal(BNify('10').mul(this.one));
+    // half on Compound so 5 / 0.02 = 250 cDAI in idle pool
+    const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance.should.be.bignumber.equal(BNify('250').mul(this.oneCToken));
+    // half on Fulcrum so 5 / 1.25 = 4 iDAI in idle pool
+    const resBalanceIDAI = await this.iDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalanceIDAI.should.be.bignumber.equal(BNify('4').mul(this.one));
+
+    // update prices
+    await this.cDAIWrapper._setPriceInToken(BNify('250000000000000000000000000')); // 0.025
+    await this.cDAIMock._setExchangeRateStored(BNify('250000000000000000000000000')); // 0.025 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1300000000000000000')); // 1.30DAI
+    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
+
+    // 250 * 0.025 = 6.25 DAI nav of cDAI pool
+    // so we transfer 1.25 DAI to cDAI mock to cover new interests earned
+    await this.DAIMock.transfer(this.cDAIMock.address, BNify('1250000000000000000'), { from: creator });
+    // 4 * 1.3 = 5.2 DAI nav of iDAI pool
+    // so we transfer 1.2 DAI to iDAI mock to cover new interests earned
+    await this.DAIMock.transfer(this.iDAIMock.address, BNify('1200000000000000000'), { from: creator });
+    // tokenPrice is now (6.25 + 5.2) / 10 = 1.145 DAI per idleDAI
+
+    // 11.45 total DAI nav + 10 DAI minted now
+    // we set them all on Compound
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('21450000000000000000'), BNify('0').mul(this.one)] // 21.45 DAI, 0 DAI
+    );
+
+    // Approve and Mint 10 DAI,
+    // tokenPrice is 1.145 here
+    await this.mintIdle(BNify('10').mul(this.one), someone);
+    // so 10 / 1.145 IdleDAI will be minted to nonOwner
+    const resBalanceIdle2 = await this.token.balanceOf.call(someone, { from: someone });
+    resBalanceIdle2.should.be.bignumber.equal(BNify('8733624454148471615')); // 8.73362445415
+    // 21.45 / 0.025 = 858 cDAI
+    const resBalance2 = await this.cDAIMock.balanceOf.call(this.token.address, { from: someone });
+    resBalance2.should.be.bignumber.equal(BNify('858').mul(this.oneCToken));
+    // iDAI pool is empty now
+    const resBalanceIDAI2 = await this.iDAIMock.balanceOf.call(this.token.address, { from: someone });
+    resBalanceIDAI2.should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    // Redeems 10 IdleDAI
+    const redeemedTokens = await this.token.redeemIdleToken.call(BNify('10').mul(this.one), true, [], {from: nonOwner});
+    redeemedTokens.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45 DAI
+
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), true, [], {from: nonOwner});
+    // so nonOwner has no IdleDAI
+    const resBalanceIdle3 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIdle3.should.be.bignumber.equal(BNify('0').mul(this.one));
+    // 10 IdleDAI have been burned
+    const resSupply = await this.token.totalSupply.call({ from: nonOwner });
+    resSupply.should.be.bignumber.equal(BNify('8733624454148471615'));
+
+    // iDAI pool is still empty given that no rebalance happened
+    const resBalanceIDAI3 = await this.iDAIMock.balanceOf.call(this.token.address, { from: someone });
+    resBalanceIDAI3.should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    // 11.45 DAI are given back to nonOwner
+    const resBalanceDAI3 = await this.DAIMock.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceDAI3.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45
+
+    // there are cDAI in Idle contract
+    const resBalance3 = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance3.should.be.bignumber.equal(BNify('400').mul(this.oneCToken));
+  });
+  it('redeemInterestBearingTokens', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.cDAIMock._setExchangeRateStored(BNify('200000000000000000000000000')); // 0.02 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1250000000000000000')); // 1.25DAI
+    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 1.1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+    await this.iDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+
+    // First mint with tokenPrice = 1
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+
+    // Approve and Mint 10 DAI,
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // so 10 IdleDAI will be minted to nonOwner
+    const resBalanceIdle = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIdle.should.be.bignumber.equal(BNify('10').mul(this.one));
+    // half on Compound so 5 / 0.02 = 250 cDAI in idle pool
+    const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance.should.be.bignumber.equal(BNify('250').mul(this.oneCToken));
+    // half on Fulcrum so 5 / 1.25 = 4 iDAI in idle pool
+    const resBalanceIDAI = await this.iDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalanceIDAI.should.be.bignumber.equal(BNify('4').mul(this.one));
+
+    // used for rebalance at the end of the redeem method
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('0').mul(this.one), BNify('0').mul(this.one)]
+    );
+
+    // Redeems 10 IdleDAI
+    await this.token.redeemInterestBearingTokens(BNify('10').mul(this.one), {from: nonOwner});
+    // so nonOwner has no IdleDAI
+    const resBalanceIdle2 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIdle2.should.be.bignumber.equal(BNify('0').mul(this.one));
+    // IdleDAI have been burned
+    const resSupply = await this.token.totalSupply.call({ from: nonOwner });
+    resSupply.should.be.bignumber.equal(BNify('0').mul(this.one));
+    // there are no cDAI in Idle contract
+    const resBalance2 = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance2.should.be.bignumber.equal(BNify('0').mul(this.oneCToken));
+    // there are no iDAI in Idle contract
+    const resBalanceIDAI2 = await this.iDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalanceIDAI2.should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    // interest bearing assets are given directly to the user without redeeming the underlying DAI
+    const resBalanceCDAIOwner = await this.cDAIMock.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceCDAIOwner.should.be.bignumber.equal(BNify('250').mul(this.oneCToken));
+    const resBalanceIDAIOwner = await this.iDAIMock.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIDAIOwner.should.be.bignumber.equal(BNify('4').mul(this.one));
   });
   it('claimITokens and rebalances', async function () {
     await this.iDAIMock.setToTransfer(BNify('2').mul(this.one), {from: creator});
@@ -920,14 +1065,14 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     await this.token.pause({from: creator});
     await expectRevert.unspecified(this.token.rebalance(BNify('0').mul(this.one), [], { from: nonOwner }));
   });
-  it('rebalances when _newAmount == 0 and no currentTokensUsed', async function () {
+  it('does not rebalances when _newAmount == 0 and no currentTokensUsed', async function () {
     // Initially when no one has minted `currentTokensUsed` is empty
     // so _rebalanceCheck would return true
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
 
     const res = await this.token.rebalance.call(BNify('0').mul(this.one), [], { from: creator });
-    res.should.be.equal(true);
+    res.should.be.equal(false);
     await this.token.rebalance(BNify('0').mul(this.one), [], { from: creator });
   });
   it('cannot rebalance if iToken price has decreased', async function () {
