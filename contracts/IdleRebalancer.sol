@@ -271,8 +271,7 @@ contract IdleRebalancer is Ownable {
     uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
     // |fulcrumRate - compoundRate| <= tolerance
-    bool areParamsOk =
-      (currFulcRate.add(maxRateDifference) >= currCompRate && isCompoundBest) ||
+    bool areParamsOk = (currFulcRate.add(maxRateDifference) >= currCompRate && isCompoundBest) ||
       (currCompRate.add(maxRateDifference) >= currFulcRate && !isCompoundBest);
 
     uint256[] memory actualParams = new uint256[](2);
