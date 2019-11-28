@@ -21,9 +21,9 @@ The new smart contracts architecture included in this repository dynamically reb
 Contracts in this repository contain this new rebalance process with a dynamic funds allocation, as slightly described in the aforementioned article.
 
 ### High level intro of overall system
-`IdleToken` contract pools together users' funds and convert them into interest-bearing assets (cTokens, iTokens and other tokenized lending positions in the future). `IdleToken` is an ERC-20 token and represents the right to redeem a proportional share of the value locked in the smart contract, which corresponds to the amount locked by a single user. 
+`IdleToken` contract pools together users' funds and convert them into interest-bearing assets (cTokens, iTokens and other tokenized lending positions in the future). `IdleToken` is an ERC-20 token and represents the right to redeem a proportional share of the value locked in the smart contract, which corresponds to the amount locked by a single user.
 
-`IdleToken` price is based on minted `totalSupply` and  current Net Asset Value (NAV) of all interest-bearing tokens locked in `IdleToken` contract.
+`IdleToken` price is based on minted `totalSupply` and current Net Asset Value (NAV) of all interest-bearing tokens locked in `IdleToken` contract.
 
 Therefore, price formula is: `IdleToken Price = IdlePool NAV / IdleToken totalSupply`
 
@@ -64,7 +64,7 @@ When a user wants to lend `_newAmount` of DAI, the rebalance algorithm works in 
 
 The algorithm that will be implemented on the client is used by the `rebalanceCalcV2` buidler task in `buidler.config.js` file. To check the results of the algorithm with mainnet try this (no tx will be made):
 
-`npx buidler idleDAI:rebalanceCalcV2 --amount 1000000` 
+`npx buidler idleDAI:rebalanceCalcV2 --amount 1000000`
 
 where `1000000` is the total amount to be rebalanced.
 
@@ -77,22 +77,21 @@ Formulas for each lending provider implemented can be found in:
 Info for on-chain calculations of the rebalance process can be found in:
 - [info_rebalance.md](info_rebalance.md)
 
-### Smart contract architecture:
-The smart contract architecture is currently composed by 6 contracts (all contract files have been extensively commented).
+### Smart contracts architecture:
+The smart contracts architecture is currently composed by 6 contracts (all contract files have been extensively commented).
 - `IdleToken` contract is the main one, it's an ERC20, which contains all the data and all pooled funds (in the form of interest-bearing tokens, ie cDAI, iDAI, ...)
 - `IdlePriceCalculator` contract is used to calculate the IdleToken current price based on the NAV of all the pools in `IdleToken` contract and the `totalSupply` of `IdleToken`.
 - `IdleRebalancer` is used to check and calculate amounts for the rebalance process.
+- `IdleFactory` is used to create new `IdleToken` contracts (IdleDAI, IdleUSDC, ...) and as a registry of the deployed contracts.
 
 Additionally, there are different `ILendingProtocol` wrappers (currently 2, one for Fulcrum `IdleFulcrum` and one for Compound `IdleCompound`) used to interact with lending providers.
 In `IdleToken` we (the owners) can set the implementation for `IdleRebalancer`, `IdleFulcrum`, `IdleCompound` (so they are "upgradable").
 
-In the future, more wrappers should be added and `IdleRebalancer` should be updated with new calculations.
-`IdleFactory` is used to create new `IdleToken` contracts (IdleDAI, IdleUSDC, ...) and as a registry of the deployed contracts.
+In the future, more wrappers would be added and `IdleRebalancer` should be updated with new calculations.
 
 ### Interactions
 
 Users are allowed to `mintIdleToken`, `redeemIdleToken`, `rebalance` and `redeemInterestBearingTokens` with `IdleToken` contract. There is also a `claimITokens` method but it should not be used in this version of the contract because we are reverting the Fulcrum tx during redeem if all the liquidity is not currently available.
-
 
 ### Admin functionalities
 For `IdleToken`:
