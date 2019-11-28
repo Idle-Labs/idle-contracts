@@ -47,15 +47,15 @@ At the end of the `mintIdleToken` the user will receive IdleDAI and the `IdleTok
 4. `_amount` of IdleDAI are then burned from the user
 5. A rebalance of all the pools is triggered if needed
 
-**Reblance approach**
+**Rebalance approach**
 
 The `rebalance` method, called by `mintIdleToken` and `redeemIdleToken` is public and can be invoked by anyone; the user with more funds should be the one more incentivized to make the call if he spots that the current allocation is not the best. Funds of all other users will be rebalanced as well with this one-for-all mechanism (given that funds of all users are pooled together).
 
-With a very large amount of funds, rates on different lending protocols should be arbitraged in order to have the highest aggregated rate for all funds.
+With a very large amount of funds, rates on different lending protocols would be arbitraged in order to have the highest aggregated rate for all funds.
 
-The rebalance algorithm works in the following way when a user wants to lend `_newAmount` of DAI.
+The rebalance algorithm works in the following way when a user wants to lend `_newAmount` of DAI:
 
-1. If the current funds are all in one protocol we check if that protocol can sustain all the liquidity the user intends to provide (`_newAmount`), so if this protocol has still the best apr compared to all the others implemented.
+1. If the current funds are all in one protocol we check if that protocol can sustain all the liquidity the user intends to provide (`_newAmount`), so if this protocol has still the best apr compared to all the others implemented (or if the new rate is within a range defined by `minRateDifference`).
 2. otherwise we redeem everything from every protocol and check if the protocol with the best apr can support all the liquidity that we redeemed plus `_newAmount` supplied by the user.
 3. if it's not the case we calculate the dynamic allocation for every protocol with an iterative approch using `IdleRebalancer`. NOTE: our client calculates the ideal amounts for the dynamic allocation off-chain and it passes those value via the `_clientProtocolAmounts` parameter of `mintIdleToken`, `redeemIdleToken` and `rebalance` method.
 The algorithm that will be implemented on the client is the one used by the `rebalanceCalcV2` buidler task in `buidler.config.js` file,
@@ -82,6 +82,11 @@ In `IdleToken` we (the owners) can set the implementation for `IdleRebalancer`, 
 
 In the future, more wrappers should be added and `IdleRebalancer` should be updated with new calculations.
 `IdleFactory` is used to create new `IdleToken` contracts (IdleDAI, IdleUSDC, ...) and as a registry of the deployed contracts.
+
+### Interactions
+
+Users are allowed to `mintIdleToken`, `redeemIdleToken`, `rebalance` and `redeemInterestBearingTokens` with `IdleToken` contract. There is also a `claimITokens` method but it should not be used in this version of the contract because we are reverting the Fulcrum tx during redeem if all the liquidity is not currently available.
+
 
 ### Admin functionalities
 For `IdleToken`:
@@ -124,7 +129,10 @@ During a `redeemIdleToken` is possibile that even if a user wants to redeem only
 yarn global add truffle ganache-cli
 
 yarn
+
+cp .env.public .env
 ```
+fill `INFURA_KEY` in `.env` with a real infura api key if you plan to run buidler's tasks (`buidler.config.js`) or to run migrations as described in the `Mainnet fork tests` section below.
 
 ### Tests
 
@@ -139,7 +147,3 @@ ganache-cli --fork https://mainnet.infura.io/v3/{INFURA_API_KEY} -e 100000 --unl
 
 truffle migrate --network local
 ```
-
-### Interactions
-
-Users are allowed to `mintIdleToken`, `redeemIdleToken`, `rebalance` and `redeemInterestBearingTokens`. There is also a `claimITokens` method but it should not be used in this version of the contract because we are reverting the Fulcrum tx during redeem if all the liquidity is not currently available.
