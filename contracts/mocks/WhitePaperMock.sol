@@ -3,6 +3,7 @@ import "../interfaces/WhitePaperInterestRateModel.sol";
 
 contract WhitePaperMock is WhitePaperInterestRateModel {
   uint256 public borrowRate;
+  uint256 public supplyRate;
   uint256 public baseRate;
   uint256 public multiplier;
   uint256 public blocksPerYear;
@@ -13,5 +14,11 @@ contract WhitePaperMock is WhitePaperInterestRateModel {
   }
   function getBorrowRate(uint256 cash, uint256 borrows, uint256 _reserves) external view returns (uint256, uint256) {
 
+  }
+  function _setSupplyRate(uint256 rate) public {
+    supplyRate = rate;
+  }
+  function getSupplyRate(uint256, uint256, uint256, uint256) external view returns (uint256) {
+    return supplyRate;
   }
 }

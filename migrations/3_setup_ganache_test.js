@@ -11,7 +11,7 @@ var ForceSend = artifacts.require("./ForceSend.sol");
 
 const BNify = s => new BigNumber(String(s));
 
-const cDAI = {
+const cSAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
   'kovan': '0x3BD3f5b19BCB7f96d42cb6A9dE510ea6f9096355',
@@ -21,7 +21,7 @@ const cDAI = {
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'coverage': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
 };
-const iDAI = {
+const iSAI = {
   'live': '0x14094949152eddbfcd073717200da82fed8dc960',
   'live-fork': '0x14094949152eddbfcd073717200da82fed8dc960', // needed for truffle
   'kovan': '0xA1e58F3B1927743393b25f261471E1f2D3D9f0F6',
@@ -31,7 +31,7 @@ const iDAI = {
   'test': '0x14094949152eddbfcd073717200da82fed8dc960',
   'coverage': '0x14094949152eddbfcd073717200da82fed8dc960',
 };
-const DAI = {
+const SAI = {
   'live': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'live-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359', // needed for truffle
   'kovan': '0xC4375B7De8af5a38a93548eb8453a498222C4fF2',
@@ -46,11 +46,11 @@ module.exports = async function(deployer, network, accounts) {
   if (network !== 'local') {
     return console.log('3_setup_ganache_test.js not used in this network');
   }
-  console.log('Migration used to setup DAI ETH balance for accounts[0] in order to interct with Idle');
+  console.log('Migration used to setup SAI ETH balance for accounts[0] in order to interct with Idle');
   console.log('##################################');
 
   const one = BNify('1000000000000000000');
-  const SAIAddr = DAI[network];
+  const SAIAddr = SAI[network];
   const SAI = await IERC20.at(SAIAddr);
   const idleFactoryInstance = await IdleFactory.at(IdleFactory.address);
   const idleAddr = await idleFactoryInstance.getIdleTokenAddress.call(SAIAddr);
@@ -60,7 +60,7 @@ module.exports = async function(deployer, network, accounts) {
   console.log('##################################');
   console.log('##################################');
 
-  // We have to mint some DAI for our accounts see
+  // We have to mint some SAI for our accounts see
   // so we send 1 eth to SAI.address to have gas to mint.
   // https://medium.com/ethereum-grid/forking-ethereum-mainnet-mint-your-own-dai-d8b62a82b3f7
   const forceSend = await ForceSend.new();

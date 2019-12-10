@@ -13,7 +13,7 @@ var ForceSend = artifacts.require("./ForceSend.sol");
 
 const BNify = s => new BigNumber(String(s));
 
-const cDAI = {
+const cSAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
   'kovan': '0x3BD3f5b19BCB7f96d42cb6A9dE510ea6f9096355',
@@ -23,7 +23,7 @@ const cDAI = {
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'coverage': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
 };
-const iDAI = {
+const iSAI = {
   'live': '0x14094949152eddbfcd073717200da82fed8dc960',
   'live-fork': '0x14094949152eddbfcd073717200da82fed8dc960', // needed for truffle
   'kovan': '0xA1e58F3B1927743393b25f261471E1f2D3D9f0F6',
@@ -33,7 +33,7 @@ const iDAI = {
   'test': '0x14094949152eddbfcd073717200da82fed8dc960',
   'coverage': '0x14094949152eddbfcd073717200da82fed8dc960',
 };
-const DAI = {
+const SAI = {
   'live': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'live-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359', // needed for truffle
   'kovan': '0xC4375B7De8af5a38a93548eb8453a498222C4fF2',
@@ -49,9 +49,9 @@ module.exports = async function(deployer, network, accounts) {
     return console.log('4_test_ganache_idle.js not used in this network');
   }
   console.log('Creating IdleSAI contract');
-  console.log('DAI[network]', DAI[network]);
-  console.log('cDAI[network]', cDAI[network]);
-  console.log('iDAI[network]', iDAI[network]);
+  console.log('SAI[network]', SAI[network]);
+  console.log('cSAI[network]', cSAI[network]);
+  console.log('iSAI[network]', iSAI[network]);
   console.log('IdleRebalancer', IdleRebalancer.address);
   console.log('IdlePriceCalculator', IdlePriceCalculator.address);
   console.log('IdleCompound', IdleCompound.address);
@@ -61,9 +61,9 @@ module.exports = async function(deployer, network, accounts) {
 
   const one = BNify('1000000000000000000');
   const oneCToken = BNify('100000000');
-  const SAIAddr = DAI[network];
-  const iSAIAddr = iDAI[network];
-  const cSAIAddr = cDAI[network];
+  const SAIAddr = SAI[network];
+  const iSAIAddr = iSAI[network];
+  const cSAIAddr = cSAI[network];
 
   const SAI = await IERC20.at(SAIAddr);
   const iSAI = await iERC20Fulcrum.at(iSAIAddr);

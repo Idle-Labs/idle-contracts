@@ -5,7 +5,7 @@ var IdleCompound = artifacts.require("./IdleCompound.sol");
 var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
 var IdleFactory = artifacts.require("./IdleFactory.sol");
 
-const cDAI = {
+const cSAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
   'kovan': '0x3BD3f5b19BCB7f96d42cb6A9dE510ea6f9096355',
@@ -15,7 +15,7 @@ const cDAI = {
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'coverage': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
 };
-const iDAI = {
+const iSAI = {
   'live': '0x14094949152eddbfcd073717200da82fed8dc960',
   'live-fork': '0x14094949152eddbfcd073717200da82fed8dc960', // needed for truffle
   'kovan': '0xA1e58F3B1927743393b25f261471E1f2D3D9f0F6',
@@ -25,7 +25,7 @@ const iDAI = {
   'test': '0x14094949152eddbfcd073717200da82fed8dc960',
   'coverage': '0x14094949152eddbfcd073717200da82fed8dc960',
 };
-const DAI = {
+const SAI = {
   'live': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'live-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359', // needed for truffle
   'kovan': '0xC4375B7De8af5a38a93548eb8453a498222C4fF2',
@@ -38,14 +38,14 @@ const DAI = {
 
 module.exports = async function(deployer, network, accounts) {
   console.log('Network', network);
-  console.log('cDAI address: ', cDAI[network]);
-  console.log('iDAI address: ', iDAI[network]);
-  console.log('DAI address: ', DAI[network]);
+  console.log('cSAI address: ', cSAI[network]);
+  console.log('iSAI address: ', iSAI[network]);
+  console.log('SAI address: ', SAI[network]);
   console.log('##################');
-  await deployer.deploy(IdleCompound, cDAI[network], DAI[network]);
-  await deployer.deploy(IdleFulcrum, iDAI[network], DAI[network]);
+  await deployer.deploy(IdleCompound, cSAI[network], SAI[network]);
+  await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
   await deployer.deploy(IdleRebalancer,
-    cDAI[network], iDAI[network],
+    cSAI[network], iSAI[network],
     IdleCompound.address, IdleFulcrum.address
   );
   const PriceCalculator = await deployer.deploy(IdlePriceCalculator);
@@ -54,7 +54,7 @@ module.exports = async function(deployer, network, accounts) {
     'IdleSAI',
     'IDLESAI',
     18,
-    DAI[network], cDAI[network], iDAI[network],
+    SAI[network], cSAI[network], iSAI[network],
     IdleRebalancer.address,
     PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address
@@ -63,7 +63,7 @@ module.exports = async function(deployer, network, accounts) {
     'IdleSAI',
     'IDLESAI',
     18,
-    DAI[network], cDAI[network], iDAI[network],
+    SAI[network], cSAI[network], iSAI[network],
     IdleRebalancer.address,
     PriceCalculator.address,
     IdleCompound.address, IdleFulcrum.address

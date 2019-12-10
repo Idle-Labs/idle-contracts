@@ -343,7 +343,6 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set next rate with utilization rate > 90%
     await this.iDAIWrapperMock._setNextSupplyRate(BNify(this.one).mul(BNify('3'))); // 2%
-    await this.cDAIWrapperMock._setNextSupplyRateWithParams(BNify(this.one).mul(BNify('2'))); // 2%
 
     const amountFulcrum = toRebalance.mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
       paramsFulcrum[2].add(paramsFulcrum[1]).add(paramsCompound[6].add(paramsCompound[2]).add(paramsCompound[2]))

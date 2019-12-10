@@ -82,7 +82,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
    * @return : yearly net rate
    */
   function nextSupplyRateWithParams(uint256[] calldata params)
-    external pure
+    external view
     returns (uint256) {
       /*
         uint256 a1 = params[0]; // avgBorrowInterestRate;
