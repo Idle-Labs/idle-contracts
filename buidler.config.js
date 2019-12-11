@@ -929,7 +929,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
     // console.log(`${BNify(multiplier).toString()} multiplier`)
     // console.log(`################`);
 
-    console.log(`${targetSupplyRateWithFeeCompound.div(1e18).toString()} targetSupplyRateWithFeeCompound per year`);
+    console.log(`${targetSupplyRateWithFeeCompound.div(1e18).toString()}% targetSupplyRateWithFeeCompound per year`);
     // ##### END COMPOUND
 
     // So ideally we should solve this one and find x1 and x:
@@ -942,14 +942,13 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
 
     // ###### COMPOUND
     const targetSupplyRateWithFeeCompoundFoo = async x => {
-      const res = await whitePaperInterestModel.getSupplyRate(
-        web3.utils.toBN(BNify(getCash).plus(newDAIAmount)),
-        web3.utils.toBN(BNify(totalBorrows)),
-        web3.utils.toBN(BNify(totalReserves)),
-        web3.utils.toBN(BNify(reserveFactorMantissa))
+      const res = await whitePaperInterestModel.getSupplyRate.call(
+        web3.utils.toBN(BNify(getCash).plus(BNify(x)).integerValue(BigNumber.ROUND_FLOOR).toFixed()),
+        web3.utils.toBN(BNify(totalBorrows).integerValue(BigNumber.ROUND_FLOOR).toFixed()),
+        web3.utils.toBN(BNify(totalReserves).integerValue(BigNumber.ROUND_FLOOR).toFixed()),
+        web3.utils.toBN(BNify(reserveFactorMantissa).integerValue(BigNumber.ROUND_FLOOR).toFixed())
       );
-
-      return BNify(whitepaperRate).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
+      return BNify(res).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
     }
 
     const algo = async (amount, currBestTokenAddr, bestRate, worstRate) => {
