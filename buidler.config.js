@@ -960,7 +960,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
 
       if (isCompoundBest) {
         console.log('Trying to make all on compound')
-        if (await targetSupplyRateWithFeeCompoundFoo(amount).plus(tolerance).gt(worstRate)) {
+        if ((await targetSupplyRateWithFeeCompoundFoo(amount)).plus(tolerance).gt(worstRate)) {
           // All on Compound
           return [amount, BNify(0)];
         }
