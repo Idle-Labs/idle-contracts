@@ -65,9 +65,9 @@ module.exports = async function(deployer, network, accounts) {
   const iSAIAddr = iSAI[network];
   const cSAIAddr = cSAI[network];
 
-  const SAI = await IERC20.at(SAIAddr);
-  const iSAI = await iERC20Fulcrum.at(iSAIAddr);
-  const cSAI = await CERC20.at(cSAIAddr);
+  const SAIContract = await IERC20.at(SAIAddr);
+  const iSAIContract = await iERC20Fulcrum.at(iSAIAddr);
+  const cSAIContract = await CERC20.at(cSAIAddr);
   const iSAIERC20 = await IERC20.at(iSAIAddr);
   const cSAIERC20 = await IERC20.at(cSAIAddr);
 
@@ -78,12 +78,12 @@ module.exports = async function(deployer, network, accounts) {
   const toMint = BNify('1000000').times(one); // 1M SAI
 
   // give SAI to accounts[0]
-  await SAI.mint(accounts[0], toMint, { from: SAIAddr });
+  await SAIContract.mint(accounts[0], toMint, { from: SAIAddr });
 
   console.log('IdleSAI.address', IdleSAI.address);
   console.log('##################################');
   // Approve IdleSAI as accounts[0] SAI spender
-  await SAI.approve(IdleSAI.address, BNify('-1'), { from: accounts[0] });
+  await SAIContract.approve(IdleSAI.address, BNify('-1'), { from: accounts[0] });
 
   const tokenPrice = await IdleSAI.tokenPrice.call();
   console.log('IdleSAI current tokenPrice', BNify(tokenPrice).div(one).toString());
@@ -105,14 +105,14 @@ module.exports = async function(deployer, network, accounts) {
     console.log('cSAI #####################');
     const cSAIBalanceIdleSAI = BNify(await cSAIERC20.balanceOf.call(idleSAIAddr));
     console.log('cSAIBalance of IdleSAI', cSAIBalanceIdleSAI.div(oneCToken).toString());
-    const cSAIPrice = BNify(await cSAI.exchangeRateStored.call());
+    const cSAIPrice = BNify(await cSAIContract.exchangeRateStored.call());
     const cSAIPoolValue = cSAIBalanceIdleSAI.times(cSAIPrice.div(one));
     console.log('cSAI pool VALUE: ', cSAIPoolValue.div(one).toString());
 
     console.log('iSAI #####################');
     const iSAIBalanceIdleSAI = BNify(await iSAIERC20.balanceOf.call(idleSAIAddr));
     console.log('iSAIBalance of IdleSAI', iSAIBalanceIdleSAI.div(one).toString());
-    const iSAIPrice = BNify(await iSAI.tokenPrice.call());
+    const iSAIPrice = BNify(await iSAIContract.tokenPrice.call());
     const iSAIPoolValue = iSAIBalanceIdleSAI.times(iSAIPrice.div(one));
     console.log('iSAI pool VALUE: ', iSAIPoolValue.div(one).toString());
     console.log('##########################');

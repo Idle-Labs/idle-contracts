@@ -51,7 +51,7 @@ module.exports = async function(deployer, network, accounts) {
 
   const one = BNify('1000000000000000000');
   const SAIAddr = SAI[network];
-  const SAI = await IERC20.at(SAIAddr);
+  const SAIContract = await IERC20.at(SAIAddr);
   const idleFactoryInstance = await IdleFactory.at(IdleFactory.address);
   const idleAddr = await idleFactoryInstance.getIdleTokenAddress.call(SAIAddr);
   const IdleSAI = await IdleToken.at(idleAddr);

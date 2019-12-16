@@ -1,5 +1,6 @@
 const BigNumber = require('bignumber.js');
 require('dotenv').config();
+const fetch = require('node-fetch');
 const path = require("path");
 
 usePlugin("@nomiclabs/buidler-truffle5")
@@ -506,7 +507,7 @@ task("idleDAI:rebalanceCalc", "idleDAI rebalance calculations")
     console.log(`${resAlgo[0].div(1e18).times(rateOfOneDAIInCDAI).toString()} cDAI generated, ${resAlgo[1].div(1e18).times(tokenPrice).div(1e18).toString()} iDAI generated ####################`);
   });
 task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
-  .addParam("amount", "The amount provided, eg '100000' for 100000 DAI ")
+  .addParam("amount", "The amount provided, eg '100000' for 100000 SAI (ONLY FOR SAI) ")
   .setAction(async taskArgs => {
     const getBlockNumber = await web3.eth.getBlockNumber();
     console.log('BLOCK NUMBER: ', getBlockNumber.toString());
@@ -793,7 +794,7 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     const rateOfOneDAIInCDAI = BNify(1e18).div(BNify(exchangeRateStored).div(1e18)).div(1e8)
     console.log(`${resAlgo[0].div(1e18).times(rateOfOneDAIInCDAI).toString()} cDAI generated, ${resAlgo[1].div(1e18).times(tokenPrice).div(1e18).toString()} iDAI generated ####################`);
   });
-task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper rate")
+task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper rate (ONLY FOR DAI)")
   .addParam("amount", "The amount provided, eg '100000' for 100000 DAI ")
   .setAction(async taskArgs => {
     const getBlockNumber = await web3.eth.getBlockNumber();
@@ -1822,6 +1823,19 @@ task("cDAI:apr", "Get cDAI APR")
 
     res = BNify(res).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
     console.log(`RES: ${res.div(1e18).toString()}`)
+  });
+
+task("idleDAI:uniqueAddressesCount", "Get unique addresses that interacted with Idle")
+  .setAction(async taskArgs => {
+    const resOld = await fetch('http://api.etherscan.io/api?module=account&action=txlist&address=0x10cf8e1CDba9A2Bd98b87000BCAdb002b13eA525&startblock=8119506&endblock=8467117&sort=asc&apikey=YourApiKeyToken')
+    const res = await fetch('http://api.etherscan.io/api?module=account&action=txlist&address=0xacf651aad1cbb0fd2c7973e2510d6f63b7e440c9&startblock=8354656&endblock=99999999&sort=asc&apikey=YourApiKeyToken')
+    const resOldFinal = await resOld.json();
+    const resFinal = await res.json();
+
+    const newAddresses = resFinal.result.map(r => r.from);
+    const oldAddresses = resOldFinal.result.map(r => r.from);
+    const allAddr = [...new Set(oldAddresses.concat(newAddresses))];
+    console.log(`allAdd:`, allAddr.length);
   });
 
 module.exports = {
