@@ -58,6 +58,8 @@ contract('IdleFactory', function ([_, creator, nonOwner, someone, foo]) {
     this.idleTokenAddr = await this.Factory.newIdleToken.call(...this.params, { from: creator });
     await this.Factory.newIdleToken(...this.params, { from: creator });
     await this.IdleRebalancer.setIdleToken(this.idleTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
   });
 
   it('allows onlyOwner to set newIdleToken', async function () {

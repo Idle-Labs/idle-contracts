@@ -23,6 +23,7 @@ contract('IdleCompound', function ([_, creator, nonOwner, someone, foo]) {
       this.DAIMock.address,
       {from: creator}
     );
+    await this.cDAIWrapper.setIdleToken(nonOwner, {from: creator});
   });
 
   it('constructor set a token address', async function () {

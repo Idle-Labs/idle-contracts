@@ -27,6 +27,8 @@ contract IdlePriceCalculator {
   )
     external view
     returns (uint256 price) {
+      require(currentTokensUsed.length == protocolWrappersAddresses.length, "Different Length");
+
       if (totalSupply == 0) {
         return 10**18;
       }

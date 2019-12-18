@@ -42,6 +42,8 @@ contract IdleRebalancer is Ownable {
    * @param _iWrapper : iWrapper address
    */
   constructor(address _cToken, address _iToken, address _cWrapper, address _iWrapper) public {
+    require(_cToken != address(0) && _iToken != address(0) && _cWrapper != address(0) && _iWrapper != address(0), 'some addr is 0');
+
     cToken = _cToken;
     iToken = _iToken;
     cWrapper = _cWrapper;
@@ -107,7 +109,7 @@ contract IdleRebalancer is Ownable {
 
   /**
    * sets maxIterations for bisection recursive calls
-   * @param _maxIterations : max rate difference in percentage scaled by 10**18
+   * @param _maxIterations : max number of iterations for the bisection algorithm
    */
   function setMaxIterations(uint256 _maxIterations)
     external onlyOwner {
@@ -125,7 +127,8 @@ contract IdleRebalancer is Ownable {
 
   /**
    * sets maxSupplyedParamsDifference
-   * @param _maxSupplyedParamsDifference : max rate difference in percentage scaled by 10**18
+   * @param _maxSupplyedParamsDifference : max slippage between the rebalance params given from the client
+   *                                       and actual amount to be rebalanced
    */
   function setMaxSupplyedParamsDifference(uint256 _maxSupplyedParamsDifference)
     external onlyOwner {

@@ -75,6 +75,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     );
     await this.Factory.setTokenOwnershipAndPauser(this.idleTokenAddr, {from: creator});
     await this.IdleRebalancer.setIdleToken(this.idleTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
 
     this.token = await IdleToken.at(this.idleTokenAddr);
 
@@ -1195,6 +1197,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   // ###################### _rebalanceCheck tests #################################
   it('_rebalanceCheck when no currentToken is given and the best protocol cannot sustain all the liquidity provided', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
@@ -1207,6 +1211,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('_rebalanceCheck when no currentToken is given and the best protocol can sustain all the liquidity provided', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
@@ -1219,6 +1225,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('_rebalanceCheck when no currentToken is given and the best protocol cannot sustain all the liquidity but the new rate is within a minRateDifference', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2.0%
@@ -1231,6 +1239,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has not the best rate', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
@@ -1245,6 +1255,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has the best rate (even with _newAmount)', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.iDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
@@ -1261,6 +1273,8 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('_rebalanceCheck when currentToken is given and curr protocol has not the best rate but is within a minRateDifference', async function () {
     await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
 
     await this.cDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.iDAIWrapper._setAPR(BNify('1900000000000000000')); // 1.9%

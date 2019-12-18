@@ -70,6 +70,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     await this.IdleRebalancer.setIdleToken(creator, {from: creator});
+    // await this.cDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
+    // await this.iDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
   });
 
   it('constructor set a token (DAI) address', async function () {

@@ -22,13 +22,34 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   address public token;
   // underlying token (eg DAI) address
   address public underlying;
+  address public idleToken;
   /**
    * @param _token : iToken address
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
+    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+
     token = _token;
     underlying = _underlying;
+  }
+
+  /**
+   * Throws if called by any account other than IdleToken contract.
+   */
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    _;
+  }
+
+  // onlyOwner
+  /**
+   * sets idleToken address
+   * @param _idleToken : idleToken address
+   */
+  function setIdleToken(address _idleToken)
+    external onlyOwner {
+      idleToken = _idleToken;
   }
 
   // onlyOwner
@@ -88,7 +109,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
       */
 
       // The initial formula is the following
-      // q = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x)1) * o1 / k1
+      // q = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1
       // We rewrote it in this way to avoid intermediate overflows
       // q = (a1 * s1 / (s1 + x1) * b1) / (s1 + x1) * o1 / k1
       return params[0].mul(params[2]).div(params[2].add(params[5]))
@@ -126,7 +147,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
    * @return iTokens minted
    */
   function mint()
-    external
+    external onlyIdle
     returns (uint256 iTokens) {
       uint256 balance = IERC20(underlying).balanceOf(address(this));
       if (balance == 0) {
@@ -146,7 +167,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
    * @return underlying tokens redeemd
    */
   function redeem(address _account)
-    external
+    external onlyIdle
     returns (uint256 tokens) {
       uint256 balance = IERC20(token).balanceOf(address(this));
       uint256 expectedAmount = balance.mul(iERC20Fulcrum(token).tokenPrice()).div(10**18);

@@ -70,4 +70,6 @@ module.exports = async function(deployer, network, accounts) {
   );
   await Factory.setTokenOwnershipAndPauser(IdleSAIAddress);
   (await IdleRebalancer.at(IdleRebalancer.address)).setIdleToken(IdleSAIAddress);
+  (await IdleCompound.at(IdleCompound.address)).setIdleToken(IdleSAIAddress);
+  (await IdleFulcrum.at(IdleFulcrum.address)).setIdleToken(IdleSAIAddress);
 };

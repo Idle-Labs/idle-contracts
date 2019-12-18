@@ -216,8 +216,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   }
 
   // external
-  // We should save the amount one has deposited to calc interests
-
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
    * This method triggers a rebalance of the pools if needed
@@ -451,9 +449,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
       if (currentToken != address(0) && currentToken != maxAddress) {
         return (true, maxAddress);
-      }
-
-      if (currentToken == address(0) || currentToken == maxAddress) {
+      } else {
         uint256 nextRate = _getProtocolNextRate(protocolWrappers[maxAddress], _amount);
         if (nextRate.add(minRateDifference) < secondBestRate) {
           return (true, maxAddress);

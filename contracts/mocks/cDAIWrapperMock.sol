@@ -78,4 +78,7 @@ contract cDAIWrapperMock is ILendingProtocol, Ownable {
   function _setPriceInToken(uint256 _price) external returns (uint256) {
     price = _price;
   }
+  function setIdleToken(address) external {
+
+  }
 }

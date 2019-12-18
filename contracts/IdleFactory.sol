@@ -42,6 +42,12 @@ contract IdleFactory is Ownable {
     address _idleCompound,
     address _idleFulcrum
   ) external onlyOwner returns(address) {
+    require(
+      _token != address(0) && _cToken != address(0) &&
+      _iToken != address(0) && _rebalancer != address(0) &&
+      _priceCalculator != address(0) && _idleCompound != address(0) &&
+      _idleFulcrum != address(0), 'some addr is 0');
+
     IdleToken idleToken = new IdleToken(
       _name, // eg. IdleDAI
       _symbol, // eg. IDLEDAI

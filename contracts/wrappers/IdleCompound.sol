@@ -23,14 +23,35 @@ contract IdleCompound is ILendingProtocol, Ownable {
   address public token;
   // underlying token (token eg DAI) address
   address public underlying;
+  address public idleToken;
 
   /**
    * @param _token : cToken address
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
+    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+
     token = _token;
     underlying = _underlying;
+  }
+
+  /**
+   * Throws if called by any account other than IdleToken contract.
+   */
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    _;
+  }
+
+  // onlyOwner
+  /**
+   * sets idleToken address
+   * @param _idleToken : idleToken address
+   */
+  function setIdleToken(address _idleToken)
+    external onlyOwner {
+      idleToken = _idleToken;
   }
 
   // onlyOwner
@@ -92,7 +113,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
       // ((a + (b*c)/(b + s + x)) / k) * e
       uint256 inter3 = params[1].add(inter1).div(params[7]).mul(params[5]);
       // ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f
-      return inter3.mul(params[2]).div(inter2).div(10**18).mul(params[7]).mul(100);
+      return inter3.mul(params[2]).div(inter2).div(params[0]).mul(params[7]).mul(params[8]);
   }
 
   /**
@@ -149,10 +170,10 @@ contract IdleCompound is ILendingProtocol, Ownable {
    * tokens are then transferred to msg.sender
    * NOTE: underlying tokens needs to be sended here before calling this
    *
-   * @return iTokens minted
+   * @return cTokens minted
    */
   function mint()
-    external
+    external onlyIdle
     returns (uint256 cTokens) {
       uint256 balance = IERC20(underlying).balanceOf(address(this));
       if (balance == 0) {
@@ -173,12 +194,12 @@ contract IdleCompound is ILendingProtocol, Ownable {
   /**
    * Gets all cTokens in this contract and redeems underlying tokens.
    * underlying tokens are then transferred to `_account`
-   * NOTE: iTokens needs to be sended here before calling this
+   * NOTE: cTokens needs to be sended here before calling this
    *
    * @return underlying tokens redeemd
    */
   function redeem(address _account)
-    external
+    external onlyIdle
     returns (uint256 tokens) {
       // Funds needs to be sended here before calling this
       CERC20 _cToken = CERC20(token);

@@ -74,26 +74,4 @@ interface iERC20Fulcrum {
   function claimLoanToken()
     external
     returns (uint256 claimedAmount);
-
-  /* function burnToEther(
-    address receiver,
-    uint256 burnAmount)
-    external
-    returns (uint256 loanAmountPaid);
-
-
-  function supplyInterestRate()
-    external
-    view
-    returns (uint256);
-
-  function assetBalanceOf(
-    address _owner)
-    external
-    view
-    returns (uint256);
-
-  function claimLoanToken()
-    external
-    returns (uint256 claimedAmount); */
 }
