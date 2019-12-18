@@ -148,7 +148,56 @@ truffle test
 Migrations files `3_setup_ganache_test.js` and `4_test_ganache_idle.js` (only used with `local` network) have been created for testing purposes, in order to have real tests with the mainnet environment.
 
 ```
-ganache-cli --fork https://mainnet.infura.io/v3/{INFURA_API_KEY} -e 100000 --unlock 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359
+ganache-cli --fork https://mainnet.infura.io/v3/{INFURA_API_KEY} -e 100000 --unlock 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 --unlock 0x6B175474E89094C44Da98b954EedeAC495271d0F
 
 truffle migrate --network local
 ```
+
+### Deployed instances
+# Kovan
+## SAI
+cSAI: 0x63c344bf8651222346dd870be254d4347c9359f7
+iSAI: 0xA1e58F3B1927743393b25f261471E1f2D3D9f0F6
+SAI: 0xC4375B7De8af5a38a93548eb8453a498222C4fF2
+IdleCompound: 0xB0231BEad4d85F0d51f4F0e0FC48dBdE9E116274
+IdleFulcrum: 0xA6802e25A56085A6ceDDc5c3938366CD36aC480d
+IdleRebalancer: 0x0aDc35200113DB565891F3B2c30b3bAd067Ce57B
+IdlePriceCalculator: 0xBeC8Cc1f71ccbD1F53D6A32ED60e9Ac9cDaF3B78
+IdleFactory: 0xF2536c7708DeC0d6E467d1Fb4dbe023e5ECE2Bc9
+IdleSAI: 0x03f79C6bF275651106Cd172c1650E9a78585e3BA
+
+IdleSAI other version: 0x36345c598e4d120E85B7cD1F68492147e2d2C579
+
+## DAI
+cDAI: 0xe7bc397dbd069fc7d0109c0636d06888bb50668c
+iDAI: 0x6c1e2b0f67e00c06c8e2be7dc681ab785163ff4d
+DAI: 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa
+IdleCompoundV2 : 0xCCF49a7b1dF3A1D12c337B0f1703e007B1D2C19a
+IdleFulcrum: 0xe08489C291E67eB5E6695c421127A48587fA9852
+IdleRebalancer: 0xb29642d7497A926f889504af319ad585f848493B
+IdlePriceCalculator: 0xeFe83B951137a1DA8bB595bD655b83c078396AfD
+IdleFactory: 0x594082c0d0306fA70566E7C306AeCdf16d91A7BF
+IdleDAI: 0x7e2D43140793109bDED439aEBBaa2973926DB300
+
+# Mainnet
+## SAI
+cSAI: 0xf5dce57282a584d2746faf1593d3121fcac444dc
+iSAI: 0x14094949152eddbfcd073717200da82fed8dc960
+SAI: 0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359
+IdleCompound:
+IdleFulcrum:
+IdleRebalancer:
+IdlePriceCalculator:
+IdleFactory:
+IdleSAI:
+
+## DAI
+cDAI: 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643
+iDAI: 0x493C57C4763932315A328269E1ADaD09653B9081
+DAI: 0x6B175474E89094C44Da98b954EedeAC495271d0F
+IdleCompoundV2:
+IdleFulcrum:
+IdleRebalancer:
+IdlePriceCalculator:
+IdleFactory:
+IdleDAI:

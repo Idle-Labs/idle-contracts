@@ -1,15 +1,20 @@
 var IdleToken = artifacts.require("./IdleToken.sol");
 var IdleRebalancer = artifacts.require("./IdleRebalancer.sol");
+var IdleRebalancerV2 = artifacts.require("./IdleRebalancerV2.sol");
 var IdlePriceCalculator = artifacts.require("./IdlePriceCalculator.sol");
 var IdleCompound = artifacts.require("./IdleCompound.sol");
+var IdleCompoundV2 = artifacts.require("./IdleCompoundV2.sol");
 var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
 var IdleFactory = artifacts.require("./IdleFactory.sol");
 
 const cSAI = {
   'live': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'live-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc', // needed for truffle
-  'kovan': '0x3BD3f5b19BCB7f96d42cb6A9dE510ea6f9096355',
-  'kovan-fork': '0x3BD3f5b19BCB7f96d42cb6A9dE510ea6f9096355', // needed for truffle
+
+  // Attention: This is the new interest rate model
+  'kovan': '0x63c344bf8651222346dd870be254d4347c9359f7',
+  'kovan-fork': '0x63c344bf8651222346dd870be254d4347c9359f7', // needed for truffle
+
   'local': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'local-fork': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
   'test': '0xf5dce57282a584d2746faf1593d3121fcac444dc',
@@ -42,34 +47,55 @@ module.exports = async function(deployer, network, accounts) {
   console.log('iSAI address: ', iSAI[network]);
   console.log('SAI address: ', SAI[network]);
   console.log('##################');
-  await deployer.deploy(IdleCompound, cSAI[network], SAI[network]);
+
+  // if is using new interestRateModel
+  let isUsingNewRateModel = false;
+  if (network === 'kovan' && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
+    isUsingNewRateModel = true;
+    await deployer.deploy(IdleCompoundV2, cSAI[network], SAI[network]);
+    await deployer.deploy(IdleRebalancerV2,
+      cSAI[network], iSAI[network],
+      IdleCompound.address, IdleFulcrum.address
+    );
+  } else {
+    await deployer.deploy(IdleCompound, cSAI[network], SAI[network]);
+    await deployer.deploy(IdleRebalancer,
+      cSAI[network], iSAI[network],
+      IdleCompound.address, IdleFulcrum.address
+    );
+  }
   await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
-  await deployer.deploy(IdleRebalancer,
-    cSAI[network], iSAI[network],
-    IdleCompound.address, IdleFulcrum.address
-  );
-  const PriceCalculator = await deployer.deploy(IdlePriceCalculator);
-  const Factory = await deployer.deploy(IdleFactory);
+
+  const Factory = await IdleFactory.at(IdleFactory.address);
   const IdleSAIAddress = await Factory.newIdleToken.call(
     'IdleSAI',
     'IDLESAI',
     18,
     SAI[network], cSAI[network], iSAI[network],
-    IdleRebalancer.address,
-    PriceCalculator.address,
-    IdleCompound.address, IdleFulcrum.address
+    isUsingNewRateModel ? IdleRebalancerV2.address : IdleRebalancer.address,
+    IdlePriceCalculator.address,
+    isUsingNewRateModel ? IdleCompoundV2.address : IdleCompound.address,
+    IdleFulcrum.address
   );
   await Factory.newIdleToken(
     'IdleSAI',
     'IDLESAI',
     18,
     SAI[network], cSAI[network], iSAI[network],
-    IdleRebalancer.address,
-    PriceCalculator.address,
-    IdleCompound.address, IdleFulcrum.address
+    isUsingNewRateModel ? IdleRebalancerV2.address : IdleRebalancer.address,
+    IdlePriceCalculator.address,
+    isUsingNewRateModel ? IdleCompoundV2.address : IdleCompound.address,
+    IdleFulcrum.address
   );
   await Factory.setTokenOwnershipAndPauser(IdleSAIAddress);
-  (await IdleRebalancer.at(IdleRebalancer.address)).setIdleToken(IdleSAIAddress);
-  (await IdleCompound.at(IdleCompound.address)).setIdleToken(IdleSAIAddress);
+
+  console.log('#### IdleSAIAddress: ', IdleSAIAddress);
+  if (isUsingNewRateModel) {
+    (await IdleRebalancerV2.at(IdleRebalancerV2.address)).setIdleToken(IdleSAIAddress);
+    (await IdleCompoundV2.at(IdleCompoundV2.address)).setIdleToken(IdleSAIAddress);
+  } else {
+    (await IdleRebalancer.at(IdleRebalancer.address)).setIdleToken(IdleSAIAddress);
+    (await IdleCompound.at(IdleCompound.address)).setIdleToken(IdleSAIAddress);
+  }
   (await IdleFulcrum.at(IdleFulcrum.address)).setIdleToken(IdleSAIAddress);
 };
