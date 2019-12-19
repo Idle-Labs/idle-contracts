@@ -45,30 +45,14 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   // onlyOwner
   /**
    * sets idleToken address
+   * NOTE: can be called only once. It's not on the constructor because we are deploying this contract
+   *       after the IdleToken contract
    * @param _idleToken : idleToken address
    */
   function setIdleToken(address _idleToken)
     external onlyOwner {
+      require(idleToken == address(0), "idleToken addr already set");
       idleToken = _idleToken;
-  }
-
-  // onlyOwner
-  /**
-   * sets token address
-   * @param _token : iToken address
-   */
-  function setToken(address _token)
-    external onlyOwner {
-      token = _token;
-  }
-
-  /**
-   * sets underlying address
-   * @param _underlying : underlying address (eg DAI)
-   */
-  function setUnderlying(address _underlying)
-    external onlyOwner {
-      underlying = _underlying;
   }
   // end onlyOwner
 

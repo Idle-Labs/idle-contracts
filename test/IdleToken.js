@@ -148,13 +148,6 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
   it('constructor set minRateDifference', async function () {
     (await this.token.minRateDifference()).should.be.bignumber.equal(BNify(10**17));
   });
-  it('allows onlyOwner to setToken', async function () {
-    const val = this.someAddr;
-    await this.token.setToken(val, { from: creator });
-    (await this.token.token()).should.be.equal(val);
-
-    await expectRevert.unspecified(this.token.setToken(val, { from: nonOwner }));
-  });
   it('allows onlyOwner to setManualPlay', async function () {
     const val = true;
     await this.token.setManualPlay(val, { from: creator });

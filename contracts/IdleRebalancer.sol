@@ -64,47 +64,14 @@ contract IdleRebalancer is Ownable {
   // onlyOwner
   /**
    * sets idleToken address
+   * NOTE: can be called only once. It's not on the constructor because we are deploying this contract
+   *       after the IdleToken contract
    * @param _idleToken : idleToken address
    */
   function setIdleToken(address _idleToken)
     external onlyOwner {
+      require(idleToken == address(0), "idleToken addr already set");
       idleToken = _idleToken;
-  }
-
-  /**
-   * sets cToken address
-   * @param _cToken : cToken address
-   */
-  function setCToken(address _cToken)
-    external onlyOwner {
-      cToken = _cToken;
-  }
-
-  /**
-   * sets iToken address
-   * @param _iToken : iToken address
-   */
-  function setIToken(address _iToken)
-    external onlyOwner {
-      iToken = _iToken;
-  }
-
-  /**
-   * sets cToken wrapper address
-   * @param _cWrapper : cToken wrapper address
-   */
-  function setCTokenWrapper(address _cWrapper)
-    external onlyOwner {
-      cWrapper = _cWrapper;
-  }
-
-  /**
-   * sets iToken wrapper address
-   * @param _iWrapper : iToken wrapper address
-   */
-  function setITokenWrapper(address _iWrapper)
-    external onlyOwner {
-      iWrapper = _iWrapper;
   }
 
   /**

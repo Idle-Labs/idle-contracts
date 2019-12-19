@@ -29,19 +29,16 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
   it('constructor set a underlying address', async function () {
     (await this.iDAIWrapper.underlying()).should.equal(this.DAIMock.address);
   });
-  it('allows onlyOwner to setToken', async function () {
+  it('allows onlyOwner to setIdleToken', async function () {
     const val = this.someAddr;
-    await this.iDAIWrapper.setToken(val, { from: creator });
-    (await this.iDAIWrapper.token()).should.equal(val);
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await expectRevert(
+      this.iDAIWrapper.setIdleToken(val, { from: creator }),
+      'idleToken addr already set'
+    );
 
-    await expectRevert.unspecified(this.iDAIWrapper.setToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setUnderlying', async function () {
-    const val = this.someAddr;
-    await this.iDAIWrapper.setUnderlying(val, { from: creator });
-    (await this.iDAIWrapper.underlying()).should.equal(val);
-
-    await expectRevert.unspecified(this.iDAIWrapper.setUnderlying(val, { from: nonOwner }));
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.iDAIWrapper.setIdleToken(val, { from: nonOwner }));
   });
   it('returns next supply rate given amount (counting fee ie spreadMultiplier)', async function () {
     const val = BNify(10**18);

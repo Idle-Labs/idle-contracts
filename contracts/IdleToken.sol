@@ -114,15 +114,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
   // onlyOwner
   /**
-   * It allows owner to set the underlying token address
-   *
-   * @param _token : underlying token address tracked by this contract (eg DAI address)
-   */
-  function setToken(address _token)
-    external onlyOwner {
-      token = _token;
-  }
-  /**
    * It allows owner to set the iToken (Fulcrum) address
    *
    * @param _iToken : iToken address

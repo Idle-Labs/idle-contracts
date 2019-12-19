@@ -70,8 +70,6 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     await this.IdleRebalancer.setIdleToken(creator, {from: creator});
-    // await this.cDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
-    // await this.iDAIWrapper.setIdleToken(this.idleTokenAddr, {from: creator});
   });
 
   it('constructor set a token (DAI) address', async function () {
@@ -95,34 +93,6 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
   it('constructor set a maxSupplyedParamsDifference', async function () {
     (await this.IdleRebalancer.maxSupplyedParamsDifference()).should.be.bignumber.equal(BNify('100000'));
   });
-  it('allows onlyOwner to setCToken', async function () {
-    const val = this.someAddr;
-    await this.IdleRebalancer.setCToken(val, { from: creator });
-    (await this.IdleRebalancer.cToken()).should.equal(val);
-
-    await expectRevert.unspecified(this.IdleRebalancer.setCToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setIToken', async function () {
-    const val = this.someAddr;
-    await this.IdleRebalancer.setIToken(val, { from: creator });
-    (await this.IdleRebalancer.iToken()).should.equal(val);
-
-    await expectRevert.unspecified(this.IdleRebalancer.setIToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setCTokenWrapper', async function () {
-    const val = this.someAddr;
-    await this.IdleRebalancer.setCTokenWrapper(val, { from: creator });
-    (await this.IdleRebalancer.cWrapper()).should.equal(val);
-
-    await expectRevert.unspecified(this.IdleRebalancer.setCTokenWrapper(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setITokenWrapper', async function () {
-    const val = this.someAddr;
-    await this.IdleRebalancer.setITokenWrapper(val, { from: creator });
-    (await this.IdleRebalancer.iWrapper()).should.equal(val);
-
-    await expectRevert.unspecified(this.IdleRebalancer.setITokenWrapper(val, { from: nonOwner }));
-  });
   it('allows onlyOwner to setMaxIterations', async function () {
     const val = BNify('50');
     await this.IdleRebalancer.setMaxIterations(val, { from: creator });
@@ -143,6 +113,17 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     (await this.IdleRebalancer.maxSupplyedParamsDifference()).should.be.bignumber.equal(val);
 
     await expectRevert.unspecified(this.IdleRebalancer.setMaxSupplyedParamsDifference(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setIdleToken', async function () {
+    const val = this.someAddr;
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await expectRevert(
+      this.IdleRebalancer.setIdleToken(val, { from: creator }),
+      'idleToken addr already set'
+    );
+
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.IdleRebalancer.setIdleToken(val, { from: nonOwner }));
   });
   it('calcRebalanceAmounts', async function () {
     const newDAIAmount = BNify('100000000').mul(this.one); // 100.000.000 DAI
