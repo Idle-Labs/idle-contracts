@@ -16,7 +16,9 @@ contract IdleFactory is Ownable {
 
   /**
    * Used to deploy new instances of IdleTokens, only callable by owner
-   * Ownership of IdleToken is then transferred to msg.sender. Same for Pauser role
+   * Ownership of IdleToken is then transferred to msg.sender. Same for Pauser role.
+   * NOTE: underlyingToIdleTokenMap[_token] can be overwritten if a new IdleToken instance is deployed
+   *       to substitute the previous one for the same underlying token
    *
    * @param _name : IdleToken name
    * @param _symbol : IdleToken symbol
