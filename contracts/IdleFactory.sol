@@ -76,6 +76,8 @@ contract IdleFactory is Ownable {
   * @param _idleToken : idleToken address who needs to change owner and pauser
   */
   function setTokenOwnershipAndPauser(address _idleToken) external onlyOwner {
+    require(_idleToken != address(0), '_idleToken addr is 0');
+
     IdleToken idleToken = IdleToken(_idleToken);
     idleToken.transferOwnership(msg.sender);
     idleToken.addPauser(msg.sender);

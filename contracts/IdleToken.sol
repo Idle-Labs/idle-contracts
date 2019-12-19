@@ -148,6 +148,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    */
   function setProtocolWrapper(address _token, address _wrapper)
     external onlyOwner {
+      require(_token != address(0) && _wrapper != address(0), 'some addr is 0');
       // update allAvailableTokens if needed
       if (protocolWrappers[_token] == address(0)) {
         allAvailableTokens.push(_token);

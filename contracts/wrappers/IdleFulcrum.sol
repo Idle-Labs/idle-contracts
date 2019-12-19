@@ -52,6 +52,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   function setIdleToken(address _idleToken)
     external onlyOwner {
       require(idleToken == address(0), "idleToken addr already set");
+      require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
   }
   // end onlyOwner
