@@ -42,6 +42,8 @@ contract IdleRebalancerV2 is Ownable {
    * @param _iWrapper : iWrapper address
    */
   constructor(address _cToken, address _iToken, address _cWrapper, address _iWrapper) public {
+    require(_cToken != address(0) && _iToken != address(0) && _cWrapper != address(0) && _iWrapper != address(0), 'some addr is 0');
+
     cToken = _cToken;
     iToken = _iToken;
     cWrapper = _cWrapper;
@@ -62,47 +64,15 @@ contract IdleRebalancerV2 is Ownable {
   // onlyOwner
   /**
    * sets idleToken address
+   * NOTE: can be called only once. It's not on the constructor because we are deploying this contract
+   *       after the IdleToken contract
    * @param _idleToken : idleToken address
    */
   function setIdleToken(address _idleToken)
     external onlyOwner {
+      require(idleToken == address(0), "idleToken addr already set");
+      require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
-  }
-
-  /**
-   * sets cToken address
-   * @param _cToken : cToken address
-   */
-  function setCToken(address _cToken)
-    external onlyOwner {
-      cToken = _cToken;
-  }
-
-  /**
-   * sets iToken address
-   * @param _iToken : iToken address
-   */
-  function setIToken(address _iToken)
-    external onlyOwner {
-      iToken = _iToken;
-  }
-
-  /**
-   * sets cToken wrapper address
-   * @param _cWrapper : cToken wrapper address
-   */
-  function setCTokenWrapper(address _cWrapper)
-    external onlyOwner {
-      cWrapper = _cWrapper;
-  }
-
-  /**
-   * sets iToken wrapper address
-   * @param _iWrapper : iToken wrapper address
-   */
-  function setITokenWrapper(address _iWrapper)
-    external onlyOwner {
-      iWrapper = _iWrapper;
   }
 
   /**
@@ -150,26 +120,15 @@ contract IdleRebalancerV2 is Ownable {
   {
     // Get all params for calculating Compound nextSupplyRateWithParams
     CERC20 _cToken = CERC20(cToken);
-    WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
     uint256[] memory paramsCompound = new uint256[](10);
-    paramsCompound[0] = 10**18; // j
-    paramsCompound[1] = 0; // a
     paramsCompound[2] = _cToken.totalBorrows(); // b
-    paramsCompound[3] = 0; // c
-    paramsCompound[4] = _cToken.totalReserves(); // d
-    paramsCompound[5] = paramsCompound[0].sub(_cToken.reserveFactorMantissa()); // e
     paramsCompound[6] = _cToken.getCash(); // s
-    paramsCompound[7] = white.blocksPerYear(); // k
-    paramsCompound[8] = 100; // f
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
     uint256[] memory paramsFulcrum = new uint256[](6);
-    paramsFulcrum[0] = _iToken.avgBorrowInterestRate(); // a1
     paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
     paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
-    paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
-    paramsFulcrum[4] = 10**20; // k1
 
     tokenAddresses = new address[](2);
     tokenAddresses[0] = cToken;
@@ -262,13 +221,8 @@ contract IdleRebalancerV2 is Ownable {
     paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
 
     // calculate next rates with amountCompound and amountFulcrum
-
-    // For Fulcrum see https://github.com/bZxNetwork/bZx-monorepo/blob/development/packages/contracts/extensions/loanTokenization/contracts/LoanToken/LoanTokenLogicV3.sol#L1418
-    // fulcrumUtilRate = fulcrumBorrow.mul(10**20).div(assetSupply);
-    uint256 currFulcRate = (paramsFulcrum[1].mul(10**20).div(paramsFulcrum[2])) > 90 ether ?
-      ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[5]) :
-      ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[5]);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRate(paramsCompound[9]);
     bool isCompoundBest = currCompRate > currFulcRate;
     // |fulcrumRate - compoundRate| <= tolerance
     bool areParamsOk = (currFulcRate.add(maxRateDifference) >= currCompRate && isCompoundBest) ||
@@ -311,14 +265,8 @@ contract IdleRebalancerV2 is Ownable {
     paramsFulcrum[5] = amountFulcrum;
 
     // calculate next rates with amountCompound and amountFulcrum
-
-    // For Fulcrum see https://github.com/bZxNetwork/bZx-monorepo/blob/development/packages/contracts/extensions/loanTokenization/contracts/LoanToken/LoanTokenLogicV3.sol#L1418
-    // fulcrumUtilRate = fulcrumBorrow.mul(10**20).div(assetSupply);
-    uint256 currFulcRate = (paramsFulcrum[1].mul(10**20).div(paramsFulcrum[2])) > 90 ether ?
-      ILendingProtocol(iWrapper).nextSupplyRate(amountFulcrum) :
-      ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
-
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRate(amountFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRate(amountCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
 
     // bisection interval update, we choose to halve the smaller amount

@@ -23,33 +23,39 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
   address public token;
   // underlying token (token eg DAI) address
   address public underlying;
+  address public idleToken;
 
   /**
    * @param _token : cToken address
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
+    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+
     token = _token;
     underlying = _underlying;
   }
 
-  // onlyOwner
   /**
-   * sets token address
-   * @param _token : cToken address
+   * Throws if called by any account other than IdleToken contract.
    */
-  function setToken(address _token)
-    external onlyOwner {
-      token = _token;
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    _;
   }
 
+  // onlyOwner
   /**
-   * sets underlying address
-   * @param _underlying : underlying address (eg DAI)
+   * sets idleToken address
+   * NOTE: can be called only once. It's not on the constructor because we are deploying this contract
+   *       after the IdleToken contract
+   * @param _idleToken : idleToken address
    */
-  function setUnderlying(address _underlying)
+  function setIdleToken(address _idleToken)
     external onlyOwner {
-      underlying = _underlying;
+      require(idleToken == address(0), "idleToken addr already set");
+      require(_idleToken != address(0), "_idleToken addr is 0");
+      idleToken = _idleToken;
   }
   // end onlyOwner
 
@@ -77,12 +83,13 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
     returns (uint256) {
       CERC20 cToken = CERC20(token);
       WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
-      return white.getSupplyRate(
+      uint256 ratePerBlock = white.getSupplyRate(
         cToken.getCash().add(_amount),
         cToken.totalBorrows(),
         cToken.totalReserves(),
         cToken.reserveFactorMantissa()
       );
+      return ratePerBlock.mul(white.blocksPerYear()).mul(100);
   }
 
   /**

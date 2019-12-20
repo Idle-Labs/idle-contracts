@@ -813,10 +813,11 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
       iDAI.spreadMultiplier.call(),
       iDAI.nextSupplyInterestRate.call(web3.utils.toBN(newDAIAmount)),
       iDAI.tokenPrice.call(),
+      iDAI.dsr.call(),
     ];
 
     const res = await Promise.all(promises);
-    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice] = res;
+    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice, dsr] = res;
 
     supplyRate = BNify(supplyRate);
     borrowRate = BNify(borrowRate);
@@ -825,54 +826,46 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
     spreadMultiplier = BNify(spreadMultiplier);
     autoNextRate = BNify(autoNextRate);
     tokenPrice = BNify(tokenPrice);
+    dsr = BNify(dsr);
 
     const utilizationRate = BNify(totalAssetBorrow).div(BNify(totalAssetSupply));
 
     console.log(`CONTRACT FULCRUM current DATA:`);
     console.log(`${BNify(supplyRate).div(1e18).toString()}% supplyRate %`);
-    console.log(`${BNify(borrowRate).div(1e18).toString()}% borrowRate %`);
-    console.log(`${BNify(totalAssetSupply).div(1e18).toString()} totalAssetSupply DAI`);
-    console.log(`${BNify(totalAssetBorrow).div(1e18).toString()} totalAssetBorrow DAI`);
+    // console.log(`${BNify(borrowRate).div(1e18).toString()}% borrowRate %`);
+    // console.log(`${BNify(totalAssetSupply).div(1e18).toString()} totalAssetSupply DAI`);
+    // console.log(`${BNify(totalAssetBorrow).div(1e18).toString()} totalAssetBorrow DAI`);
     // console.log(`${spreadMultiplier.toString()} spreadMultiplier`);
     console.log(`${utilizationRate.toString()} utilizationRate`);
     // console.log(`${newDAIAmount.div(1e18).toString()} newDAIAmount`);
     console.log(`${autoNextRate.div(1e18).toString()}% autoNextRate`);
     console.log(`${tokenPrice.div(1e18).toString()} DAI tokenPrice`);
+    console.log(`${dsr.div(1e18).toString()}% DAI DSR`);
     // console.log(`##############`);
 
-    const a1 = borrowRate;
-    const b1 = totalAssetBorrow;
-    let s1 = totalAssetSupply;
+    // const a1 = borrowRate;
+    // const b1 = totalAssetBorrow;
+    // let s1 = totalAssetSupply;
     const o1 = spreadMultiplier;
     const x1 = newDAIAmount;
     const k1 = BNify('1e20');
+    //
+    // console.log(`a1 = ${borrowRate}`);
+    // console.log(`b1 = ${totalAssetBorrow}`);
+    // console.log(`s1 = ${totalAssetSupply}`);
+    // console.log(`o1 = ${spreadMultiplier}`);
+    // console.log(`x1 = ${newDAIAmount}`);
+    // console.log(`k1 = ${BNify('1e20')}`);
 
-    console.log(`a1 = ${borrowRate}`);
-    console.log(`b1 = ${totalAssetBorrow}`);
-    console.log(`s1 = ${totalAssetSupply}`);
-    console.log(`o1 = ${spreadMultiplier}`);
-    console.log(`x1 = ${newDAIAmount}`);
-    console.log(`k1 = ${BNify('1e20')}`);
+    const currentSupplyInterestRate = supplyRate;
+    const targetSupplyRate = autoNextRate;
 
-    const currentSupplyInterestRate = a1.times(b1.div(s1));
-    const targetSupplyRate = a1.times(s1.div(s1.plus(x1))).times(b1.div(s1.plus(x1)))
-
-    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1))
+    const currentSupplyInterestRateWithFee = supplyRate
       .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // ######
-    const targetSupplyRateWithFee = a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
+    const targetSupplyRateWithFee = autoNextRate
       .times(o1).div(k1); // counting fee (spreadMultiplier)
-
-    // q = a * (s / (s + x)) * (b / (s + x))
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(s) - sqrt(q) s)/sqrt(q)
-    // const maxDAIAmount = a.sqrt().times(b.sqrt()).times(s.sqrt()).minus(q.sqrt().times(s)).div(q.sqrt());
-    // q = a * (s / (s + x)) * (b / (s + x)) * o / k
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(o) sqrt(s) - sqrt(k) sqrt(q) s)/(sqrt(k) sqrt(q))
-    // const maxDAIAmountWithFee = a.sqrt().times(b.sqrt()).times(o.sqrt()).times(s.sqrt()).minus(k.sqrt().times(q.sqrt()).times(s)).div(k.sqrt().times(q.sqrt()));
 
     console.log(`${currentSupplyInterestRate.div(1e18).toString()} currentSupplyInterestRate`);
     // console.log(`${targetSupplyRate.div(1e18).toString()} targetSupplyRate`);
@@ -885,7 +878,10 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
 
     const cDAI = await cERC20.at('0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643'); // mainnet
     const cDAIWithSupply = await ERC20.at('0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643'); // mainnet
-    const whitePaperInterestModel = await WhitePaperInterestRateModel.at(await cDAI.interestRateModel()); // mainnet
+    const rateModel = await cDAI.interestRateModel();
+    console.log('rateModel', rateModel);
+
+    const whitePaperInterestModel = await WhitePaperInterestRateModel.at(rateModel); // mainnet
 
     let promisesComp = [
       cDAI.supplyRatePerBlock.call(),
@@ -912,8 +908,10 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
       web3.utils.toBN(BNify(reserveFactorMantissa))
     );
 
-    const targetSupplyRateWithFeeCompound = BNify(whitepaperRate).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
+    const whiteDsr = await whitePaperInterestModel.dsrPerBlock.call();
 
+    const targetSupplyRateWithFeeCompound = BNify(whitepaperRate).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
+    dsrRatePerYear = BNify(whiteDsr).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
     supplyRatePerYear = BNify(contractSupply).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
     borrowRatePerYearContract = BNify(contractBorrow).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
 
@@ -922,6 +920,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
     console.log(`${BNify(totalBorrows).div(1e18).toString()} totalBorrows`)
     console.log(`${BNify(getCash).div(1e18).toString()} getCash`)
     console.log(`${BNify(supplyRatePerYear).div(1e18).toString()}% supplyRatePerYear`);
+    console.log(`${BNify(dsrRatePerYear).div(1e18).toString()}% dsrRatePerYear`);
     // console.log(`${BNify(totalReserves).div(1e18).toString()} totalReserves`)
     // console.log(`${BNify(totalSupply).div(1e8).toString()} totalSupply`)
     console.log(`${BNify(exchangeRateStored).div(1e20).toString()} exchangeRateStored`)
@@ -937,9 +936,10 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
     // (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
 
     // ###### FULCRUM
-    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+    const targetSupplyRateWithFeeFulcrumFoo = async amount => {
+      const rate = await iDAI.nextSupplyInterestRate.call(web3.utils.toBN(amount));
+      return BNify(rate).times(o1).div(k1);
+    }
 
     // ###### COMPOUND
     const targetSupplyRateWithFeeCompoundFoo = async x => {
@@ -967,7 +967,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
         }
       } else {
         console.log('Trying to make all on fulcrum')
-        if (targetSupplyRateWithFeeFulcrumFoo(amount).plus(tolerance).gt(worstRate)) {
+        if ((await targetSupplyRateWithFeeFulcrumFoo(amount)).plus(tolerance).gt(worstRate)) {
           console.log('all on fulcrum')
           // All on Fulcrum
           return [BNify(0), amount];
@@ -1001,7 +1001,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
         isCurrCompoundBest = isCompoundBest) => {
         console.log(++i);
 
-        const fulcNewRate = targetSupplyRateWithFeeFulcrumFoo(fulcrumAmount);
+        const fulcNewRate = await targetSupplyRateWithFeeFulcrumFoo(fulcrumAmount);
         const compNewRate = await targetSupplyRateWithFeeCompoundFoo(compoundAmount);
         const isCompoundNewBest = compNewRate.gt(fulcNewRate);
 
@@ -1049,7 +1049,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
       return [compAmount, fulcAmount];
     };
 
-    const fulcrumCurr = targetSupplyRateWithFeeFulcrumFoo(0);
+    const fulcrumCurr = await targetSupplyRateWithFeeFulcrumFoo(0);
     const compoundCurr = await targetSupplyRateWithFeeCompoundFoo(0);
     const currBestAddress = fulcrumCurr.gt(compoundCurr) ? iDAI.address : cDAI.address;
     const bestRate = fulcrumCurr.gt(compoundCurr) ? fulcrumCurr : compoundCurr;

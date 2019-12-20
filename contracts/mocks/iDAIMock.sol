@@ -127,4 +127,14 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     external
     view
     returns (uint256) {}
+
+  function dsr()
+    external
+    view
+    returns (uint256) {}
+
+  function chaiPrice()
+    external
+    view
+    returns (uint256) {}
 }

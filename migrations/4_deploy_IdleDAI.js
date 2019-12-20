@@ -2,7 +2,7 @@ var IdleToken = artifacts.require("./IdleToken.sol");
 var IdleRebalancerV2 = artifacts.require("./IdleRebalancerV2.sol");
 var IdlePriceCalculator = artifacts.require("./IdlePriceCalculator.sol");
 var IdleCompoundV2 = artifacts.require("./IdleCompoundV2.sol");
-var IdleFulcrum = artifacts.require("./IdleFulcrum.sol");
+var IdleFulcrumV2 = artifacts.require("./IdleFulcrumV2.sol");
 var IdleFactory = artifacts.require("./IdleFactory.sol");
 
 const cDAI = {
@@ -43,10 +43,10 @@ module.exports = async function(deployer, network, accounts) {
   console.log('DAI address: ', DAI[network]);
   console.log('##################');
   await deployer.deploy(IdleCompoundV2, cDAI[network], DAI[network]);
-  await deployer.deploy(IdleFulcrum, iDAI[network], DAI[network]);
+  await deployer.deploy(IdleFulcrumV2, iDAI[network], DAI[network]);
   await deployer.deploy(IdleRebalancerV2,
     cDAI[network], iDAI[network],
-    IdleCompoundV2.address, IdleFulcrum.address
+    IdleCompoundV2.address, IdleFulcrumV2.address
   );
 
   const Factory = await IdleFactory.at(IdleFactory.address);
@@ -58,7 +58,7 @@ module.exports = async function(deployer, network, accounts) {
     DAI[network], cDAI[network], iDAI[network],
     IdleRebalancerV2.address,
     IdlePriceCalculator.address,
-    IdleCompoundV2.address, IdleFulcrum.address
+    IdleCompoundV2.address, IdleFulcrumV2.address
   );
   await Factory.newIdleToken(
     'IdleDAI',
@@ -67,9 +67,11 @@ module.exports = async function(deployer, network, accounts) {
     DAI[network], cDAI[network], iDAI[network],
     IdleRebalancerV2.address,
     IdlePriceCalculator.address,
-    IdleCompoundV2.address, IdleFulcrum.address
+    IdleCompoundV2.address, IdleFulcrumV2.address
   );
   await Factory.setTokenOwnershipAndPauser(IdleDAIAddress);
   console.log('#### IdleDAIAddress: ', IdleDAIAddress);
   (await IdleRebalancerV2.at(IdleRebalancerV2.address)).setIdleToken(IdleDAIAddress);
+  (await IdleCompoundV2.at(IdleCompoundV2.address)).setIdleToken(IdleDAIAddress);
+  (await IdleFulcrumV2.at(IdleFulcrumV2.address)).setIdleToken(IdleDAIAddress);
 };

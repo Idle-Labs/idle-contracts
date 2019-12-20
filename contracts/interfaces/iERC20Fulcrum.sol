@@ -74,4 +74,14 @@ interface iERC20Fulcrum {
   function claimLoanToken()
     external
     returns (uint256 claimedAmount);
+
+  function dsr()
+    external
+    view
+    returns (uint256);
+
+  function chaiPrice()
+    external
+    view
+    returns (uint256);
 }

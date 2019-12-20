@@ -6,4 +6,5 @@ interface WhitePaperInterestRateModel {
   function multiplier() external view returns (uint256);
   function baseRate() external view returns (uint256);
   function blocksPerYear() external view returns (uint256);
+  function dsrPerBlock() external view returns (uint256);
 }

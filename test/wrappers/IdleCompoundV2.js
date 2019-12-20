@@ -31,19 +31,16 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
   it('constructor set an underlying address', async function () {
     (await this.cDAIWrapper.underlying()).should.equal(this.DAIMock.address);
   });
-  it('allows onlyOwner to setToken', async function () {
+  it('allows onlyOwner to setIdleToken', async function () {
     const val = this.someAddr;
-    await this.cDAIWrapper.setToken(val, { from: creator });
-    (await this.cDAIWrapper.token()).should.equal(val);
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await expectRevert(
+      this.cDAIWrapper.setIdleToken(val, { from: creator }),
+      'idleToken addr already set'
+    );
 
-    await expectRevert.unspecified(this.cDAIWrapper.setToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setUnderlying', async function () {
-    const val = this.someAddr;
-    await this.cDAIWrapper.setUnderlying(val, { from: creator });
-    (await this.cDAIWrapper.underlying()).should.equal(val);
-
-    await expectRevert.unspecified(this.cDAIWrapper.setUnderlying(val, { from: nonOwner }));
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.cDAIWrapper.setIdleToken(val, { from: nonOwner }));
   });
   it('returns next supply rate given amount', async function () {
     const val = [];

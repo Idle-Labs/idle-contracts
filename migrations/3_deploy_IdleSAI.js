@@ -48,14 +48,15 @@ module.exports = async function(deployer, network, accounts) {
   console.log('SAI address: ', SAI[network]);
   console.log('##################');
 
+  await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
   // if is using new interestRateModel
   let isUsingNewRateModel = false;
-  if (network === 'kovan' && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
+  if ((network === 'kovan' || network === 'kovan-fork') && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
     isUsingNewRateModel = true;
     await deployer.deploy(IdleCompoundV2, cSAI[network], SAI[network]);
     await deployer.deploy(IdleRebalancerV2,
       cSAI[network], iSAI[network],
-      IdleCompound.address, IdleFulcrum.address
+      IdleCompoundV2.address, IdleFulcrum.address
     );
   } else {
     await deployer.deploy(IdleCompound, cSAI[network], SAI[network]);
@@ -64,7 +65,6 @@ module.exports = async function(deployer, network, accounts) {
       IdleCompound.address, IdleFulcrum.address
     );
   }
-  await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
 
   const Factory = await IdleFactory.at(IdleFactory.address);
   const IdleSAIAddress = await Factory.newIdleToken.call(
