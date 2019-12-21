@@ -120,15 +120,21 @@ contract IdleRebalancerV2 is Ownable {
   {
     // Get all params for calculating Compound nextSupplyRateWithParams
     CERC20 _cToken = CERC20(cToken);
-    uint256[] memory paramsCompound = new uint256[](10);
-    paramsCompound[2] = _cToken.totalBorrows(); // b
-    paramsCompound[6] = _cToken.getCash(); // s
+    WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
+
+    uint256[] memory paramsCompound = new uint256[](6);
+    paramsCompound[0] = _cToken.totalBorrows(); // b
+    paramsCompound[1] = _cToken.getCash(); // s
+    paramsCompound[2] = _cToken.totalReserves();
+    paramsCompound[3] = _cToken.reserveFactorMantissa();
+    paramsCompound[4] = white.blocksPerYear();
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
-    uint256[] memory paramsFulcrum = new uint256[](6);
-    paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
-    paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
+    uint256[] memory paramsFulcrum = new uint256[](4);
+    paramsFulcrum[0] = _iToken.totalAssetBorrow(); // b1
+    paramsFulcrum[1] = _iToken.totalAssetSupply(); // s1
+    paramsFulcrum[2] = _iToken.spreadMultiplier();
 
     tokenAddresses = new address[](2);
     tokenAddresses[0] = cToken;
@@ -158,8 +164,8 @@ contract IdleRebalancerV2 is Ownable {
       x = n * totF / (totC + totF)
     */
 
-    uint256 amountFulcrum = _rebalanceParams[0].mul(paramsFulcrum[2].add(paramsFulcrum[1])).div(
-      paramsFulcrum[2].add(paramsFulcrum[1]).add(paramsCompound[6].add(paramsCompound[2]).add(paramsCompound[2]))
+    uint256 amountFulcrum = _rebalanceParams[0].mul(paramsFulcrum[1].add(paramsFulcrum[0])).div(
+      paramsFulcrum[1].add(paramsFulcrum[0]).add(paramsCompound[1].add(paramsCompound[0]).add(paramsCompound[0]))
     );
 
     // Recursive bisection algorithm
@@ -217,20 +223,20 @@ contract IdleRebalancerV2 is Ownable {
     uint256 interestToBeSplitted = actualAmountToBeRebalanced.sub(totAmountSentByUser);
 
     // sets newDAIAmount for each protocol
-    paramsCompound[9] = rebalanceParams[1].add(interestToBeSplitted.div(2));
-    paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
+    paramsCompound[5] = rebalanceParams[1].add(interestToBeSplitted.div(2));
+    paramsFulcrum[3] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
 
     // calculate next rates with amountCompound and amountFulcrum
-    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[5]);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRate(paramsCompound[9]);
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
     // |fulcrumRate - compoundRate| <= tolerance
     bool areParamsOk = (currFulcRate.add(maxRateDifference) >= currCompRate && isCompoundBest) ||
       (currCompRate.add(maxRateDifference) >= currFulcRate && !isCompoundBest);
 
     uint256[] memory actualParams = new uint256[](2);
-    actualParams[0] = paramsCompound[9];
-    actualParams[1] = paramsFulcrum[5];
+    actualParams[0] = paramsCompound[5];
+    actualParams[1] = paramsFulcrum[3];
 
     return (areParamsOk, actualParams);
   }
@@ -261,12 +267,12 @@ contract IdleRebalancerV2 is Ownable {
     returns (uint256[] memory amounts) {
 
     // sets newDAIAmount for each protocol
-    paramsCompound[9] = amountCompound;
-    paramsFulcrum[5] = amountFulcrum;
+    paramsCompound[5] = amountCompound;
+    paramsFulcrum[3] = amountFulcrum;
 
     // calculate next rates with amountCompound and amountFulcrum
-    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRate(amountFulcrum);
-    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRate(amountCompound);
+    uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
+    uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
 
     // bisection interval update, we choose to halve the smaller amount
@@ -289,8 +295,8 @@ contract IdleRebalancerV2 is Ownable {
       isCompoundBest ? amountCompound.add(step) : amountCompound.sub(step),
       isCompoundBest ? amountFulcrum.sub(step) : amountFulcrum.add(step),
       tolerance, currIter + 1, maxIter, n,
-      paramsCompound, // paramsCompound[9] would be overwritten on next iteration
-      paramsFulcrum // paramsFulcrum[5] would be overwritten on next iteration
+      paramsCompound, // paramsCompound[5] would be overwritten on next iteration
+      paramsFulcrum // paramsFulcrum[3] would be overwritten on next iteration
     );
   }
 }

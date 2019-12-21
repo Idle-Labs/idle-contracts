@@ -937,7 +937,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
 
     // ###### FULCRUM
     const targetSupplyRateWithFeeFulcrumFoo = async amount => {
-      const rate = await iDAI.nextSupplyInterestRate.call(web3.utils.toBN(amount));
+      const rate = await iDAI.nextSupplyInterestRate.call(web3.utils.toBN(BNify(amount).integerValue(BigNumber.ROUND_FLOOR).toFixed()));
       return BNify(rate).times(o1).div(k1);
     }
 

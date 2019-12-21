@@ -69,7 +69,15 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
   function nextSupplyRateWithParams(uint256[] calldata params)
     external view
     returns (uint256) {
-      return nextSupplyRate(params[9]); // params[9] is the new amount supplied
+      CERC20 cToken = CERC20(token);
+      WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
+      uint256 ratePerBlock = white.getSupplyRate(
+        params[1].add(params[5]),
+        params[0],
+        params[2],
+        params[3]
+      );
+      return ratePerBlock.mul(params[4]).mul(100);
   }
 
   /**

@@ -83,8 +83,11 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    */
   function nextSupplyRateWithParams(uint256[] calldata params)
     external view
-    returns (uint256) {
-      return nextSupplyRate(params[5]);
+    returns (uint256 nextRate) {
+      iERC20Fulcrum iToken = iERC20Fulcrum(token);
+      nextRate = iToken.nextSupplyInterestRate(params[3]);
+      // remove 10% mandatory self insurance
+      nextRate = nextRate.mul(params[2]).div(10**20);
   }
 
   /**
