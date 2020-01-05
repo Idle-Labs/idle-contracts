@@ -228,8 +228,8 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts)
-    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
+  function mintIdleToken(uint256 _amount, uint256[] memory _clientProtocolAmounts)
+    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
       uint256 idlePrice = tokenPrice();
@@ -253,8 +253,8 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata _clientProtocolAmounts)
-    external nonReentrant
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory _clientProtocolAmounts)
+    public nonReentrant
     returns (uint256 redeemedTokens) {
       address currentToken;
 
@@ -334,7 +334,6 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return : whether has rebalanced or not
    */
-
   function rebalance(uint256 _newAmount, uint256[] memory _clientProtocolAmounts)
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
@@ -498,6 +497,49 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       }
   }
 
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   */
+   function _getCurrentAllocations() internal view
+     returns (address[] memory tokenAddresses, uint256[] memory amounts) {
+       // Get balance of every protocol implemented
+       tokenAddresses = new address[](currentTokensUsed.length);
+       amounts = new uint256[](currentTokensUsed.length);
+
+       address currentToken;
+       uint256 currTokenPrice;
+
+       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+         currentToken = currentTokensUsed[i];
+         tokenAddresses[i] = currentToken;
+         currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
+         amounts[i] = currTokenPrice.mul(
+           IERC20(currentToken).balanceOf(address(this))
+         ).div(10**18);
+       }
+
+       // return addresses and respective amounts in underlying
+       return (tokenAddresses, amounts);
+   }
+
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompound, amountFulcrum]
+   */
+  function getCurrentAllocations() external view
+    returns (address[] memory tokenAddresses, uint256[] memory amounts) {
+      return _getCurrentAllocations();
+  }
+
   // ILendingProtocols calls
   /**
    * Get next rate of a lending protocol given an amount to be lended
@@ -551,5 +593,24 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       // Transfer _amount of _protocolToken (eg. cDAI) to _wrapperAddr
       IERC20(_token).safeTransfer(_wrapperAddr, _amount);
       tokens = _wrapper.redeem(_account);
+  }
+
+  function getParamsForMintIdleToken(uint256 _amount)
+    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
+    returns (address[] memory, uint256[] memory) {
+      mintIdleToken(_amount, new uint256[](0));
+      return _getCurrentAllocations();
+  }
+   function getParamsForRedeemIdleToken(uint256 _amount, bool _skipRebalance)
+    external nonReentrant
+    returns (address[] memory, uint256[] memory) {
+      redeemIdleToken(_amount, _skipRebalance, new uint256[](0));
+      return _getCurrentAllocations();
+  }
+  function getParamsForRebalance(uint256 _newAmount)
+    external whenNotPaused whenITokenPriceHasNotDecreased
+    returns (address[] memory, uint256[] memory) {
+      rebalance(_newAmount, new uint256[](0));
+      return _getCurrentAllocations();
   }
 }

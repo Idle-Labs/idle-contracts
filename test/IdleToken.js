@@ -112,6 +112,19 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
       await this.DAIMock.approve(this.token.address, amount, { from: who });
       await this.token.mintIdleToken(amount, [], { from: who });
     };
+    this.fakeMintIdle = async (amount, who) => {
+      // Give DAI to `who`
+      await this.DAIMock.transfer(who, amount, { from: creator });
+      await this.DAIMock.approve(this.fakeToken.address, amount, { from: who });
+      await this.fakeToken.mintIdleToken(amount, [], { from: who });
+    };
+
+    this.getParamsForMintIdleToken = async (amount, who) => {
+      // Give DAI to `who`
+      await this.DAIMock.transfer(who, amount, { from: creator });
+      await this.DAIMock.approve(this.token.address, amount, { from: who });
+      return await this.token.getParamsForMintIdleToken.call(amount, { from: who });
+    };
   });
 
   it('constructor set a name', async function () {
@@ -424,6 +437,65 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     const resBalance2 = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
     resBalance2.should.be.bignumber.equal(BNify('1300').mul(this.oneCToken));
   });
+  it('getCurrentAllocations', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 1.1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+    await this.iDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+
+    // First mint with tokenPrice = 1
+    // all funds will be sent to one protocol (Compound)
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('22').mul(this.one)]
+    );
+
+    // Set idle token address to idleFakeTokenAddr
+    await this.IdleRebalancer.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.cDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+    await this.iDAIWrapper.setIdleToken(this.idleFakeTokenAddr, {from: creator});
+
+    // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
+    // tokenPrice is 1 here
+    await this.fakeMintIdle(BNify('32').mul(this.one), nonOwner);
+
+    // const resGetParams = await this.getParamsForMintIdleToken(BNify('10').mul(this.one), nonOwner);
+    const resGetParams = await this.fakeToken.getCurrentAllocations.call({ from: nonOwner });
+    resGetParams[0][0].should.be.equal(this.cDAIMock.address);
+    resGetParams[0][1].should.be.equal(this.iDAIMock.address);
+
+    resGetParams[1][0].should.be.bignumber.equal(BNify('10').mul(this.one));
+    resGetParams[1][1].should.be.bignumber.equal(BNify('22').mul(this.one));
+  });
+  it('getParamsForMintIdleToken', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 1.1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+    await this.iDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
+
+    // First mint with tokenPrice = 1
+    // all funds will be sent to one protocol (Compound)
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('10').mul(this.one), BNify('22').mul(this.one)]
+    );
+
+    // tokenPrice is 1 here
+    const resGetParams = await this.getParamsForMintIdleToken(BNify('32').mul(this.one), nonOwner);
+    resGetParams[0][0].should.be.equal(this.cDAIMock.address);
+    resGetParams[0][1].should.be.equal(this.iDAIMock.address);
+
+    resGetParams[1][0].should.be.bignumber.equal(BNify('10').mul(this.one));
+    resGetParams[1][1].should.be.bignumber.equal(BNify('22').mul(this.one));
+  });
   it('cannot mints if iToken price has decreased', async function () {
     await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
     await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
@@ -653,6 +725,90 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     // 11.45 DAI are given back to nonOwner
     const resBalanceDAI3 = await this.DAIMock.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceDAI3.should.be.bignumber.equal(BNify('11450000000000000000')); // 11.45
+  });
+  it('getParamsForRedeemIdleToken', async function () {
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.cDAIMock._setExchangeRateStored(BNify('200000000000000000000000000')); // 0.02 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1250000000000000000')); // 1.25DAI
+    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 1.1%
+
+    // First mint with tokenPrice = 1
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+
+    // Approve and Mint 10 DAI for nonOwner,
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // so 10 IdleDAI will be minted to nonOwner
+    const resBalanceIdle = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
+    resBalanceIdle.should.be.bignumber.equal(BNify('10').mul(this.one));
+    // half on Compound so 5 / 0.02 = 250 cDAI in idle pool
+    const resBalance = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance.should.be.bignumber.equal(BNify('250').mul(this.oneCToken));
+    // half on Fulcrum so 5 / 1.25 = 4 iDAI in idle pool
+    const resBalanceIDAI = await this.iDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalanceIDAI.should.be.bignumber.equal(BNify('4').mul(this.one));
+
+    // update prices
+    await this.cDAIWrapper._setPriceInToken(BNify('250000000000000000000000000')); // 0.025
+    await this.cDAIMock._setExchangeRateStored(BNify('250000000000000000000000000')); // 0.025 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1300000000000000000')); // 1.30DAI
+    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
+
+    // 250 * 0.025 = 6.25 DAI nav of cDAI pool
+    // so we transfer 1.25 DAI to cDAI mock to cover new interests earned
+    await this.DAIMock.transfer(this.cDAIMock.address, BNify('1250000000000000000'), { from: creator });
+    // 4 * 1.3 = 5.2 DAI nav of iDAI pool
+    // so we transfer 1.2 DAI to iDAI mock to cover new interests earned
+    await this.DAIMock.transfer(this.iDAIMock.address, BNify('1200000000000000000'), { from: creator });
+    // tokenPrice is now (6.25 + 5.2) / 10 = 1.145 DAI per idleDAI
+
+    // 11.45 total DAI nav + 10 DAI minted now
+    // we set them all on Compound
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('21450000000000000000'), BNify('0').mul(this.one)] // 21.45 DAI, 0 DAI
+    );
+
+    // Approve and Mint 10 DAI,
+    // tokenPrice is 1.145 here
+    await this.mintIdle(BNify('10').mul(this.one), someone);
+    // so 10 / 1.145 IdleDAI will be minted to nonOwner
+    const resBalanceIdle2 = await this.token.balanceOf.call(someone, { from: someone });
+    resBalanceIdle2.should.be.bignumber.equal(BNify('8733624454148471615')); // 8.73362445415
+    // 21.45 / 0.025 = 858 cDAI
+    const resBalance2 = await this.cDAIMock.balanceOf.call(this.token.address, { from: someone });
+    resBalance2.should.be.bignumber.equal(BNify('858').mul(this.oneCToken));
+    // iDAI pool is empty now
+    const resBalanceIDAI2 = await this.iDAIMock.balanceOf.call(this.token.address, { from: someone });
+    resBalanceIDAI2.should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    // Prepare fake data for rebalanceCheck
+    await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.iDAIWrapper._setAPR(BNify('1100000000000000000')); // 1.1%
+    await this.cDAIWrapper._setNextSupplyRate(BNify('900000000000000000')); // 0.9%
+    // everything will go to Compound because next supply rate of compound is > of current Fulcrum rate
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('0'), BNify('8733624454148471615')] // 0 DAI, 8.73362445415 DAI
+    );
+
+
+    const resGetParams = await this.token.getParamsForRedeemIdleToken.call(BNify('10').mul(this.one), false, {from: nonOwner});
+    // Redeems 10 IdleDAI
+    // 10 IdleDAI have been burned
+    // there are no cDAI in Idle contract
+    // there are 8.733624454148471615 / 1.3 = 6.718172657037285857 iDAI
+    resGetParams[0][0].should.be.equal(this.iDAIMock.address);
+    resGetParams[1][0].should.be.bignumber.equal(BNify('8733624454148471614'));
+    // resGetParams[1][0].should.be.bignumber.equal(BNify('8733624454148471615'));
   });
   it('redeems idle tokens and does not rebalances if paused', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
@@ -1185,6 +1341,36 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
 
     // there is only 2 tokens (invalid opcode)
     await expectRevert.assertion(this.token.currentTokensUsed(2));
+  });
+  it('getParamsForRebalance', async function () {
+    // update prices
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.025
+    await this.cDAIMock._setExchangeRateStored(BNify('200000000000000000000000000')); // 0.025 DAI
+    await this.iDAIWrapper._setPriceInToken(BNify('1250000000000000000')); // 1.25 DAI
+    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25 DAI
+
+    // set same rates so to use _calcAmounts from IdleRebalancer
+    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('5').mul(this.one), BNify('5').mul(this.one)]
+    );
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+
+    await this.IdleRebalancer._setCalcAmounts(
+      [this.cDAIMock.address, this.iDAIMock.address],
+      [BNify('2').mul(this.one), BNify('8').mul(this.one)]
+    );
+
+    const resGetParams = await this.token.getParamsForRebalance.call(BNify('10').mul(this.one), {from: nonOwner});
+      resGetParams[0][0].should.be.equal(this.cDAIMock.address);
+      resGetParams[0][1].should.be.equal(this.iDAIMock.address);
+
+      resGetParams[1][0].should.be.bignumber.equal(BNify('2').mul(this.one));
+      resGetParams[1][1].should.be.bignumber.equal(BNify('8').mul(this.one));
   });
 
   // ###################### _rebalanceCheck tests #################################
