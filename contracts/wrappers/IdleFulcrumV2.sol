@@ -66,11 +66,8 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    */
   function nextSupplyRate(uint256 _amount)
     public view
-    returns (uint256 nextRate) {
-      iERC20Fulcrum iToken = iERC20Fulcrum(token);
-      nextRate = iToken.nextSupplyInterestRate(_amount);
-      // remove 10% mandatory self insurance
-      nextRate = nextRate.mul(iToken.spreadMultiplier()).div(10**20);
+    returns (uint256) {
+      return iERC20Fulcrum(token).nextSupplyInterestRate(_amount);
   }
 
   /**
@@ -83,11 +80,8 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    */
   function nextSupplyRateWithParams(uint256[] calldata params)
     external view
-    returns (uint256 nextRate) {
-      iERC20Fulcrum iToken = iERC20Fulcrum(token);
-      nextRate = iToken.nextSupplyInterestRate(params[3]);
-      // remove 10% mandatory self insurance
-      nextRate = nextRate.mul(params[2]).div(10**20);
+    returns (uint256) {
+      return iERC20Fulcrum(token).nextSupplyInterestRate(params[2]);
   }
 
   /**
@@ -104,12 +98,8 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    */
   function getAPR()
     external view
-    returns (uint256 apr) {
-      iERC20Fulcrum iToken = iERC20Fulcrum(token);
-      apr = iToken.supplyInterestRate(); // APR in wei 18 decimals
-      // remove Mandatory self-insurance of Fulcrum from iApr
-      // apr * spreadMultiplier / (100 * 1e18)
-      apr = apr.mul(iToken.spreadMultiplier()).div(10**20);
+    returns (uint256) {
+      return iERC20Fulcrum(token).nextSupplyInterestRate(0);
   }
 
   /**

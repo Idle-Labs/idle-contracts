@@ -131,10 +131,9 @@ contract IdleRebalancerV2 is Ownable {
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
-    uint256[] memory paramsFulcrum = new uint256[](4);
+    uint256[] memory paramsFulcrum = new uint256[](3);
     paramsFulcrum[0] = _iToken.totalAssetBorrow(); // b1
     paramsFulcrum[1] = _iToken.totalAssetSupply(); // s1
-    paramsFulcrum[2] = _iToken.spreadMultiplier();
 
     tokenAddresses = new address[](2);
     tokenAddresses[0] = cToken;
@@ -224,7 +223,7 @@ contract IdleRebalancerV2 is Ownable {
 
     // sets newDAIAmount for each protocol
     paramsCompound[5] = rebalanceParams[1].add(interestToBeSplitted.div(2));
-    paramsFulcrum[3] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
+    paramsFulcrum[2] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
 
     // calculate next rates with amountCompound and amountFulcrum
     uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
@@ -236,7 +235,7 @@ contract IdleRebalancerV2 is Ownable {
 
     uint256[] memory actualParams = new uint256[](2);
     actualParams[0] = paramsCompound[5];
-    actualParams[1] = paramsFulcrum[3];
+    actualParams[1] = paramsFulcrum[2];
 
     return (areParamsOk, actualParams);
   }
@@ -268,7 +267,7 @@ contract IdleRebalancerV2 is Ownable {
 
     // sets newDAIAmount for each protocol
     paramsCompound[5] = amountCompound;
-    paramsFulcrum[3] = amountFulcrum;
+    paramsFulcrum[2] = amountFulcrum;
 
     // calculate next rates with amountCompound and amountFulcrum
     uint256 currFulcRate = ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
@@ -296,7 +295,7 @@ contract IdleRebalancerV2 is Ownable {
       isCompoundBest ? amountFulcrum.sub(step) : amountFulcrum.add(step),
       tolerance, currIter + 1, maxIter, n,
       paramsCompound, // paramsCompound[5] would be overwritten on next iteration
-      paramsFulcrum // paramsFulcrum[3] would be overwritten on next iteration
+      paramsFulcrum // paramsFulcrum[2] would be overwritten on next iteration
     );
   }
 }
