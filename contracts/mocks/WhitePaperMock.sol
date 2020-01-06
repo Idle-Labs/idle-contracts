@@ -21,4 +21,5 @@ contract WhitePaperMock is WhitePaperInterestRateModel {
   function getSupplyRate(uint256, uint256, uint256, uint256) external view returns (uint256) {
     return supplyRate;
   }
+  function dsrPerBlock() external view returns (uint256) {}
 }

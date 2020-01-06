@@ -46,7 +46,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
 
     const nextSupplyInterestRateFulcrum = await this.iDAIMock.nextSupplyInterestRate.call(val);
     const spreadMultiplier = await this.iDAIMock.spreadMultiplier.call();
-    const expectedRes = BNify(nextSupplyInterestRateFulcrum).mul(BNify(spreadMultiplier)).div(BNify(10**20));
+    const expectedRes = BNify(nextSupplyInterestRateFulcrum);
     res.should.be.bignumber.equal(expectedRes);
   });
   it('returns next supply rate given params (counting fee ie spreadMultiplier)', async function () {
@@ -75,7 +75,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
 
     const currSupplyInterestRateFulcrum = await this.iDAIMock.supplyInterestRate.call();
     const spreadMultiplier = await this.iDAIMock.spreadMultiplier.call();
-    const expectedRes = BNify(currSupplyInterestRateFulcrum).mul(BNify(spreadMultiplier)).div(BNify(10**20));
+    const expectedRes = BNify(currSupplyInterestRateFulcrum);
     res.should.be.bignumber.equal(expectedRes);
   });
   it('mint returns 0 if no tokens are presenti in this contract', async function () {

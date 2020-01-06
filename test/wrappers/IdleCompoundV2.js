@@ -23,6 +23,7 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
       this.DAIMock.address,
       {from: creator}
     );
+    await this.cDAIWrapper.setIdleToken(nonOwner, {from: creator});
   });
 
   it('constructor set a token address', async function () {
@@ -57,30 +58,26 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
 
     // set mock data in cDAIMock
     await this.cDAIMock.setParams(val);
-    await this.WhitePaperMock._setSupplyRate(BNify('2').mul(this.one));
+    await this.WhitePaperMock._setSupplyRate(BNify('2').mul(this.one).div(val[7]).div(BNify('100')));
 
     const nextSupplyInterestRateCompound = await this.cDAIWrapper.nextSupplyRate.call(BNify('10000000000000000000000'));
-
-    nextSupplyInterestRateCompound.should.be.bignumber.equal(BNify('2').mul(this.one));
+    // minor rounding issue due to the calculation of the rate per block for the actual annual rate
+    nextSupplyInterestRateCompound.should.be.bignumber.equal(BNify('1999999999972800000'));
   });
   it('returns next supply rate given params (counting fee)', async function () {
     // tested with data and formula from task idleDAI:rebalanceCalc -> targetSupplyRateWithFeeCompound
     const val = [];
-    val[0] = BNify('1000000000000000000'), // 10 ** 18;
-    val[1] = BNify('50000000000000000'), // white.baseRate();
-    val[2] = BNify('23235999897534012338929659'), // cToken.totalBorrows();
-    val[3] = BNify('120000000000000000'), // white.multiplier();
-    val[4] = BNify('107742405685625342683992'), // cToken.totalReserves();
-    val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
-    val[6] = BNify('11945633145364637018215366'), // cToken.getCash();
-    val[7] = BNify('2102400'), // cToken.blocksPerYear();
-    val[8] = BNify('100'), // 100;
-    val[9] = BNify('10000000000000000000000') // 10**22 -> 10000 DAI newAmountSupplied;
+    val[0] = BNify('23235999897534012338929659'), // cToken.totalBorrows();
+    val[1] = BNify('11945633145364637018215366'), // cToken.getCash();
+    val[2] = BNify('107742405685625342683992'), // cToken.totalReserves();
+    val[3] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
+    val[4] = BNify('2102400'), // cToken.blocksPerYear();
+    val[5] = BNify('10000000000000000000000') // 10**22 -> 10000 DAI newAmountSupplied;
 
-    await this.WhitePaperMock._setSupplyRate(BNify('2').mul(this.one));
+    await this.WhitePaperMock._setSupplyRate(BNify('2').mul(this.one).div(val[4]).div(BNify('100')));
     const res = await this.cDAIWrapper.nextSupplyRateWithParams.call(val, { from: nonOwner });
-
-    res.should.be.bignumber.equal(BNify('2').mul(this.one));
+    // minor rounding issue due to the calculation of the rate per block for the actual annual rate
+    res.should.be.bignumber.equal(BNify('1999999999972800000'));
   });
   it('getPriceInToken returns cToken price', async function () {
     const res = await this.cDAIWrapper.getPriceInToken.call({ from: nonOwner });
