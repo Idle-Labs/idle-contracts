@@ -1103,13 +1103,15 @@ task("idleDAI:rebalanceCalcTest", "idleDAI rebalance calculations")
     const currentSupplyInterestRate = a1.times(b1.div(s1));
     const targetSupplyRate = a1.times(s1.div(s1.plus(x1))).times(b1.div(s1.plus(x1)))
 
-    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1));
+      // Fee is already counted
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // ######
     const targetSupplyRateWithFee = a1.times(s1.div(s1.plus(x1)))
       .times(b1.div(s1.plus(x1)))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+      // Fee is already counted
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // q = a * (s / (s + x)) * (b / (s + x))
     // with wolfram for x
@@ -1191,7 +1193,8 @@ task("idleDAI:rebalanceCalcTest", "idleDAI rebalance calculations")
     // ###### FULCRUM
     const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(s1.div(s1.plus(x1)))
       .times(b1.div(s1.plus(x1)))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+      // Fee is already counted
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     const maxDAIFulcrumFoo = q1 =>
       a1.sqrt().times(b1.sqrt()).times(o1.sqrt()).times(s1.sqrt()).minus(k1.sqrt().times(q1.sqrt()).times(s1)).div(k1.sqrt().times(q1.sqrt()));
