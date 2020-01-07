@@ -571,14 +571,14 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   function _getCurrentAllocations() internal view
     returns (address[] memory tokenAddresses, uint256[] memory amounts) {
       // Get balance of every protocol implemented
-      tokenAddresses = new address[](currentTokensUsed.length);
-      amounts = new uint256[](currentTokensUsed.length);
+      tokenAddresses = new address[](allAvailableTokens.length);
+      amounts = new uint256[](allAvailableTokens.length);
 
       address currentToken;
       uint256 currTokenPrice;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentToken = currentTokensUsed[i];
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        currentToken = allAvailableTokens[i];
         tokenAddresses[i] = currentToken;
         currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
         amounts[i] = currTokenPrice.mul(
