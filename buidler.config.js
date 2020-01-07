@@ -569,13 +569,15 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     const currentSupplyInterestRate = a1.times(b1.div(s1));
     const targetSupplyRate = a1.times(s1.div(s1.plus(x1))).times(b1.div(s1.plus(x1)))
 
-    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1));
+      // Fee is already counted now
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // ######
     const targetSupplyRateWithFee = a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+      .times(b1.div(s1.plus(x1)));
+      // Fee is already counted now
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // q = a * (s / (s + x)) * (b / (s + x))
     // with wolfram for x
@@ -678,8 +680,9 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
 
     // ###### FULCRUM
     const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
-      .times(o1).div(k1); // counting fee (spreadMultiplier)
+      .times(b1.div(s1.plus(x1)));
+      // Fee is already counted now
+      // .times(o1).div(k1); // counting fee (spreadMultiplier)
 
     // ###### COMPOUND
     const targetSupplyRateWithFeeCompoundFoo = x => a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
@@ -805,7 +808,6 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
     const iDAI = await iERC20Fulcrum.at('0x493C57C4763932315A328269E1ADaD09653B9081'); // mainnet
     const newDAIAmount = BNify(taskArgs.amount).times(BNify(1e18));
     let promises = [
-      // iDAI.supplyInterestRate.call(),
       iDAI.nextSupplyInterestRate.call(web3.utils.toBN('0')),
       iDAI.avgBorrowInterestRate.call(),
       // iDAI.borrowInterestRate.call(),
@@ -814,7 +816,7 @@ task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper 
       iDAI.spreadMultiplier.call(),
       iDAI.nextSupplyInterestRate.call(web3.utils.toBN(newDAIAmount)),
       iDAI.tokenPrice.call(),
-      iDAI.dsr.call(),
+      iDAI.dsr.call()
     ];
 
     const res = await Promise.all(promises);
