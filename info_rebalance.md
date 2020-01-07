@@ -1,4 +1,4 @@
-## Rebalance reasoning for Compound and Fulcrum (used in `IdleRebalancer` contract)
+## Rebalance reasoning for Compound and Fulcrum (used in `IdleRebalancer` contract) for all assets except DAI
 ### Compound nextRate after supplying `x` amount
 ```
 a = baseRate
@@ -7,7 +7,7 @@ c = multiplier
 d = totalReserves
 e = 1 - reserveFactor
 s = getCash
-x = newDAIAmount
+x = newSAIAmount
 k = blocksPerYear; // blocksPerYear
 j = 1e18; // oneEth
 f = 100;
@@ -23,7 +23,7 @@ a1 = avgBorrowInterestRate;
 b1 = totalAssetBorrow;
 s1 = totalAssetSupply;
 o1 = spreadMultiplier;
-x1 = newDAIAmount;
+x1 = newSAIAmount;
 k1 = 1e20;
 ```
 yearly rate
@@ -34,7 +34,7 @@ q1 = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1)) * o1 / k1
 ### Algorithm for dynamic funds allocation (DFA)
 We have
 ```
-n = tot DAI to rebalance
+n = tot SAI to rebalance
 ```
 
 and in the end `q` for Compound and `q1` for Fulcrum should be equal (or the rate of one of them is > of the other even after supplying all `n`).
@@ -65,6 +65,14 @@ So we are using an interative approach using the bisection method and created a 
 ```
 npx buidler idleDAI:rebalanceCalcV2 --amount xxx
 ```
-where `xxx` is the amount of DAI to rebalance.
+where `xxx` is the amount of SAI to rebalance.
 
-(We tried also with newton-raphson method, task `idleDAI:rebalanceCalcNewton`, and it works but the first derivative calculation it's difficult to implement on-chain and involves signed numbers > 256 bit so for now we are going with bisection).
+## DAI rebalance
+
+For DAI we are using a slightly different approach, instead
+of calculating everything manually, in the contract, we rely on `nextSupplyInterestRate` method of the Fulcrum contract and `getSupplyRate` for the Compound one. Those are used toììin order to take into account also the DSR which has been implemented in both protocols. The modified version of the algorithm is implemented in the following task
+
+```
+npx buidler idleDAI:rebalanceCalcV3 --amount xxx
+```
+where `xxx` is the amount of DAI to rebalance.

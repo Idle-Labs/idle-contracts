@@ -1,13 +1,19 @@
+# Update:
+
+`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate
+
+---
+
 ### Fulcrum formula for calculating next rate after supplying `x` amount (with their fee)
 
-Info gathered thourgh: initial [link](https://medium.com/bzxnetwork/introducing-fulcrum-tokenized-margin-made-dead-simple-e65ccc82393f) of fulcrum announcement, [iDAI contract](https://etherscan.io/address/0x14094949152eddbfcd073717200da82fed8dc960), several chat session with Fulcrum's CEO
+Info gathered thourgh: initial [link](https://medium.com/bzxnetwork/introducing-fulcrum-tokenized-margin-made-dead-simple-e65ccc82393f) of fulcrum announcement, [iSAI contract](https://etherscan.io/address/0x14094949152eddbfcd073717200da82fed8dc960), several chat session with Fulcrum's team.
 
 ```
 a = avgBorrowInterestRate;
 b = totalAssetBorrow;
 s = totalAssetSupply;
 o = spreadMultiplier;
-x = newDAIAmount;
+x = newSAIAmount;
 k = 1e20;
 ```
 
@@ -21,7 +27,7 @@ This has been manually tested using a buidler task (NOT Considering fee/mandator
 ```
 npx buidler iDAI:manualNextRateData --amount xxx
 ```
-where `xxx` is the amount to supply in DAI; it gives the same result of Fulcrum's `nextSupplyInterestRate` method
+where `xxx` is the amount to supply in SAI; it gives the same result of Fulcrum's `nextSupplyInterestRate` method
 check the task
 ```
 npx buidler iDAI:autoNextSupplyRateData --amount xxx
