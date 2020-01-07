@@ -72,8 +72,7 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
 
   /**
    * Calculate next supply rate from Fulcrum, given an `_amount` supplied (last array param)
-   * and all other params supplied. See `info_fulcrum.md` for more info
-   * on calculations.
+   * and all other params supplied.
    *
    * @param params : array with all params needed for calculation (see below)
    * @return : yearly net rate

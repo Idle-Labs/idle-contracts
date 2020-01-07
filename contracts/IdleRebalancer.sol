@@ -135,12 +135,10 @@ contract IdleRebalancer is Ownable {
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
-    uint256[] memory paramsFulcrum = new uint256[](6);
+    uint256[] memory paramsFulcrum = new uint256[](4);
     paramsFulcrum[0] = _iToken.avgBorrowInterestRate(); // a1
     paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
     paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
-    paramsFulcrum[3] = _iToken.spreadMultiplier(); // o1
-    paramsFulcrum[4] = 10**20; // k1
 
     tokenAddresses = new address[](2);
     tokenAddresses[0] = cToken;
@@ -230,14 +228,14 @@ contract IdleRebalancer is Ownable {
 
     // sets newDAIAmount for each protocol
     paramsCompound[9] = rebalanceParams[1].add(interestToBeSplitted.div(2));
-    paramsFulcrum[5] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
+    paramsFulcrum[3] = rebalanceParams[2].add(interestToBeSplitted.sub(interestToBeSplitted.div(2)));
 
     // calculate next rates with amountCompound and amountFulcrum
 
     // For Fulcrum see https://github.com/bZxNetwork/bZx-monorepo/blob/development/packages/contracts/extensions/loanTokenization/contracts/LoanToken/LoanTokenLogicV3.sol#L1418
     // fulcrumUtilRate = fulcrumBorrow.mul(10**20).div(assetSupply);
     uint256 currFulcRate = (paramsFulcrum[1].mul(10**20).div(paramsFulcrum[2])) > 90 ether ?
-      ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[5]) :
+      ILendingProtocol(iWrapper).nextSupplyRate(paramsFulcrum[3]) :
       ILendingProtocol(iWrapper).nextSupplyRateWithParams(paramsFulcrum);
     uint256 currCompRate = ILendingProtocol(cWrapper).nextSupplyRateWithParams(paramsCompound);
     bool isCompoundBest = currCompRate > currFulcRate;
@@ -247,7 +245,7 @@ contract IdleRebalancer is Ownable {
 
     uint256[] memory actualParams = new uint256[](2);
     actualParams[0] = paramsCompound[9];
-    actualParams[1] = paramsFulcrum[5];
+    actualParams[1] = paramsFulcrum[3];
 
     return (areParamsOk, actualParams);
   }
@@ -279,7 +277,7 @@ contract IdleRebalancer is Ownable {
 
     // sets newDAIAmount for each protocol
     paramsCompound[9] = amountCompound;
-    paramsFulcrum[5] = amountFulcrum;
+    paramsFulcrum[3] = amountFulcrum;
 
     // calculate next rates with amountCompound and amountFulcrum
 
@@ -313,7 +311,7 @@ contract IdleRebalancer is Ownable {
       isCompoundBest ? amountFulcrum.sub(step) : amountFulcrum.add(step),
       tolerance, currIter + 1, maxIter, n,
       paramsCompound, // paramsCompound[9] would be overwritten on next iteration
-      paramsFulcrum // paramsFulcrum[5] would be overwritten on next iteration
+      paramsFulcrum // paramsFulcrum[3] would be overwritten on next iteration
     );
   }
 }

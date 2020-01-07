@@ -54,7 +54,6 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     _avgBorrowRate = params[0];
     _totalAssetBorrow = params[1];
     _totalAssetSupply = params[2];
-    spreadMultiplier = params[3];
   }
   function setFakeBurn() public {
     isUsingFakeBurn = true;

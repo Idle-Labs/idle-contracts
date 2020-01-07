@@ -1,11 +1,11 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
-const IdleFulcrum = artifacts.require('IdleFulcrum');
+const IdleFulcrumV2 = artifacts.require('IdleFulcrumV2');
 const iDAIMock = artifacts.require('iDAIMock');
 const DAIMock = artifacts.require('DAIMock');
 const BNify = n => new BN(String(n));
 
-contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
+contract('IdleFulcrumV2', function ([_, creator, nonOwner, someone, foo]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.ETHAddr = '0x0000000000000000000000000000000000000000';
@@ -15,7 +15,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
     this.DAIMock = await DAIMock.new({from: creator});
     this.iDAIMock = await iDAIMock.new(this.DAIMock.address, creator, {from: creator});
 
-    this.iDAIWrapper = await IdleFulcrum.new(
+    this.iDAIWrapper = await IdleFulcrumV2.new(
       this.iDAIMock.address,
       this.DAIMock.address,
       {from: creator}
@@ -51,16 +51,13 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
   it('returns next supply rate given params', async function () {
     // tested with data and formula from task iDAI:manualNextRateData
     const val = [
-      BNify("16089452222034747442"), // a, avgBorrowInterestRate
       BNify("419766782897339371903563"), // b, totalAssetBorrow
       BNify("995495112439158951883651"), // s, totalAssetSupply
       BNify(10**23) //  x, _amount
     ];
+    await this.iDAIMock.setSupplyInterestRateForTest(BNify('1'));
     const res = await this.iDAIWrapper.nextSupplyRateWithParams.call(val, { from: nonOwner });
-    // a * b * s / ((s + x) * (s + x))
-    const expectedRes2 = val[0].mul(val[1]).mul(val[2]).div((val[2].add(val[3]).mul(val[2].add(val[3]))));
-    res.should.not.be.bignumber.equal(BNify(0));
-    res.should.be.bignumber.equal(expectedRes2);
+    res.should.be.bignumber.equal(BNify('1'));
   });
   it('getPriceInToken returns iToken price', async function () {
     const res = await this.iDAIWrapper.getPriceInToken.call({ from: nonOwner });

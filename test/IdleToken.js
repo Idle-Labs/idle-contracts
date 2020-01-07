@@ -806,9 +806,10 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo]) {
     // 10 IdleDAI have been burned
     // there are no cDAI in Idle contract
     // there are 8.733624454148471615 / 1.3 = 6.718172657037285857 iDAI
-    resGetParams[0][0].should.be.equal(this.iDAIMock.address);
-    resGetParams[1][0].should.be.bignumber.equal(BNify('8733624454148471614'));
-    // resGetParams[1][0].should.be.bignumber.equal(BNify('8733624454148471615'));
+    resGetParams[0][0].should.be.equal(this.cDAIMock.address);
+    resGetParams[0][1].should.be.equal(this.iDAIMock.address);
+    resGetParams[1][0].should.be.bignumber.equal(BNify('0'));
+    resGetParams[1][1].should.be.bignumber.equal(BNify('8733624454148471614'));
   });
   it('redeems idle tokens and does not rebalances if paused', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
