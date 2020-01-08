@@ -81,18 +81,14 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
     external view
     returns (uint256) {
       /*
-        uint256 a1 = params[0]; // avgBorrowInterestRate;
+        uint256 a1 = params[0]; // protocolInterestRate;
         uint256 b1 = params[1]; // totalAssetBorrow;
         uint256 s1 = params[2]; // totalAssetSupply;
         uint256 x1 = params[3]; // _amount;
       */
 
-      // The initial formula is the following
-      // q = a1 * (s1 / (s1 + x1)) * (b1 / (s1 + x1))
-      // We rewrote it in this way to avoid intermediate overflows
-      // q = (a1 * s1 / (s1 + x1) * b1) / (s1 + x1)
-      return params[0].mul(params[2]).div(params[2].add(params[3]))
-        .mul(params[1]).div(params[2].add(params[3]));
+      // q = (a1 * b1 / (s1 + x1))
+      return params[0].mul(params[1]).div(params[2].add(params[3]));
   }
 
   /**

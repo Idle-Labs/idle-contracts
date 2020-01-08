@@ -136,7 +136,7 @@ contract IdleRebalancer is Ownable {
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
     uint256[] memory paramsFulcrum = new uint256[](4);
-    paramsFulcrum[0] = _iToken.avgBorrowInterestRate(); // a1
+    paramsFulcrum[0] = _iToken.protocolInterestRate(); // a1
     paramsFulcrum[1] = _iToken.totalAssetBorrow(); // b1
     paramsFulcrum[2] = _iToken.totalAssetSupply(); // s1
 

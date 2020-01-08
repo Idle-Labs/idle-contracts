@@ -42,6 +42,11 @@ interface iERC20Fulcrum {
     view
     returns (uint256);
 
+  function protocolInterestRate()
+    external
+    view
+    returns (uint256);
+
   function spreadMultiplier()
     external
     view

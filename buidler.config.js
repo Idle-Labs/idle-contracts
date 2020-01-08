@@ -518,17 +518,19 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     const newDAIAmount = BNify(taskArgs.amount).times(BNify(1e18));
     let promises = [
       iDAI.supplyInterestRate.call(),
-      iDAI.avgBorrowInterestRate.call(),
+      iDAI.protocolInterestRate.call(),
+      // iDAI.avgBorrowInterestRate.call(),
       // iDAI.borrowInterestRate.call(),
       iDAI.totalAssetSupply.call(),
       iDAI.totalAssetBorrow.call(),
       iDAI.spreadMultiplier.call(),
       iDAI.nextSupplyInterestRate.call(web3.utils.toBN(newDAIAmount)),
       iDAI.tokenPrice.call(),
+      iDAI.protocolInterestRate.call()
     ];
 
     const res = await Promise.all(promises);
-    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice] = res;
+    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice, protocolInterestRate] = res;
 
     supplyRate = BNify(supplyRate);
     borrowRate = BNify(borrowRate);
@@ -537,6 +539,7 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     spreadMultiplier = BNify(spreadMultiplier);
     autoNextRate = BNify(autoNextRate);
     tokenPrice = BNify(tokenPrice);
+    protocolInterestRate = BNify(protocolInterestRate);
 
     const utilizationRate = BNify(totalAssetBorrow).div(BNify(totalAssetSupply));
 
@@ -566,30 +569,15 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     console.log(`x1 = ${newDAIAmount}`);
     console.log(`k1 = ${BNify('1e20')}`);
 
+
+    // New formula
+    // q = (a1 * b1 / (s1 + x1))
+
     const currentSupplyInterestRate = a1.times(b1.div(s1));
-    const targetSupplyRate = a1.times(s1.div(s1.plus(x1))).times(b1.div(s1.plus(x1)))
+    const currentSupplyInterestRateWithFee = currentSupplyInterestRate;
+    const targetSupplyRate = a1.times(b1).div(s1.plus(x1));
+    const targetSupplyRateWithFee = targetSupplyRate;
 
-    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1));
-      // Fee is already counted now
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
-
-    // ######
-    const targetSupplyRateWithFee = a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)));
-      // Fee is already counted now
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
-
-    // q = a * (s / (s + x)) * (b / (s + x))
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(s) - sqrt(q) s)/sqrt(q)
-    // const maxDAIAmount = a.sqrt().times(b.sqrt()).times(s.sqrt()).minus(q.sqrt().times(s)).div(q.sqrt());
-    // q = a * (s / (s + x)) * (b / (s + x)) * o / k
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(o) sqrt(s) - sqrt(k) sqrt(q) s)/(sqrt(k) sqrt(q))
-    // const maxDAIAmountWithFee = a.sqrt().times(b.sqrt()).times(o.sqrt()).times(s.sqrt()).minus(k.sqrt().times(q.sqrt()).times(s)).div(k.sqrt().times(q.sqrt()));
-
-    console.log(`${currentSupplyInterestRate.div(1e18).toString()} currentSupplyInterestRate`);
-    // console.log(`${targetSupplyRate.div(1e18).toString()} targetSupplyRate`);
     console.log(`${currentSupplyInterestRateWithFee.div(1e18).toString()} currentSupplyInterestRateWithFee`);
     console.log(`${targetSupplyRateWithFee.div(1e18).toString()} targetSupplyRateWithFee`);
     console.log(`############ END FULCRUM `);
@@ -679,10 +667,7 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     // (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
 
     // ###### FULCRUM
-    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)));
-      // Fee is already counted now
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
+    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(b1).div(s1.plus(x1));
 
     // ###### COMPOUND
     const targetSupplyRateWithFeeCompoundFoo = x => a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
@@ -1101,29 +1086,10 @@ task("idleDAI:rebalanceCalcTest", "idleDAI rebalance calculations")
     console.log(`k1 = ${BNify('1e20')}`);
 
     const currentSupplyInterestRate = a1.times(b1.div(s1));
-    const targetSupplyRate = a1.times(s1.div(s1.plus(x1))).times(b1.div(s1.plus(x1)))
+    const currentSupplyInterestRateWithFee = currentSupplyInterestRate;
+    const targetSupplyRate = a1.times(b1).div(s1.plus(x1));
+    const targetSupplyRateWithFee = targetSupplyRate;
 
-    const currentSupplyInterestRateWithFee = a1.times(b1.div(s1));
-      // Fee is already counted
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
-
-    // ######
-    const targetSupplyRateWithFee = a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
-      // Fee is already counted
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
-
-    // q = a * (s / (s + x)) * (b / (s + x))
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(s) - sqrt(q) s)/sqrt(q)
-    // const maxDAIAmount = a.sqrt().times(b.sqrt()).times(s.sqrt()).minus(q.sqrt().times(s)).div(q.sqrt());
-    // q = a * (s / (s + x)) * (b / (s + x)) * o / k
-    // with wolfram for x
-    // x = (sqrt(a) sqrt(b) sqrt(o) sqrt(s) - sqrt(k) sqrt(q) s)/(sqrt(k) sqrt(q))
-    // const maxDAIAmountWithFee = a.sqrt().times(b.sqrt()).times(o.sqrt()).times(s.sqrt()).minus(k.sqrt().times(q.sqrt()).times(s)).div(k.sqrt().times(q.sqrt()));
-
-    console.log(`${currentSupplyInterestRate.div(1e18).toString()} currentSupplyInterestRate`);
-    // console.log(`${targetSupplyRate.div(1e18).toString()} targetSupplyRate`);
     console.log(`${currentSupplyInterestRateWithFee.div(1e18).toString()} currentSupplyInterestRateWithFee`);
     console.log(`${targetSupplyRateWithFee.div(1e18).toString()} targetSupplyRateWithFee`);
     console.log(`############ END FULCRUM `);
@@ -1191,10 +1157,7 @@ task("idleDAI:rebalanceCalcTest", "idleDAI rebalance calculations")
     // (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
 
     // ###### FULCRUM
-    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(s1.div(s1.plus(x1)))
-      .times(b1.div(s1.plus(x1)))
-      // Fee is already counted
-      // .times(o1).div(k1); // counting fee (spreadMultiplier)
+    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(b1).div(s1.plus(x1));
 
     const maxDAIFulcrumFoo = q1 =>
       a1.sqrt().times(b1.sqrt()).times(o1.sqrt()).times(s1.sqrt()).minus(k1.sqrt().times(q1.sqrt()).times(s1)).div(k1.sqrt().times(q1.sqrt()));

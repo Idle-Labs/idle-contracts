@@ -51,7 +51,7 @@ contract('IdleFulcrum', function ([_, creator, nonOwner, someone, foo]) {
   it('returns next supply rate given params', async function () {
     // tested with data and formula from task iDAI:manualNextRateData
     const val = [
-      BNify("16089452222034747442"), // a, avgBorrowInterestRate
+      BNify("16089452222034747442"), // a, protocolInterestRate
       BNify("419766782897339371903563"), // b, totalAssetBorrow
       BNify("995495112439158951883651"), // s, totalAssetSupply
       BNify(10**23) //  x, _amount

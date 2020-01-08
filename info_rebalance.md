@@ -1,3 +1,11 @@
+# Update:
+
+`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate
+
+`avgBorrowInterestRate` has been substituted with `protocolInterestRate` which now accounts for fees
+
+---
+
 ## Rebalance reasoning for Compound and Fulcrum (used in `IdleRebalancer` contract) for all assets except DAI
 ### Compound nextRate after supplying `x` amount
 ```

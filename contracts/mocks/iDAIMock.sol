@@ -96,6 +96,12 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     returns (uint256) {
     return _avgBorrowRate;
   }
+  function protocolInterestRate()
+    external
+    view
+    returns (uint256) {
+    return _avgBorrowRate;
+  }
 
   function totalAssetBorrow()
     external

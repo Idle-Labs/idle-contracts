@@ -145,7 +145,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set Params for iDAIMock
     const valFulcrum = [];
-    valFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    valFulcrum[0] = BNify('15477397326696356896'), // iToken.protocolInterestRate()
     valFulcrum[1] = BNify('126330399262842122707083'), // totalAssetBorrow;
     valFulcrum[2] = BNify('838941079486105304319308'), // totalAssetSupply();
 
@@ -155,8 +155,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     res.tokenAddresses[0].should.be.equal(this.cDAIMock.address);
     res.tokenAddresses[1].should.be.equal(this.iDAIMock.address);
-    res.amounts[0].should.be.bignumber.equal(BNify('99597057605112332746807218')); // 99704548 DAI compound
-    res.amounts[1].should.be.bignumber.equal(BNify('402942394887667253192782')); // 295451 DAI fulcrum
+    res.amounts[0].should.be.bignumber.equal(BNify('99194115210224665493614436')); // 99704548 DAI compound
+    res.amounts[1].should.be.bignumber.equal(BNify('805884789775334506385564')); // 295451 DAI fulcrum
   });
   it('calcRebalanceAmounts with given params which are lower than the expected one', async function () {
     const newDAIAmount = BNify('100000000').mul(this.one); // 100.000.000 DAI
@@ -178,7 +178,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set Params for iDAIMock
     const valFulcrum = [];
-    valFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    valFulcrum[0] = BNify('15477397326696356896'), // iToken.protocolInterestRate()
     valFulcrum[1] = BNify('126330399262842122707083'), // totalAssetBorrow;
     valFulcrum[2] = BNify('838941079486105304319308'), // totalAssetSupply();
 
@@ -198,8 +198,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     res.tokenAddresses[0].should.be.equal(this.cDAIMock.address);
     res.tokenAddresses[1].should.be.equal(this.iDAIMock.address);
-    res.amounts[0].should.be.bignumber.equal(BNify('99597057605112332746807218'));
-    res.amounts[1].should.be.bignumber.equal(BNify('402942394887667253192782'));
+    res.amounts[0].should.be.bignumber.equal(BNify('99194115210224665493614436'));
+    res.amounts[1].should.be.bignumber.equal(BNify('805884789775334506385564'));
   });
   it('calcRebalanceAmounts with given params which are higher than the expected one', async function () {
     const newDAIAmount = BNify('100000000').mul(this.one); // 100.000.000 DAI
@@ -221,7 +221,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set Params for iDAIMock
     const valFulcrum = [];
-    valFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    valFulcrum[0] = BNify('15477397326696356896'), // iToken.protocolInterestRate()
     valFulcrum[1] = BNify('126330399262842122707083'), // totalAssetBorrow;
     valFulcrum[2] = BNify('838941079486105304319308'), // totalAssetSupply();
 
@@ -241,8 +241,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     res.tokenAddresses[0].should.be.equal(this.cDAIMock.address);
     res.tokenAddresses[1].should.be.equal(this.iDAIMock.address);
-    res.amounts[0].should.be.bignumber.equal(BNify('99597057605112332746807218'));
-    res.amounts[1].should.be.bignumber.equal(BNify('402942394887667253192782'));
+    res.amounts[0].should.be.bignumber.equal(BNify('99194115210224665493614436'));
+    res.amounts[1].should.be.bignumber.equal(BNify('805884789775334506385564'));
   });
 
   it('bisectionRec (fake public method in IdleRebalancerMock)', async function () {
@@ -264,7 +264,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set Params for iDAIMock
     const paramsFulcrum = [];
-    paramsFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    paramsFulcrum[0] = BNify('15477397326696356896'), // iToken.protocolInterestRate()
     // fake borrow to be > 90%
     // paramsFulcrum[1] = BNify('806330399262842122707083'), // totalAssetBorrow;
     paramsFulcrum[1] = BNify('126330399262842122707083'), // totalAssetBorrow;
@@ -303,8 +303,8 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
       paramsFulcrum,
       { from: creator }
     );
-    resCall[0].should.be.bignumber.equal(BNify('99597057605112332746807218')); // 99704548 DAI compound
-    resCall[1].should.be.bignumber.equal(BNify('402942394887667253192782')); // 295451 DAI fulcrum
+    resCall[0].should.be.bignumber.equal(BNify('99194115210224665493614436')); // 99704548 DAI compound
+    resCall[1].should.be.bignumber.equal(BNify('805884789775334506385564')); // 295451 DAI fulcrum
   });
 
   it('bisectionRec wih fulcrum utilizationRate > 90% (fake public method in IdleRebalancerMock)', async function () {
@@ -326,7 +326,7 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
 
     // set Params for iDAIMock
     const paramsFulcrum = [];
-    paramsFulcrum[0] = BNify('15477397326696356896'), // iToken.avgBorrowInterestRate()
+    paramsFulcrum[0] = BNify('15477397326696356896'), // iToken.protocolInterestRate()
     // fake borrow to be > 90%
     // paramsFulcrum[1] = BNify('806330399262842122707083'), // totalAssetBorrow;
     paramsFulcrum[1] = BNify('826330399262842122707083'), // totalAssetBorrow;
