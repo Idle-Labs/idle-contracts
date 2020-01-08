@@ -54,7 +54,6 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     _avgBorrowRate = params[0];
     _totalAssetBorrow = params[1];
     _totalAssetSupply = params[2];
-    spreadMultiplier = params[3];
   }
   function setFakeBurn() public {
     isUsingFakeBurn = true;
@@ -97,6 +96,12 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     returns (uint256) {
     return _avgBorrowRate;
   }
+  function protocolInterestRate()
+    external
+    view
+    returns (uint256) {
+    return _avgBorrowRate;
+  }
 
   function totalAssetBorrow()
     external
@@ -124,6 +129,16 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     view
     returns (uint256) {}
   function nextLoanInterestRate(uint256)
+    external
+    view
+    returns (uint256) {}
+
+  function dsr()
+    external
+    view
+    returns (uint256) {}
+
+  function chaiPrice()
     external
     view
     returns (uint256) {}

@@ -37,6 +37,15 @@ interface IIdleToken {
   function mintIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts) external returns (uint256 mintedTokens);
 
   /**
+   * @param _amount : amount of underlying token to be lended
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompound, amountFulcrum]
+   */
+  function getParamsForMintIdleToken(uint256 _amount) external returns (address[] memory, uint256[] memory);
+
+  /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
    * This method triggers a rebalance of the pools if needed
    * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
@@ -49,6 +58,17 @@ interface IIdleToken {
    */
   function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata _clientProtocolAmounts)
     external returns (uint256 redeemedTokens);
+
+  /**
+   * @param _amount : amount of IdleTokens to be burned
+   * @param _skipRebalance : whether to skip the rebalance process or not
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompound, amountFulcrum]
+   */
+  function getParamsForRedeemIdleToken(uint256 _amount, bool _skipRebalance)
+    external returns (address[] memory, uint256[] memory);
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
@@ -70,6 +90,14 @@ interface IIdleToken {
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return : whether has rebalanced or not
    */
-
   function rebalance(uint256 _newAmount, uint256[] calldata _clientProtocolAmounts) external returns (bool);
+
+  /**
+   * @param _newAmount : amount of underlying tokens that needs to be minted with this rebalance
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompound, amountFulcrum]
+   */
+  function getParamsForRebalance(uint256 _newAmount) external returns (address[] memory, uint256[] memory);
 }

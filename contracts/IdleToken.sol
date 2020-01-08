@@ -48,6 +48,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
   // return to the normal level
   bool public manualPlay = false;
+  bool private _notLocalEntered;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -96,6 +97,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       protocolWrappers[_iToken] = _idleFulcrum;
       allAvailableTokens = [_cToken, _iToken];
       minRateDifference = 100000000000000000; // 0.1% min
+      _notLocalEntered = true;
   }
 
   modifier whenITokenPriceHasNotDecreased() {
@@ -110,6 +112,20 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
     if (iTokenPrice > lastITokenPrice) {
       lastITokenPrice = iTokenPrice;
     }
+  }
+
+  modifier nonLocallyReentrant() {
+    // On the first call to nonReentrant, _notEntered will be true
+    require(_notLocalEntered, "LocalReentrancyGuard: reentrant call");
+
+    // Any calls to nonReentrant after this point will fail
+    _notLocalEntered = false;
+
+    _;
+
+    // By storing the original value once again, a refund is triggered (see
+    // https://eips.ethereum.org/EIPS/eip-2200)
+    _notLocalEntered = true;
   }
 
   // onlyOwner
@@ -218,8 +234,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] calldata _clientProtocolAmounts)
-    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
+  function mintIdleToken(uint256 _amount, uint256[] memory _clientProtocolAmounts)
+    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
       uint256 idlePrice = tokenPrice();
@@ -230,6 +246,25 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
       _mint(msg.sender, mintedTokens);
+  }
+
+  /**
+   * Used to get `_clientProtocolAmounts` for `mintIdleToken` method, given an underlying amount (eg. DAI).
+   * This should be used only for a call not an actual tx
+   * NOTE: User should 'approve' _amount of tokens before calling this method
+   * NOTE 2: this method can be paused
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   */
+  function getParamsForMintIdleToken(uint256 _amount)
+    external nonLocallyReentrant whenNotPaused whenITokenPriceHasNotDecreased
+    returns (address[] memory, uint256[] memory) {
+      mintIdleToken(_amount, new uint256[](0));
+      return _getCurrentAllocations();
   }
 
   /**
@@ -244,9 +279,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata _clientProtocolAmounts)
-    external nonReentrant
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory _clientProtocolAmounts)
+    public nonReentrant
     returns (uint256 redeemedTokens) {
       address currentToken;
 
@@ -271,6 +305,27 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       }
 
       rebalance(0, _clientProtocolAmounts);
+  }
+
+  /**
+   * Used to get `_clientProtocolAmounts` for `redeemIdleToken` method
+   * This should be used only for a call not an actual tx
+   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
+   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
+   *         Ideally one should wait until the black swan event is terminated
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   * @param _skipRebalance : whether to skip the rebalance process or not
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   */
+   function getParamsForRedeemIdleToken(uint256 _amount, bool _skipRebalance)
+    external nonLocallyReentrant
+    returns (address[] memory, uint256[] memory) {
+      redeemIdleToken(_amount, _skipRebalance, new uint256[](0));
+      return _getCurrentAllocations();
   }
 
   /**
@@ -324,7 +379,6 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
    * @return : whether has rebalanced or not
    */
-
   function rebalance(uint256 _newAmount, uint256[] memory _clientProtocolAmounts)
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
@@ -397,6 +451,24 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       emit Rebalance(tokenBalance);
 
       return true; // hasRebalanced
+  }
+
+  /**
+   * Used to get `_clientProtocolAmounts` for `rebalance` method
+   * This should be used only for a call not an actual tx
+   * NOTE: this method can be paused
+   *
+   * @param _newAmount : amount of underlying tokens that needs to be minted with this rebalance
+   * @return : address[] array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return : uint256[] array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   */
+  function getParamsForRebalance(uint256 _newAmount)
+    external whenNotPaused whenITokenPriceHasNotDecreased
+    returns (address[] memory, uint256[] memory) {
+      rebalance(_newAmount, new uint256[](0));
+      return _getCurrentAllocations();
   }
 
   // internal
@@ -486,6 +558,36 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
           protocolWrappers[currentTokensUsed[i]]
         );
       }
+  }
+
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   */
+  function _getCurrentAllocations() internal view
+    returns (address[] memory tokenAddresses, uint256[] memory amounts) {
+      // Get balance of every protocol implemented
+      tokenAddresses = new address[](allAvailableTokens.length);
+      amounts = new uint256[](allAvailableTokens.length);
+
+      address currentToken;
+      uint256 currTokenPrice;
+
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        currentToken = allAvailableTokens[i];
+        tokenAddresses[i] = currentToken;
+        currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
+        amounts[i] = currTokenPrice.mul(
+          IERC20(currentToken).balanceOf(address(this))
+        ).div(10**18);
+      }
+
+      // return addresses and respective amounts in underlying
+      return (tokenAddresses, amounts);
   }
 
   // ILendingProtocols calls

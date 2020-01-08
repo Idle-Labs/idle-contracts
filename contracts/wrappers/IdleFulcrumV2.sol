@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "../interfaces/iERC20Fulcrum.sol";
 import "../interfaces/ILendingProtocol.sol";
 
-contract IdleFulcrum is ILendingProtocol, Ownable {
+contract IdleFulcrumV2 is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -59,20 +59,20 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
 
   /**
    * Gets next supply rate from Fulcrum, given an `_amount` supplied
+   * and remove mandatory fee (`spreadMultiplier`)
    *
    * @param _amount : new underlying amount supplied (eg DAI)
    * @return nextRate : yearly net rate
    */
   function nextSupplyRate(uint256 _amount)
-    external view
+    public view
     returns (uint256) {
       return iERC20Fulcrum(token).nextSupplyInterestRate(_amount);
   }
 
   /**
    * Calculate next supply rate from Fulcrum, given an `_amount` supplied (last array param)
-   * and all other params supplied. See `info_fulcrum.md` for more info
-   * on calculations.
+   * and all other params supplied.
    *
    * @param params : array with all params needed for calculation (see below)
    * @return : yearly net rate
@@ -80,15 +80,7 @@ contract IdleFulcrum is ILendingProtocol, Ownable {
   function nextSupplyRateWithParams(uint256[] calldata params)
     external view
     returns (uint256) {
-      /*
-        uint256 a1 = params[0]; // protocolInterestRate;
-        uint256 b1 = params[1]; // totalAssetBorrow;
-        uint256 s1 = params[2]; // totalAssetSupply;
-        uint256 x1 = params[3]; // _amount;
-      */
-
-      // q = (a1 * b1 / (s1 + x1))
-      return params[0].mul(params[1]).div(params[2].add(params[3]));
+      return iERC20Fulcrum(token).nextSupplyInterestRate(params[2]);
   }
 
   /**

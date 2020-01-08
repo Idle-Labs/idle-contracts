@@ -1,5 +1,5 @@
 ### Compound formula for calculating next rate after supplying `x` amount (with their fee)
-We started from Compound and looked through their contracts (https://etherscan.io/address/0xf5dce57282a584d2746faf1593d3121fcac444dc for cDAI)
+We started from Compound and looked through their contracts (https://etherscan.io/address/0xf5dce57282a584d2746faf1593d3121fcac444dc for cSAI)
 
 ```
 exchangeRate = E = (getCash() + totalBorrows() - totalReserves()) / totalSupply()
@@ -17,7 +17,7 @@ supplyRate = borrowRate * (1-reserveFactor) * borrowsPer
            = borrowRate * (1-reserveFactor) * B / (S + B - Res)
            = (baseRate + multiplier * B / (B + S)) * (1-reserveFactor) * B / (S + B - Res)
 ```
-when supplying a new DAI amount `x` we have
+when supplying a new SAI amount `x` we have
 
 ```
 targetSupplyRate = (baseRate + multiplier * B / (B + S + x)) * (1-reserveFactor) * B / (S + x + B - Res)
@@ -37,7 +37,7 @@ c = multiplier
 d = totalReserves
 e = 1 - reserveFactor
 s = getCash
-x = maxDAIAmount
+x = maxSAIAmount
 q = targetSupplyRate
 k = 2102400; // blocksPerYear
 j = 1e18; // oneEth
@@ -46,10 +46,10 @@ f = 100;
 q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d))) / j -> rate per block
 q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> rate per year
 ```
-which is the target supply rate of Compound when supplying `x` DAI.
+which is the target supply rate of Compound when supplying `x` SAI.
 
 This has been manually tested using a buidler task
 ```
 npx buidler cDAI:nextRateDataWithAmount --amount xxx
 ```
-where `xxx` is the amount to supply in DAI.
+where `xxx` is the amount to supply in SAI.
