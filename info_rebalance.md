@@ -1,8 +1,8 @@
 # Update:
 
-`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate
+`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate also `avgBorrowInterestRate` has been substituted with `protocolInterestRate` which now accounts for fees so the formula for Fulcrum (and the subsequent formula for the rebalance analytical solutions) are outdated now.
 
-`avgBorrowInterestRate` has been substituted with `protocolInterestRate` which now accounts for fees
+The iterative approach at the end of this file is still valid.
 
 ---
 
@@ -67,6 +67,8 @@ here `x` rapresents the amount that should be placed in compound, `n - x` the am
 Our limits for `x` are `[0, n]`
 
 The analytical solution is too much complicated for on-chain implementation see [here](https://www.wolframalpha.com/input/?i=%28a1+*+%28s1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+%28b1+%2F+%28s1+%2B+%28n+-+x%29%29%29+*+o1+%2F+k1%29+-+%28%28%28%28a+%2B+%28b*c%29%2F%28b+%2B+s+%2B+x%29%29+%2F+k%29+*+e+*+b+%2F+%28s+%2B+x+%2B+b+-+d%29%29+%2F+j%29+*+k+*+f+%3D+0) (Wait for it to calculate until `Solutions for the variable x` appears)
+
+## Iterative approach
 
 So we are using an interative approach using the bisection method and created a version of the algo in the task
 

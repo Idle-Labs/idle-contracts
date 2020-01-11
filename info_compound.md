@@ -1,4 +1,4 @@
-### Compound formula for calculating next rate after supplying `x` amount (with their fee)
+### Compound formula for calculating next rate after supplying `x` amount (with their fee) - used for all assets excepet DAI
 We started from Compound and looked through their contracts (https://etherscan.io/address/0xf5dce57282a584d2746faf1593d3121fcac444dc for cSAI)
 
 ```
