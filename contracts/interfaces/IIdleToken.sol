@@ -14,6 +14,13 @@ interface IIdleToken {
   function tokenPrice() external view returns (uint256 price);
 
   /**
+   * underlying token decimals
+   *
+   * @return : decimals of underlying token
+   */
+  function tokenDecimals() external view returns (uint256 decimals);
+
+  /**
    * Get APR of every ILendingProtocol
    *
    * @return addresses: array of token addresses

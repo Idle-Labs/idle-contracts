@@ -35,6 +35,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
   address public token;
+  // eg. 18 for DAI
+  uint256 public tokenDecimals;
   // eg. iDAI address
   address public iToken; // used for claimITokens and userClaimITokens
   // Min thresold of APR difference between protocols to trigger a rebalance
@@ -90,6 +92,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
     public
     ERC20Detailed(_name, _symbol, _decimals) {
       token = _token;
+      tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken; // used for claimITokens and userClaimITokens methods
       rebalancer = _rebalancer;
       priceCalculator = _priceCalculator;

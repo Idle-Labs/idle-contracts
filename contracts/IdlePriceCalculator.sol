@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
+import "./interfaces/IIdleToken.sol";
 
 contract IdlePriceCalculator {
   using SafeMath for uint256;
@@ -30,7 +31,7 @@ contract IdlePriceCalculator {
       require(currentTokensUsed.length == protocolWrappersAddresses.length, "Different Length");
 
       if (totalSupply == 0) {
-        return 10**18;
+        return 10**(IIdleToken(idleToken).tokenDecimals());
       }
 
       uint256 currPrice;
@@ -46,5 +47,4 @@ contract IdlePriceCalculator {
 
       price = totNav.div(totalSupply); // idleToken price in token wei
   }
-
 }

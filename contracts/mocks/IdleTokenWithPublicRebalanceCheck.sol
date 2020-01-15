@@ -35,6 +35,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
   address public token;
+  uint256 public tokenDecimals;
   // eg. iDAI address
   address public iToken; // used for claimITokens and userClaimITokens
   // Min thresold of APR difference between protocols to trigger a rebalance
@@ -89,6 +90,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
     public
     ERC20Detailed(_name, _symbol, _decimals) {
       token = _token;
+      tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken; // used for claimITokens and userClaimITokens methods
       rebalancer = _rebalancer;
       priceCalculator = _priceCalculator;
