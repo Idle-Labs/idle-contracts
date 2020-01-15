@@ -782,6 +782,282 @@ task("idleDAI:rebalanceCalcV2", "idleDAI rebalance calculations")
     const rateOfOneDAIInCDAI = BNify(1e18).div(BNify(exchangeRateStored).div(1e18)).div(1e8)
     console.log(`${resAlgo[0].div(1e18).times(rateOfOneDAIInCDAI).toString()} cDAI generated, ${resAlgo[1].div(1e18).times(tokenPrice).div(1e18).toString()} iDAI generated ####################`);
   });
+task("idleDAI:rebalanceCalcV2USDC", "idleUSDC rebalance calculations")
+  .addParam("amount", "The amount provided, eg '100000' for 100000 SAI (ONLY FOR SAI) ")
+  .setAction(async taskArgs => {
+    const getBlockNumber = await web3.eth.getBlockNumber();
+    console.log('BLOCK NUMBER: ', getBlockNumber.toString());
+
+    const ERC20 = artifacts.require('ERC20');
+    const iERC20Fulcrum = artifacts.require('iERC20Fulcrum');
+    const iDAI = await iERC20Fulcrum.at('0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f'); // mainnet
+    const newDAIAmount = BNify(taskArgs.amount).times(BNify(1e6));
+    let promises = [
+      iDAI.supplyInterestRate.call(),
+      iDAI.protocolInterestRate.call(),
+      // iDAI.avgBorrowInterestRate.call(),
+      // iDAI.borrowInterestRate.call(),
+      iDAI.totalAssetSupply.call(),
+      iDAI.totalAssetBorrow.call(),
+      iDAI.spreadMultiplier.call(),
+      iDAI.nextSupplyInterestRate.call(web3.utils.toBN(newDAIAmount)),
+      iDAI.tokenPrice.call(),
+      iDAI.protocolInterestRate.call()
+    ];
+
+    const res = await Promise.all(promises);
+    let [supplyRate, borrowRate, totalAssetSupply, totalAssetBorrow, spreadMultiplier, autoNextRate, tokenPrice, protocolInterestRate] = res;
+
+    supplyRate = BNify(supplyRate);
+    borrowRate = BNify(borrowRate);
+    totalAssetSupply = BNify(totalAssetSupply);
+    totalAssetBorrow = BNify(totalAssetBorrow);
+    spreadMultiplier = BNify(spreadMultiplier);
+    autoNextRate = BNify(autoNextRate);
+    tokenPrice = BNify(tokenPrice);
+    protocolInterestRate = BNify(protocolInterestRate);
+
+    const utilizationRate = BNify(totalAssetBorrow).div(BNify(totalAssetSupply));
+
+    console.log(`CONTRACT FULCRUM current DATA:`);
+    console.log(`${BNify(supplyRate).div(1e18).toString()}% supplyRate %`);
+    // console.log(`${BNify(borrowRate).div(1e18).toString()}% borrowRate %`);
+    // console.log(`${BNify(totalAssetSupply).div(1e18).toString()} totalAssetSupply DAI`);
+    // console.log(`${BNify(totalAssetBorrow).div(1e18).toString()} totalAssetBorrow DAI`);
+    // console.log(`${spreadMultiplier.toString()} spreadMultiplier`);
+    console.log(`${utilizationRate.toString()} utilizationRate`);
+    // console.log(`${newDAIAmount.div(1e18).toString()} newDAIAmount`);
+    console.log(`${autoNextRate.div(1e18).toString()}% autoNextRate`);
+    console.log(`${tokenPrice.div(1e18).toString()} DAI tokenPrice`);
+    // console.log(`##############`);
+
+    const a1 = borrowRate;
+    const b1 = totalAssetBorrow;
+    let s1 = totalAssetSupply;
+    const o1 = spreadMultiplier;
+    const x1 = newDAIAmount;
+    const k1 = BNify('1e20');
+
+    console.log(`a1 = ${borrowRate}`);
+    console.log(`b1 = ${totalAssetBorrow}`);
+    console.log(`s1 = ${totalAssetSupply}`);
+    console.log(`o1 = ${spreadMultiplier}`);
+    console.log(`x1 = ${newDAIAmount}`);
+    console.log(`k1 = ${BNify('1e20')}`);
+
+
+    // New formula
+    // q = (a1 * b1 / (s1 + x1))
+
+    const currentSupplyInterestRate = a1.times(b1.div(s1));
+    const currentSupplyInterestRateWithFee = currentSupplyInterestRate;
+    const targetSupplyRate = a1.times(b1).div(s1.plus(x1));
+    const targetSupplyRateWithFee = targetSupplyRate;
+
+    console.log(`${currentSupplyInterestRateWithFee.div(1e18).toString()} currentSupplyInterestRateWithFee`);
+    console.log(`${targetSupplyRateWithFee.div(1e18).toString()} targetSupplyRateWithFee`);
+    console.log(`############ END FULCRUM `);
+
+    const cERC20 = artifacts.require('CERC20');
+    const WhitePaperInterestRateModel = artifacts.require('WhitePaperInterestRateModel');
+
+    const cDAI = await cERC20.at('0x39AA39c021dfbaE8faC545936693aC917d5E7563'); // mainnet
+    const cDAIWithSupply = await ERC20.at('0x39AA39c021dfbaE8faC545936693aC917d5E7563'); // mainnet
+    const whitePaperInterestModel = await WhitePaperInterestRateModel.at(await cDAI.interestRateModel()); // mainnet
+
+    let promisesComp = [
+      cDAI.supplyRatePerBlock.call(),
+      cDAI.borrowRatePerBlock.call(),
+
+      cDAI.totalBorrows.call(),
+      cDAI.getCash.call(),
+      cDAI.totalReserves.call(),
+      cDAIWithSupply.totalSupply.call(),
+      cDAI.reserveFactorMantissa.call(),
+      cDAI.exchangeRateStored.call(),
+
+      // from WhitePaperInterestRateModel
+      whitePaperInterestModel.baseRate.call(),
+      whitePaperInterestModel.multiplier.call(),
+    ];
+
+    const resComp = await Promise.all(promisesComp);
+    const [
+      contractSupply, contractBorrow,
+      totalBorrows, getCash, totalReserves, totalSupply,
+      reserveFactorMantissa, exchangeRateStored,
+      baseRate, multiplier
+    ] = resComp;
+
+    supplyRatePerYear = BNify(contractSupply).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
+    borrowRatePerYearContract = BNify(contractBorrow).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR)
+
+    console.log(`################ CONTRACT DATA COMPOUND`);
+    // console.log(`${BNify(borrowRatePerYearContract).div(1e18).toString()}% borrowRatePerYear contract`);
+    console.log(`${BNify(totalBorrows).div(1e6).toString()} totalBorrows`)
+    console.log(`${BNify(getCash).div(1e6).toString()} getCash`)
+    console.log(`${BNify(supplyRatePerYear).div(1e18).toString()}% supplyRatePerYear`);
+    // console.log(`${BNify(totalReserves).div(1e18).toString()} totalReserves`)
+    // console.log(`${BNify(totalSupply).div(1e8).toString()} totalSupply`)
+    console.log(`${BNify(exchangeRateStored).div(1e12).toString()} exchangeRateStored`)
+    // console.log(`${BNify(reserveFactorMantissa).toString()} reserveFactorMantissa`)
+    // console.log(`${BNify(baseRate).toString()} baseRate`)
+    // console.log(`${BNify(multiplier).toString()} multiplier`)
+    // console.log(`################`);
+
+    const a = BNify(baseRate);
+    const b = BNify(totalBorrows);
+    const c = BNify(multiplier);
+    const d = BNify(totalReserves);
+    const e = BNify(1e18).minus(BNify(reserveFactorMantissa));
+    let s = BNify(getCash);
+    // const q = BNify(targetSupplyRate);
+    const x = newDAIAmount;
+    const k = BNify(2102400); // blocksInAYear
+    const j = BNify(1e18); // oneEth
+    const f = BNify(100);
+
+    console.log(`j = ${BNify(1e18)}`);
+    console.log(`a = ${BNify(baseRate)}`);
+    console.log(`b = ${BNify(totalBorrows)}`);
+    console.log(`c = ${BNify(multiplier)}`);
+    console.log(`d = ${BNify(totalReserves)}`);
+    console.log(`e = ${BNify(1e18).minus(BNify(reserveFactorMantissa))}`);
+    console.log(`s = ${BNify(getCash)}`);
+    console.log(`k = ${BNify(2102400)}`);
+    console.log(`f = ${BNify(100)}`);
+    console.log(`x = ${newDAIAmount}`);
+    console.log(`exchangeRateStored = ${exchangeRateStored}`);
+
+    // q = (((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j -> to the block rate
+    // q = ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f -> to get yearly rate -> this is needed
+
+    const targetSupplyRateWithFeeCompound = a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
+        s.plus(x).plus(b).minus(d)
+      ).div(j).times(k).times(f).integerValue(BigNumber.ROUND_FLOOR) // to get the yearly rate
+
+    console.log(`${targetSupplyRateWithFeeCompound.div(1e18).toString()} targetSupplyRateWithFeeCompound per year`);
+    // ##### END COMPOUND
+
+    // So ideally we should solve this one and find x1 and x:
+    // (a1 * (s1 / (s1 + (n - x))) * (b1 / (s1 + (n - x))) * o1 / k1) - ((((a + (b*c)/(b + s + x)) / k) * e * b / (s + x + b - d)) / j) * k * f = 0
+
+    // ###### FULCRUM
+    const targetSupplyRateWithFeeFulcrumFoo = x1 => a1.times(b1).div(s1.plus(x1));
+
+    // ###### COMPOUND
+    const targetSupplyRateWithFeeCompoundFoo = x => a.plus(b.times(c).div(b.plus(s).plus(x))).div(k).times(e).times(b).div(
+        s.plus(x).plus(b).minus(d)
+      ).div(j).times('2102400').times('100').integerValue(BigNumber.ROUND_FLOOR);
+
+    const algo = (amount, currBestTokenAddr, bestRate, worstRate) => {
+      const isCompoundBest = currBestTokenAddr === cDAI.address;
+      let maxDAICompound;
+      let maxDAIFulcrum;
+      amount = BNify(amount);
+      const tolerance = BNify('0.1').times(BNify('1e18')); // 0.1%
+
+      if (isCompoundBest) {
+        console.log('Trying to make all on compound')
+        if (targetSupplyRateWithFeeCompoundFoo(amount).plus(tolerance).gt(worstRate)) {
+          // All on Compound
+          return [amount, BNify(0)];
+        }
+      } else {
+        console.log('Trying to make all on fulcrum')
+        if (targetSupplyRateWithFeeFulcrumFoo(amount).plus(tolerance).gt(worstRate)) {
+          console.log('all on fulcrum')
+          // All on Fulcrum
+          return [BNify(0), amount];
+        }
+      }
+
+      /*
+        Compound: (getCash returns the available supply only, not the borrowed one)
+        getCash + totalBorrows = totalSuppliedCompound
+
+        Fulcrum:
+        totalSupply = totalSuppliedFulcrum
+
+        we try to correlate borrow and supply on both markets
+        totC = totalSuppliedCompound + totalBorrowsCompound
+        totF = totalSuppliedFulcrum + totalBorrowsFulcrum
+
+        n : (totC + totF) = x : totF
+        x = n * totF / (totC + totF)
+      */
+
+      const amountFulcrum = amount.times(totalAssetBorrow.plus(totalAssetSupply)).div(
+        totalAssetBorrow.plus(totalAssetSupply).plus(BNify(getCash).plus(totalBorrows).plus(totalBorrows))
+      );
+      const amountCompound = amount.minus(amountFulcrum);
+
+      let i = 0;
+      const amountSizesCalcRec = (
+        compoundAmount = amountCompound,
+        fulcrumAmount = amountFulcrum,
+        isCurrCompoundBest = isCompoundBest) => {
+        console.log(++i);
+
+        const fulcNewRate = targetSupplyRateWithFeeFulcrumFoo(fulcrumAmount);
+        const compNewRate = targetSupplyRateWithFeeCompoundFoo(compoundAmount);
+        const isCompoundNewBest = compNewRate.gt(fulcNewRate);
+
+        let newCompoundAmount;
+        let newFulcrumAmount;
+        let smallerAmount;
+
+        console.log('DATA ######')
+        console.log({
+          fulcrumAmount: fulcrumAmount.div(1e6).toString(),
+          compoundAmount: compoundAmount.div(1e6).toString(),
+          fulcNewRate: fulcNewRate.div(1e18).toString(),
+          compNewRate: compNewRate.div(1e18).toString(),
+        });
+
+        smallerAmount = fulcrumAmount.gt(compoundAmount) ? compoundAmount : fulcrumAmount;
+
+        if (fulcNewRate.plus(tolerance).gt(compNewRate) && fulcNewRate.lt(compNewRate) ||
+            (compNewRate.plus(tolerance).gt(fulcNewRate) && compNewRate.lt(fulcNewRate))) {
+          return [compoundAmount, fulcrumAmount];
+        }
+
+        if (isCompoundNewBest) {
+          // Compound > Fulcrum
+          newFulcrumAmount = fulcrumAmount.minus(smallerAmount.div(BNify('2')));
+          newCompoundAmount = compoundAmount.plus(smallerAmount.div(BNify('2')))
+        } else {
+          newCompoundAmount = compoundAmount.minus(smallerAmount.div(BNify('2')));
+          newFulcrumAmount = fulcrumAmount.plus(smallerAmount.div(BNify('2')));
+        }
+
+        return amountSizesCalcRec(newCompoundAmount, newFulcrumAmount, isCompoundNewBest);
+      };
+
+      let [compAmount, fulcAmount] = amountSizesCalcRec();
+      if (maxDAIFulcrum) {
+        // add maxDAIFulcrum to s1
+        fulcAmount = fulcAmount.plus(maxDAIFulcrum);
+      }
+      if (maxDAICompound) {
+        // add maxDAIFulcrum to s
+        compAmount = compAmount.plus(maxDAICompound);
+      }
+
+      return [compAmount, fulcAmount];
+    };
+
+    const fulcrumCurr = targetSupplyRateWithFeeFulcrumFoo(0);
+    const compoundCurr = targetSupplyRateWithFeeCompoundFoo(0);
+    const currBestAddress = fulcrumCurr.gt(compoundCurr) ? iDAI.address : cDAI.address;
+    const bestRate = fulcrumCurr.gt(compoundCurr) ? fulcrumCurr : compoundCurr;
+    const worstRate = fulcrumCurr.gt(compoundCurr) ? compoundCurr : fulcrumCurr;
+
+    const resAlgo = algo(newDAIAmount, currBestAddress, bestRate, worstRate);
+    console.log(`${resAlgo[0].div(1e6).toString()} DAI in compound, ${resAlgo[1].div(1e6).toString()} DAI fulcrum ####################`);
+    const rateOfOneDAIInCDAI = BNify(1e18).div(BNify(exchangeRateStored).div(1e18)).div(1e8)
+    console.log(`${resAlgo[0].div(1e18).times(rateOfOneDAIInCDAI).toString()} cDAI generated, ${resAlgo[1].div(1e18).times(tokenPrice).div(1e18).toString()} iDAI generated ####################`);
+  });
 task("idleDAI:rebalanceCalcV3", "idleDAI rebalance calculations with whitepaper rate (ONLY FOR DAI)")
   .addParam("amount", "The amount provided, eg '100000' for 100000 DAI ")
   .setAction(async taskArgs => {
