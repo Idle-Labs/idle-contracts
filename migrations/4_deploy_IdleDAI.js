@@ -37,6 +37,9 @@ const DAI = {
 };
 
 module.exports = async function(deployer, network, accounts) {
+  if (network === 'test') {
+    return;
+  }
   console.log('Network', network);
   console.log('cDAI address: ', cDAI[network]);
   console.log('iDAI address: ', iDAI[network]);
@@ -70,7 +73,12 @@ module.exports = async function(deployer, network, accounts) {
     IdleCompoundV2.address, IdleFulcrumV2.address
   );
   await Factory.setTokenOwnershipAndPauser(IdleDAIAddress);
+
+  console.log('[DAI] IdleCompoundV2 address:', IdleCompoundV2.address);
+  console.log('[DAI] IdleFulcrumV2  address:', IdleFulcrumV2.address);
+  console.log('[DAI] IdleRebalancerV2  address:', IdleRebalancerV2.address);
   console.log('#### IdleDAIAddress: ', IdleDAIAddress);
+
   (await IdleRebalancerV2.at(IdleRebalancerV2.address)).setIdleToken(IdleDAIAddress);
   (await IdleCompoundV2.at(IdleCompoundV2.address)).setIdleToken(IdleDAIAddress);
   (await IdleFulcrumV2.at(IdleFulcrumV2.address)).setIdleToken(IdleDAIAddress);

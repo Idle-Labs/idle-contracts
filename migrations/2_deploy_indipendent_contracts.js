@@ -24,6 +24,9 @@ const DAI = {
 };
 
 module.exports = async function(deployer, network, accounts) {
+  if (network === 'test') {
+    return;
+  }
   console.log(`### Deploying indipendent contract on ${network}`);
 
   await deployer.deploy(IdlePriceCalculator);

@@ -42,6 +42,10 @@ const SAI = {
 };
 
 module.exports = async function(deployer, network, accounts) {
+  if (network === 'test') {
+    return;
+  }
+
   console.log('Network', network);
   console.log('cSAI address: ', cSAI[network]);
   console.log('iSAI address: ', iSAI[network]);
@@ -89,7 +93,11 @@ module.exports = async function(deployer, network, accounts) {
   );
   await Factory.setTokenOwnershipAndPauser(IdleSAIAddress);
 
+  console.log('[SAI] IdleCompound address:', IdleCompound.address);
+  console.log('[SAI] IdleFulcrum  address:', IdleFulcrum.address);
+  console.log('[SAI] IdleRebalancer  address:', IdleRebalancer.address);
   console.log('#### IdleSAIAddress: ', IdleSAIAddress);
+
   if (isUsingNewRateModel) {
     (await IdleRebalancerV2.at(IdleRebalancerV2.address)).setIdleToken(IdleSAIAddress);
     (await IdleCompoundV2.at(IdleCompoundV2.address)).setIdleToken(IdleSAIAddress);
