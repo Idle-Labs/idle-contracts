@@ -1,6 +1,6 @@
 # Update:
 
-`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate also `avgBorrowInterestRate` has been substituted with `protocolInterestRate` which now accounts for fees so the formula for Fulcrum (and the subsequent formula for the rebalance analytical solutions) are outdated now.
+`nextSupplyInterestRate` now directly returns the net rate so there is no need to manually calculate the net rate, also `avgBorrowInterestRate` has been substituted with `protocolInterestRate` which now accounts for fees so the formula for Fulcrum (and the subsequent formula for the rebalance analytical solutions) are outdated now.
 
 The iterative approach at the end of this file is still valid.
 
