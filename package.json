@@ -1,7 +1,7 @@
 {
-  "name": "starter-kit",
+  "name": "idle-contracts",
   "version": "1.0.0",
-  "description": "OpenZeppelin kit containing React, & OpenZeppelin SDK",
+  "description": "Idle V2 contracts repo",
   "main": "index.js",
   "scripts": {
     "test": "truffle test",
@@ -9,9 +9,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OpenZeppelin/starter-kit"
+    "url": "git+https://github.com/bugduino/idle-contracts"
   },
   "keywords": [
+    "idle",
+    "idle.finance",
     "openzeppelin",
     "truffle",
     "react",
@@ -23,12 +25,12 @@
     "web3js",
     "ethereum"
   ],
-  "author": "Ramon Recuero <ramon@dapis.io>, Igor Yalovoy <to@ylv.io>",
+  "author": "William Bergamo <william@idle.finance>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/OpenZeppelin/starter-kit/issues"
+    "url": "https://github.com/bugduino/idle-contracts/issues"
   },
-  "homepage": "https://github.com/OpenZeppelin/starter-kit/blob/stable/README.md",
+  "homepage": "https://idle.finance",
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
     "@openzeppelin/test-helpers": "^0.5.3",
