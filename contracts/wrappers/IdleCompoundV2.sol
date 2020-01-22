@@ -129,7 +129,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
    * @return iTokens minted
    */
   function mint()
-    external
+    external onlyIdle
     returns (uint256 cTokens) {
       uint256 balance = IERC20(underlying).balanceOf(address(this));
       if (balance == 0) {
@@ -155,7 +155,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
    * @return underlying tokens redeemd
    */
   function redeem(address _account)
-    external
+    external onlyIdle
     returns (uint256 tokens) {
       // Funds needs to be sended here before calling this
       CERC20 _cToken = CERC20(token);
