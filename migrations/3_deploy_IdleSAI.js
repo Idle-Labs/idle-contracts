@@ -61,7 +61,7 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
   // if is using new interestRateModel
   let isUsingNewRateModel = false;
-  if ((network === 'kovan' || network === 'kovan-fork') && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
+  if ((network === 'kovan' || network === 'kovan-fork' || network === 'deploy') && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
     isUsingNewRateModel = true;
     await deployer.deploy(IdleCompoundV2, cSAI[network], SAI[network]);
     await deployer.deploy(IdleRebalancerV2,
