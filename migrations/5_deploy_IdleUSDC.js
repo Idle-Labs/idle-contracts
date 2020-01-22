@@ -15,6 +15,8 @@ const cUSDC = {
   'local-fork': '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
   'test': '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
   'coverage': '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
+
+  'deploy': '0xcfc9bb230f00bffdb560fce2428b4e05f3442e35', // used for truffle Teams deploy, now kovan
 };
 const iUSDC = {
   'live': '0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f',
@@ -25,6 +27,8 @@ const iUSDC = {
   'local-fork': '0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f',
   'test': '0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f',
   'coverage': '0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f',
+
+  'deploy': '', // used for truffle Teams deploy, now kovan
 };
 const USDC = {
   'live': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -35,6 +39,8 @@ const USDC = {
   'local-fork': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   'test': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   'coverage': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+
+  'deploy': '0x75B0622Cec14130172EaE9Cf166B92E5C112FaFF', // used for truffle Teams deploy, now kovan
 };
 
 module.exports = async function(deployer, network, accounts) {

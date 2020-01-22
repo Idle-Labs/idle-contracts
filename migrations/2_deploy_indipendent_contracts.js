@@ -11,6 +11,8 @@ const SAI = {
   'local-fork': '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
   'test': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
   'coverage': '0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e',
+
+  'deploy': '0xC4375B7De8af5a38a93548eb8453a498222C4fF2', // used for truffle Teams deploy, now kovan
 };
 const DAI = {
   'live': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
@@ -21,6 +23,8 @@ const DAI = {
   'local-fork': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'test': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'coverage': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+
+  'deploy': '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa', // used for truffle Teams deploy, now kovan
 };
 
 module.exports = async function(deployer, network, accounts) {

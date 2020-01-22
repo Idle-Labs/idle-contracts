@@ -14,6 +14,8 @@ const cDAI = {
   'local-fork': '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
   'test': '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
   'coverage': '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
+
+  'deploy': '0xe7bc397dbd069fc7d0109c0636d06888bb50668c', // used for truffle Teams deploy, now kovan
 };
 const iDAI = {
   'live': '0x493C57C4763932315A328269E1ADaD09653B9081',
@@ -24,6 +26,8 @@ const iDAI = {
   'local-fork': '0x493C57C4763932315A328269E1ADaD09653B9081',
   'test': '0x493C57C4763932315A328269E1ADaD09653B9081',
   'coverage': '0x493C57C4763932315A328269E1ADaD09653B9081',
+
+  'deploy': '0x6c1e2b0f67e00c06c8e2be7dc681ab785163ff4d', // used for truffle Teams deploy, now kovan
 };
 const DAI = {
   'live': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
@@ -34,6 +38,8 @@ const DAI = {
   'local-fork': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'test': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'coverage': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+
+  'deploy': '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa', // used for truffle Teams deploy, now kovan
 };
 
 module.exports = async function(deployer, network, accounts) {
