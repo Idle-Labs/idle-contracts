@@ -59,8 +59,8 @@ module.exports = async function(deployer, network, accounts) {
   console.log('##################');
 
   await deployer.deploy(IdleFulcrum, iSAI[network], SAI[network]);
-  // if is using new interestRateModel
   let isUsingNewRateModel = false;
+  // if is using new interestRateModel
   if ((network === 'kovan' || network === 'kovan-fork' || network === 'deploy') && cSAI[network] === '0x63c344bf8651222346dd870be254d4347c9359f7') {
     isUsingNewRateModel = true;
     await deployer.deploy(IdleCompoundV2, cSAI[network], SAI[network]);
@@ -99,9 +99,14 @@ module.exports = async function(deployer, network, accounts) {
   );
   await Factory.setTokenOwnershipAndPauser(IdleSAIAddress);
 
-  console.log('[SAI] IdleCompound address:', IdleCompound.address);
+  if (isUsingNewRateModel) {
+    console.log('[SAI] IdleRebalancerV2  address:', IdleRebalancerV2.address);
+    console.log('[SAI] IdleCompoundV2 address:', IdleCompoundV2.address);
+  } else {
+    console.log('[SAI] IdleCompound address:', IdleCompound.address);
+    console.log('[SAI] IdleRebalancer  address:', IdleRebalancer.address);
+  }
   console.log('[SAI] IdleFulcrum  address:', IdleFulcrum.address);
-  console.log('[SAI] IdleRebalancer  address:', IdleRebalancer.address);
   console.log('#### IdleSAIAddress: ', IdleSAIAddress);
 
   if (isUsingNewRateModel) {
