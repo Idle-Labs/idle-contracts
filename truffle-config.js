@@ -39,7 +39,7 @@ module.exports = {
       gasPrice: 5000000000 // 5 gwei
     },
     // main ethereum network(mainnet)
-    main: {
+    live: {
       provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       network_id: 1,
       gas: 5500000,

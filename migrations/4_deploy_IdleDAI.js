@@ -59,7 +59,6 @@ module.exports = async function(deployer, network, accounts) {
   );
 
   const Factory = await IdleFactory.at(IdleFactory.address);
-  await deployer.deploy(IdleCompoundV2, cDAI[network], DAI[network]);
   const IdleDAIAddress = await Factory.newIdleToken.call(
     'IdleDAI',
     'IDLEDAI',
