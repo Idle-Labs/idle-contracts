@@ -4,7 +4,7 @@ const path = require("path");
 require('dotenv').config();
 const mnemonic = process.env.MAINNET_MNEMONIC;
 const HDWalletProvider = require("@truffle/hdwallet-provider");
-const LedgerWalletProvider = require('truffle-ledger-provider');
+const LedgerWalletProvider = require('@umaprotocol/truffle-ledger-provider');
 
 const ledgerOptions = {
   path: "44'/60'/0'/0/0", // ledger default derivation path
@@ -36,12 +36,7 @@ module.exports = {
       gasPrice: 5000000000, // 5 gwei
     },
     kovan: {
-      provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
-      network_id: '42',
-      gas: 6465030,
-      gasPrice: 5000000000, // 5 gwei
-    },
-    ledgerKovan: {
+      // provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
       provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 42}, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: '42',
       gas: 6465030,
@@ -55,12 +50,7 @@ module.exports = {
     },
     // main ethereum network(mainnet)
     live: {
-      provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
-      network_id: 1,
-      gas: 5500000,
-      gasPrice: 2000000000 // 2 gwei
-    },
-    ledgerLive: {
+      // provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
       gas: 5500000,
