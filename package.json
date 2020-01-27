@@ -32,11 +32,13 @@
   },
   "homepage": "https://idle.finance",
   "dependencies": {
+    "@babel/polyfill": "^7.8.3",
     "@openzeppelin/contracts": "^2.4.0",
     "@openzeppelin/test-helpers": "^0.5.3",
     "@truffle/hdwallet-provider": "^1.0.25",
     "dotenv": "^6.2.0",
     "solidity-coverage": "^0.6.7",
+    "truffle-ledger-provider": "^1.0.1",
     "truffle-security": "^1.5.5"
   },
   "devDependencies": {

@@ -1,8 +1,17 @@
+require("@babel/polyfill");
 require('chai/register-should');
 const path = require("path");
 require('dotenv').config();
 const mnemonic = process.env.MAINNET_MNEMONIC;
 const HDWalletProvider = require("@truffle/hdwallet-provider");
+const LedgerWalletProvider = require('truffle-ledger-provider');
+
+const ledgerOptions = {
+  path: "44'/60'/0'/0/0", // ledger default derivation path
+  askConfirm: false,
+  accountsLength: 1,
+  accountsOffset: 0
+};
 
 module.exports = {
   plugins: ["truffle-security"],
@@ -32,6 +41,12 @@ module.exports = {
       gas: 6465030,
       gasPrice: 5000000000, // 5 gwei
     },
+    ledgerKovan: {
+      provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 42}, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
+      network_id: '42',
+      gas: 6465030,
+      gasPrice: 5000000000, // 5 gwei
+    },
     rinkeby: {
       provider: () => new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/v3/" + process.env.INFURA_KEY),
       network_id: 4,
@@ -43,7 +58,13 @@ module.exports = {
       provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       network_id: 1,
       gas: 5500000,
-      gasPrice: 5000000000 // 5 gwei
+      gasPrice: 2000000000 // 2 gwei
+    },
+    ledgerLive: {
+      provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
+      network_id: 1,
+      gas: 5500000,
+      gasPrice: 2000000000 // 2 gwei
     },
     local: {
       host: '127.0.0.1',
