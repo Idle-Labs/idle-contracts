@@ -1,7 +1,7 @@
 
 // File: contracts/interfaces/IIdleV1.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 interface IIdleV1 {
     // _amount is the amount of idleSAI that one wants to burn
@@ -16,7 +16,7 @@ interface IIdleV1 {
 
 // File: contracts/interfaces/IIToken.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 interface IIToken {
     function mint(
@@ -36,7 +36,7 @@ interface IIToken {
 
 // File: @openzeppelin/contracts/math/Math.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 /**
  * @dev Standard math utilities missing in the Solidity language.
@@ -68,7 +68,7 @@ library Math {
 
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP. Does not include
@@ -147,7 +147,7 @@ interface IERC20 {
 
 // File: contracts/libraries/Utils.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -166,7 +166,7 @@ library Utils {
 
 // File: @openzeppelin/contracts/math/SafeMath.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
@@ -325,7 +325,7 @@ library SafeMath {
 
 // File: contracts/partials/PartialIdleV1.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -351,7 +351,7 @@ library PartialIdleV1 {
 
 // File: contracts/interfaces/IIdleV2.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 interface IIdleV2 {
   // one should approve the contract as spender for DAI before calling this method
@@ -363,7 +363,7 @@ interface IIdleV2 {
 
 // File: contracts/partials/PartialIdleV2.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -388,7 +388,7 @@ library PartialIdleV2 {
 
 // File: contracts/interfaces/IScdMcdMigration.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 interface IScdMcdMigration {
     function swapSaiToDai(uint256 _amount) external;
@@ -397,7 +397,7 @@ interface IScdMcdMigration {
 
 // File: @openzeppelin/contracts/GSN/Context.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 /*
  * @dev Provides information about the current execution context, including the
@@ -427,7 +427,7 @@ contract Context {
 
 // File: @openzeppelin/contracts/ownership/Ownable.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -505,7 +505,7 @@ contract Ownable is Context {
 
 // File: contracts/Registry.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 contract Registry is Ownable {
@@ -530,7 +530,7 @@ contract Registry is Ownable {
 
 // File: contracts/libraries/RL.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 library RL {
@@ -589,7 +589,7 @@ library RL {
 
 // File: contracts/partials/PartialMcdMigration.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -616,7 +616,7 @@ library PartialMcdMigration {
 
 // File: contracts/partials/PartialPull.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -636,7 +636,7 @@ library PartialPull {
 
 // File: @openzeppelin/contracts/utils/Address.sol
 
-pragma solidity ^0.5.5;
+pragma solidity 0.5.5;
 
 /**
  * @dev Collection of functions related to the address type
@@ -707,7 +707,7 @@ library Address {
 
 // File: contracts/partials/PartialPush.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -728,7 +728,7 @@ library PartialPush {
 
 // File: contracts/TokenSaver.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
@@ -748,7 +748,7 @@ contract TokenSaver is Ownable {
 
 // File: contracts/static-recipes/IdleMcdBridge.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.0;
 
 
 
