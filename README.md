@@ -12,7 +12,7 @@ Hence, by buying and holding IdleTokens, users' underlying position will be dyna
 
 ### Backstory
 
-The current [Idle smart contract](https://etherscan.io/address/0xacf651aad1cbb0fd2c7973e2510d6f63b7e440c9) version works in a simple, but not scalable way: when the highest interest rate is not on the tracked lending protocol anymore, and an interaction with the platform happens, the smart contract moves the whole pool of locked funds from a protocol to the other.
+The [Idle smart contract V1](https://etherscan.io/address/0xacf651aad1cbb0fd2c7973e2510d6f63b7e440c9) works in a simple, but not scalable way: when the highest interest rate is not on the tracked lending protocol anymore, and an interaction with the platform happens, the smart contract moves the whole pool of locked funds from a protocol to the other.
 
 This might provoke a well-known edge case: if the current Idle smart contract moves a large amount of funds from a lending protocol A to a lending protocol B, it could potentially decrease the interest rate in the target protocol B. Consequently, the interest rate in protocol A increases, and if there is not a substantial spread between the rates (meaning that the interest rate in protocol B becomes lower than the interest rate in protocol A), this might translates in a continuous rebalance between those two protocols. This loop continues until one of those protocols is able to "absorb" all the funds without lowering its interest rate below the other protocol's interest rate. More information and examples here: ["On Current Decentralized Rebalance"](https://medium.com/@idlefinance/on-current-decentralized-rebalance-67e5a51b763)
 
