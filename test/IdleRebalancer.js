@@ -125,6 +125,15 @@ contract('IdleRebalancer', function ([_, creator, nonOwner, someone, foo]) {
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.IdleRebalancer.setIdleToken(val, { from: nonOwner }));
   });
+  it('allows onlyOwner to setBlocksPerYear', async function () {
+    const val = BNify('2425846');
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await this.IdleRebalancer.setBlocksPerYear(val, { from: creator });
+    (await this.IdleRebalancer.blocksPerYear()).should.be.bignumber.equal(val);
+
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.IdleRebalancer.setBlocksPerYear(val, { from: nonOwner }));
+  });
   it('calcRebalanceAmounts', async function () {
     const newDAIAmount = BNify('100000000').mul(this.one); // 100.000.000 DAI
 

@@ -24,6 +24,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
   // underlying token (token eg DAI) address
   address public underlying;
   address public idleToken;
+  uint256 public blocksPerYear;
 
   /**
    * @param _token : cToken address
@@ -34,6 +35,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
+    blocksPerYear = 2371428; // ~13.3 sec blocktime
   }
 
   /**
@@ -56,6 +58,17 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
       require(idleToken == address(0), "idleToken addr already set");
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
+  }
+
+  /**
+   * sets blocksPerYear address
+   *
+   * @param _blocksPerYear : avg blocks per year
+   */
+  function setBlocksPerYear(uint256 _blocksPerYear)
+    external onlyOwner {
+      require(_blocksPerYear != 0, "_blocksPerYear is 0");
+      blocksPerYear = _blocksPerYear;
   }
   // end onlyOwner
 
@@ -97,7 +110,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
         cToken.totalReserves(),
         cToken.reserveFactorMantissa()
       );
-      return ratePerBlock.mul(white.blocksPerYear()).mul(100);
+      return ratePerBlock.mul(blocksPerYear).mul(100);
   }
 
   /**
@@ -116,9 +129,8 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
     external view
     returns (uint256 apr) {
       CERC20 cToken = CERC20(token);
-      WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
       uint256 cRate = cToken.supplyRatePerBlock(); // interest % per block
-      apr = cRate.mul(white.blocksPerYear()).mul(100);
+      apr = cRate.mul(blocksPerYear).mul(100);
   }
 
   /**

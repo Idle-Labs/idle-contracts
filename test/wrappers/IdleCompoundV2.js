@@ -43,6 +43,15 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.cDAIWrapper.setIdleToken(val, { from: nonOwner }));
   });
+  it('allows onlyOwner to setBlocksPerYear', async function () {
+    const val = BNify('2425846');
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await this.cDAIWrapper.setBlocksPerYear(val, { from: creator });
+    (await this.cDAIWrapper.blocksPerYear()).should.be.bignumber.equal(val);
+
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.cDAIWrapper.setBlocksPerYear(val, { from: nonOwner }));
+  });
   it('returns next supply rate given amount', async function () {
     const val = [];
     val[0] = BNify('1000000000000000000'), // 10 ** 18;
