@@ -34,6 +34,7 @@ contract IdleRebalancer is Ownable {
   uint256 public maxSupplyedParamsDifference; // 100000 -> 0.001%
   // max number of recursive calls for bisection algorithm
   uint256 public maxIterations;
+  uint256 public blocksPerYear;
 
   /**
    * @param _cToken : cToken address
@@ -51,6 +52,7 @@ contract IdleRebalancer is Ownable {
     maxRateDifference = 10**17; // 0.1%
     maxSupplyedParamsDifference = 100000; // 0.001%
     maxIterations = 30;
+    blocksPerYear = 2371428; // ~13.3 sec blocktime
   }
 
   /**
@@ -73,6 +75,17 @@ contract IdleRebalancer is Ownable {
       require(idleToken == address(0), "idleToken addr already set");
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
+  }
+
+  /**
+   * sets blocksPerYear address
+   *
+   * @param _blocksPerYear : avg blocks per year
+   */
+  function setBlocksPerYear(uint256 _blocksPerYear)
+    external onlyOwner {
+      require(_blocksPerYear != 0, "_blocksPerYear is 0");
+      blocksPerYear = _blocksPerYear;
   }
 
   /**
@@ -130,7 +143,7 @@ contract IdleRebalancer is Ownable {
     paramsCompound[4] = _cToken.totalReserves(); // d
     paramsCompound[5] = paramsCompound[0].sub(_cToken.reserveFactorMantissa()); // e
     paramsCompound[6] = _cToken.getCash(); // s
-    paramsCompound[7] = white.blocksPerYear(); // k
+    paramsCompound[7] = blocksPerYear; // k
     paramsCompound[8] = 100; // f
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams

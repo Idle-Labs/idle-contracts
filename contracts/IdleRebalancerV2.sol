@@ -34,6 +34,7 @@ contract IdleRebalancerV2 is Ownable {
   uint256 public maxSupplyedParamsDifference; // 100000 -> 0.001%
   // max number of recursive calls for bisection algorithm
   uint256 public maxIterations;
+  uint256 public blocksPerYear;
 
   /**
    * @param _cToken : cToken address
@@ -51,6 +52,7 @@ contract IdleRebalancerV2 is Ownable {
     maxRateDifference = 10**17; // 0.1%
     maxSupplyedParamsDifference = 100000; // 0.001%
     maxIterations = 30;
+    blocksPerYear = 2371428; // ~13.3 sec blocktime
   }
 
   /**
@@ -73,6 +75,17 @@ contract IdleRebalancerV2 is Ownable {
       require(idleToken == address(0), "idleToken addr already set");
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
+  }
+
+  /**
+   * sets blocksPerYear address
+   *
+   * @param _blocksPerYear : avg blocks per year
+   */
+  function setBlocksPerYear(uint256 _blocksPerYear)
+    external onlyOwner {
+      require(_blocksPerYear != 0, "_blocksPerYear is 0");
+      blocksPerYear = _blocksPerYear;
   }
 
   /**
@@ -120,14 +133,13 @@ contract IdleRebalancerV2 is Ownable {
   {
     // Get all params for calculating Compound nextSupplyRateWithParams
     CERC20 _cToken = CERC20(cToken);
-    WhitePaperInterestRateModel white = WhitePaperInterestRateModel(_cToken.interestRateModel());
 
     uint256[] memory paramsCompound = new uint256[](6);
     paramsCompound[0] = _cToken.totalBorrows(); // b
     paramsCompound[1] = _cToken.getCash(); // s
     paramsCompound[2] = _cToken.totalReserves();
     paramsCompound[3] = _cToken.reserveFactorMantissa();
-    paramsCompound[4] = white.blocksPerYear();
+    paramsCompound[4] = blocksPerYear;
 
     // Get all params for calculating Fulcrum nextSupplyRateWithParams
     iERC20Fulcrum _iToken = iERC20Fulcrum(iToken);
