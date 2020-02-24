@@ -12,7 +12,7 @@ import "./interfaces/IIdleRebalancer.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract IdleRebalancerManaged is IIdleRebalancer, Ownable {
+contract IdleRebalancerManagedSAI is IIdleRebalancer, Ownable {
   using SafeMath for uint256;
   // IdleToken address
   address public idleToken;
@@ -20,25 +20,21 @@ contract IdleRebalancerManaged is IIdleRebalancer, Ownable {
   address public cToken;
   // protocol token (iToken) address
   address public iToken;
-  // protocol token (aToken) address
-  address public aToken;
 
-  uint256[] public lastAmounts = new uint256[](3);
+  uint256[] public lastAmounts = new uint256[](2);
   address public rebalancerManager;
 
   /**
    * @param _cToken : cToken address
    * @param _iToken : iToken address
-   * @param _aToken : aToken address
    */
-  constructor(address _cToken, address _iToken, address _aToken) public {
-    require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0), 'some addr is 0');
+  constructor(address _cToken, address _iToken) public {
+    require(_cToken != address(0) && _iToken != address(0), 'some addr is 0');
 
     cToken = _cToken;
     iToken = _iToken;
-    aToken = _aToken;
 
-    lastAmounts = [10000, 0, 0];
+    lastAmounts = [10000, 0];
   }
 
   /**
@@ -88,11 +84,10 @@ contract IdleRebalancerManaged is IIdleRebalancer, Ownable {
   function setAllocations(uint256[] calldata _allocations)
     external onlyRebalancer
   {
-    require(_allocations[0].add(_allocations[1]).add(_allocations[2]) == 10000, "Not allocating 100%");
+    require(_allocations[0].add(_allocations[1]) == 10000, "Not allocating 100%");
 
     lastAmounts[0] = _allocations[0];
     lastAmounts[1] = _allocations[1];
-    lastAmounts[2] = _allocations[2];
   }
   /**
    * Used by IdleToken contract to calculate the amount to be lended
@@ -111,15 +106,13 @@ contract IdleRebalancerManaged is IIdleRebalancer, Ownable {
   {
     uint256 totAmountToRebalance = _rebalanceParams[0];
 
-    tokenAddresses = new address[](3);
+    tokenAddresses = new address[](2);
     tokenAddresses[0] = cToken;
     tokenAddresses[1] = iToken;
-    tokenAddresses[2] = aToken;
 
-    amounts = new uint256[](3);
+    amounts = new uint256[](2);
     amounts[0] = totAmountToRebalance.mul(lastAmounts[0]).div(10000);
     amounts[1] = totAmountToRebalance.mul(lastAmounts[1]).div(10000);
-    amounts[2] = totAmountToRebalance.sub(amounts[0]).sub(amounts[1]);
 
     return (tokenAddresses, amounts);
   }

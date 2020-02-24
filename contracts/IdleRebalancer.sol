@@ -8,6 +8,7 @@
 pragma solidity 0.5.11;
 
 import "./interfaces/CERC20.sol";
+import "./interfaces/IIdleRebalancer.sol";
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/WhitePaperInterestRateModel.sol";
@@ -16,7 +17,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract IdleRebalancer is Ownable {
+contract IdleRebalancer is IIdleRebalancer, Ownable {
   using SafeMath for uint256;
   // IdleToken address
   address public idleToken;
