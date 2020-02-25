@@ -12,9 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-import "../interfaces/CERC20.sol";
 import "../interfaces/ILendingProtocol.sol";
-import "../interfaces/WhitePaperInterestRateModel.sol";
 import "../interfaces/AaveLendingPoolProvider.sol";
 import "../interfaces/AaveLendingPool.sol";
 import "../interfaces/AaveLendingPoolCore.sol";
@@ -31,7 +29,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   address public underlying;
   address public idleToken;
 
-  address public AaveAddressesProvider = 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8;
+  address public aaveAddressesProvider = 0x24a42fD28C976A61Df5D00D0599C34c4f90748c8;
 
   /**
    * @param _token : aToken address
@@ -65,6 +63,15 @@ contract IdleAave is ILendingProtocol, Ownable {
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
   }
+  /**
+   * sets aaveAddressProvider address
+   * @param _aaveAddressesProvider : aaveAddressesProvider address
+   */
+  function setAaveAddressesProvider(address _aaveAddressesProvider)
+    external onlyOwner {
+      require(_aaveAddressesProvider != address(0), "_aaveAddressesProvider addr is 0");
+      aaveAddressesProvider = _aaveAddressesProvider;
+  }
   // end onlyOwner
 
   /**
@@ -78,7 +85,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   function nextSupplyRateWithParams(uint256[] memory params)
     public view
     returns (uint256) {
-      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(AaveAddressesProvider).getLendingPoolCore());
+      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
       AaveInterestRateStrategy apr = AaveInterestRateStrategy(core.getReserveInterestRateStrategyAddress(underlying));
       /*
         params[0] = core.getReserveAvailableLiquidity(underlying);
@@ -107,7 +114,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256) {
-      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(AaveAddressesProvider).getLendingPoolCore());
+      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
       AaveInterestRateStrategy apr = AaveInterestRateStrategy(core.getReserveInterestRateStrategyAddress(underlying));
 
       (uint256 newLiquidityRate,,) = apr.calculateInterestRates(
@@ -136,7 +143,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   function getAPR()
     external view
     returns (uint256) {
-      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(AaveAddressesProvider).getLendingPoolCore());
+      AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
       return core.getReserveCurrentLiquidityRate(underlying).div(10**9);
   }
 
@@ -154,7 +161,7 @@ contract IdleAave is ILendingProtocol, Ownable {
       if (balance == 0) {
         return aTokens;
       }
-      AaveLendingPoolProvider provider = AaveLendingPoolProvider(AaveAddressesProvider);
+      AaveLendingPoolProvider provider = AaveLendingPoolProvider(aaveAddressesProvider);
       AaveLendingPool lendingPool = AaveLendingPool(provider.getLendingPool());
       IERC20(underlying).safeIncreaseAllowance(
         provider.getLendingPoolCore(),
