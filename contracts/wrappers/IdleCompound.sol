@@ -35,7 +35,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
-    blocksPerYear = 2371428; // ~13.3 sec blocktime
+    blocksPerYear = 2102400;
   }
 
   /**
