@@ -102,7 +102,7 @@ contract IdleAave is ILendingProtocol, Ownable {
         params[2],
         params[3]
       );
-      return newLiquidityRate.div(10**9);
+      return newLiquidityRate.mul(100).div(10**9);
   }
 
   /**
@@ -124,7 +124,7 @@ contract IdleAave is ILendingProtocol, Ownable {
         core.getReserveTotalBorrowsVariable(underlying),
         core.getReserveCurrentAverageStableBorrowRate(underlying)
       );
-      return newLiquidityRate.div(10**9);
+      return newLiquidityRate.mul(100).div(10**9);
   }
 
   /**
@@ -133,8 +133,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   function getPriceInToken()
     external view
     returns (uint256) {
-      uint256 decimals = ERC20Detailed(underlying).decimals();
-      return 10**(decimals);
+      return 10**18;
   }
 
   /**
@@ -144,7 +143,7 @@ contract IdleAave is ILendingProtocol, Ownable {
     external view
     returns (uint256) {
       AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
-      return core.getReserveCurrentLiquidityRate(underlying).div(10**9);
+      return core.getReserveCurrentLiquidityRate(underlying).mul(100).div(10**9);
   }
 
   /**

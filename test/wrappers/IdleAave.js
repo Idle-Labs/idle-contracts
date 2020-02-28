@@ -28,9 +28,9 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     await this.aaveLendingPoolProviderMock._setLendingPool(this.aaveLendingPoolMock.address);
     await this.aaveLendingPoolCoreMock._setReserve(this.aaveInterestRateStrategyMock.address);
 
-    await this.aaveLendingPoolCoreMock.setReserveCurrentLiquidityRate(this.oneRay.mul(BNify('2')));
-    await this.aaveInterestRateStrategyMock._setSupplyRate(this.oneRay.mul(BNify('2')));
-    await this.aaveInterestRateStrategyMock._setBorrowRate(this.oneRay.mul(BNify('3')));
+    await this.aaveLendingPoolCoreMock.setReserveCurrentLiquidityRate(this.oneRay.div(BNify('100')).mul(BNify('2')));
+    await this.aaveInterestRateStrategyMock._setSupplyRate(this.oneRay.div(BNify('100')).mul(BNify('2')));
+    await this.aaveInterestRateStrategyMock._setBorrowRate(this.oneRay.div(BNify('100')).mul(BNify('3')));
 
     this.aDAIWrapper = await IdleAave.new(
       this.aDAIMock.address,
