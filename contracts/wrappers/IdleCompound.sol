@@ -206,4 +206,9 @@ contract IdleCompound is ILendingProtocol, Ownable {
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);
   }
+
+
+  function availableLiquidity() external view returns (uint256) {
+    return CERC20(token).getCash();
+  }
 }

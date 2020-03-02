@@ -188,4 +188,9 @@ contract IdleAave is ILendingProtocol, Ownable {
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);
   }
+
+  function availableLiquidity() external view returns (uint256) {
+    AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
+    return IERC20(underlying).balanceOf(core);
+  }
 }

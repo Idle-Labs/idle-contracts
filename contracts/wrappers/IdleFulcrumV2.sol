@@ -137,4 +137,10 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
       tokens = iERC20Fulcrum(token).burn(_account, balance);
       require(tokens >= expectedAmount, "Not enough liquidity on Fulcrum");
   }
+
+  function availableLiquidity() external view returns (uint256) {
+    return iERC20Fulcrum(token).totalAssetSupply().sub(
+      iERC20Fulcrum(token).totalAssetBorrow()
+    );
+  }
 }

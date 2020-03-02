@@ -81,4 +81,5 @@ contract cDAIWrapperMock is ILendingProtocol, Ownable {
   function setIdleToken(address) external {
 
   }
+  function availableLiquidity() external view returns (uint256) {}
 }
