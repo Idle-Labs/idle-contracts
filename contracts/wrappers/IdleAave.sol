@@ -191,6 +191,6 @@ contract IdleAave is ILendingProtocol, Ownable {
 
   function availableLiquidity() external view returns (uint256) {
     AaveLendingPoolCore core = AaveLendingPoolCore(AaveLendingPoolProvider(aaveAddressesProvider).getLendingPoolCore());
-    return IERC20(underlying).balanceOf(core);
+    return IERC20(underlying).balanceOf(address(core));
   }
 }

@@ -21,7 +21,7 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleToken.sol";
 
-import "./IdleRebalancer.sol";
+import "./IdleRebalancerManagedScore.sol";
 import "./IdlePriceCalculator.sol";
 
 contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
@@ -54,6 +54,8 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   address[] public currentTokensUsed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
+  // eg. [5000, 0, 5000] for 50% in compound, 0% fulcrum, 50% aave. same order of allAvailableTokens
+  uint256[] public lastAllocations;
 
   struct TokenProtocol {
     address tokenAddr;
@@ -123,9 +125,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       iToken = _iToken;
   }
   /**
-   * It allows owner to set the IdleRebalancer address
+   * It allows owner to set the IdleRebalancerManagedScore address
    *
-   * @param _rebalancer : new IdleRebalancer address
+   * @param _rebalancer : new IdleRebalancerManagedScore address
    */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
@@ -159,7 +161,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   /**
    * It allows owner to unpause the contract when iToken price decreased and didn't return to the expected level
    *
-   * @param _manualPlay : new IdleRebalancer address
+   * @param _manualPlay : new IdleRebalancerManagedScore address
    */
   function setManualPlay(bool _manualPlay)
     external onlyOwner {
@@ -211,10 +213,10 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    * NOTE 2: this method can be paused
    *
    * @param _amount : amount of underlying token to be lended
-   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
+   * @param : not used
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] memory _clientProtocolAmounts)
+  function mintIdleToken(uint256 _amount, uint256[] memory)
     public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
@@ -238,10 +240,10 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    *
    * @param _amount : amount of IdleTokens to be burned
    * @param _skipRebalance : whether to skip the rebalance process or not
-   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
+   * @param : not used
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory _clientProtocolAmounts)
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory)
     public nonReentrant
     returns (uint256 redeemedTokens) {
       address currentToken;
@@ -310,34 +312,56 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
    * NOTE: this method can be paused
    *
    * @param : not used
-   * @param _clientProtocolAmounts : client side calculated amounts to put on each lending protocol
+   * @param : not used
    * @return : whether has rebalanced or not
    */
-  function rebalance(uint256, uint256[] memory _clientProtocolAmounts)
+  function rebalance(uint256, uint256[] memory)
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
-      // otherwise we redeem everything from every protocol and check if the protocol with the
-      // best score can support all the liquidity that we redeemed
-
-      // - get current protocol used
-      TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();ZZ
-      // - redeem everything available from each protocol
-      bool hasBalance;
-      uint256 redeemable;
-      for (uint8 i = 0; i < tokenProtocols.length; i++) {
-        (/*hasBalance*/, redeemable) = allContractOrAvailableBalance(tokenProtocols[i].tokenAddr);
-
-        _redeemProtocolTokens(
-          tokenProtocols[i].protocolAddr,
-          tokenProtocols[i].tokenAddr,
-          /* IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)), */
-          redeemable,
-          address(this) // tokens are now in this contract
-        );
+      // check if we need to rebalance by looking at the allocations in rebalancer contract
+      uint256[] memory rebalancerLastAllocations = IdleRebalancerManagedScore(rebalancer).getAllocations();
+      bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
+      for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
+        if (lastAllocations[i] != rebalancerLastAllocations[i]) {
+          areAllocationsEqual = false;
+          break;
+        }
+      }
+      uint256 balance = IERC20(token).balanceOf(address(this));
+      if (areAllocationsEqual && balance == 0) {
+        return false;
       }
 
-      // remove all elements from `currentTokensUsed`
-      delete currentTokensUsed;
+      if (areAllocationsEqual && balance > 0) {
+        // use lastAllocations
+        uint256[] memory amounts = new uint256[](rebalancerLastAllocations.length);
+        uint256 currBalance = 0;
+        uint256 allocatedBalance = 0;
+
+        for (uint8 i = 0; i < rebalancerLastAllocations.length; i++) {
+          if (i == rebalancerLastAllocations.length - 1) {
+            amounts[i] = balance.sub(allocatedBalance);
+          } else {
+            currBalance = balance.mul(rebalancerLastAllocations[i]).div(10000);
+            allocatedBalance = allocatedBalance.add(currBalance);
+            amounts[i] = currBalance;
+          }
+        }
+        _mintWithAllocations(allAvailableTokens, amounts);
+        return false;
+      }
+
+      // Update lastAllocations with rebalancerLastAllocations
+      delete lastAllocations;
+      lastAllocations = rebalancerLastAllocations;
+
+      // TODO we should introduce the ability to withdraw only the amounts that needs to be rebalanced?
+      // eg instead of redeeming everything during rebalance we redeem and mint only what needs
+      // to be reallocated?
+      _redeemAllAvailable();
+
+      // Alternatively we can calculate exactly how much we should withdraw and mint for each protocol
+
 
       // tokenBalance here has already _newAmount counted
       uint256 tokenBalance = IERC20(token).balanceOf(address(this));
@@ -345,20 +369,12 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
         return false;
       }
 
-      // if it's not the case we calculate the dynamic allocation for every protocol
-      (address[] memory tokenAddresses, uint256[] memory protocolAmounts) = _calcAmounts(tokenBalance, _clientProtocolAmounts);
+      // remove all elements from `currentTokensUsed` even if they are still in use
+      delete currentTokensUsed;
 
-      // mint for each protocol and update currentTokensUsed
-      uint256 currAmount;
-      address currAddr;
-      for (uint8 i = 0; i < protocolAmounts.length; i++) {
-        currAmount = protocolAmounts[i];
-        if (currAmount == 0) {
-          continue;
-        }
-        currAddr = tokenAddresses[i];
-        _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
-      }
+      // if it's not the case we calculate the dynamic allocation for every protocol
+      (address[] memory addresses, uint256[] memory newAmounts) = _calcAmounts(tokenBalance, new uint256[](1));
+      _mintWithAllocations(addresses, newAmounts);
 
       // update current tokens used in IdleToken storage
       for (uint8 i = 0; i < allAvailableTokens.length; i++) {
@@ -372,11 +388,51 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       return true; // hasRebalanced
   }
 
-  function allContractOrAvailableBalance(address protocolToken) view internal returns (bool, uint256) {
-    uint256 contractBalance = IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this));
-    uint256 available = ILendingProtocol(protocolWrappers[protocolToken]).availableLiquidity();
+  function _mintWithAllocations(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
+    // mint for each protocol and update currentTokensUsed
+    require(tokenAddresses.length == protocolAmounts.length, "All tokens length != allocations length");
 
-    return (contractBalance >= available, contractBalance < available ? contractBalance : available);
+    uint256 currAmount;
+    address currAddr;
+
+    for (uint8 i = 0; i < protocolAmounts.length; i++) {
+      currAmount = protocolAmounts[i];
+      if (currAmount == 0) {
+        continue;
+      }
+      currAddr = tokenAddresses[i];
+      _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
+    }
+  }
+
+  function _redeemAllAvailable() internal {
+    // - get current protocol used
+    TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();
+    // - redeem everything available from each protocol
+    uint256 redeemable;
+    for (uint8 i = 0; i < tokenProtocols.length; i++) {
+      (/*hasBalance*/, redeemable) = allContractOrAvailableBalance(tokenProtocols[i].tokenAddr);
+
+      _redeemProtocolTokens(
+        tokenProtocols[i].protocolAddr,
+        tokenProtocols[i].tokenAddr,
+        /* IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)), */
+        redeemable,
+        address(this) // tokens are now in this contract
+      );
+    }
+  }
+
+  function allContractOrAvailableBalance(address protocolToken) view internal returns (bool, uint256) {
+    uint256 contractBalance = IERC20(protocolToken).balanceOf(address(this));
+    uint256 price = ILendingProtocol(protocolWrappers[protocolToken]).getPriceInToken();
+    uint256 contractBalanceInUnderlying = contractBalance.mul(price).div(10**18);
+    uint256 protocolLiquidity = ILendingProtocol(protocolWrappers[protocolToken]).availableLiquidity();
+
+    return (
+      contractBalanceInUnderlying >= protocolLiquidity,
+      contractBalanceInUnderlying < protocolLiquidity ? contractBalanceInUnderlying : protocolLiquidity
+    );
   }
 
   /**
@@ -411,7 +467,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
   // internal
   /**
-   * Calls IdleRebalancer `calcRebalanceAmounts` method
+   * Calls IdleRebalancerManagedScore `calcRebalanceAmounts` method
    *
    * @param _amount : amount of underlying tokens that needs to be allocated on lending protocols
    * @return tokenAddresses : array with all token addresses used,
@@ -422,7 +478,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
     returns (address[] memory, uint256[] memory) {
       uint256[] memory paramsRebalance = new uint256[](1);
       paramsRebalance[0] = _amount;
-      return IdleRebalancer(rebalancer).calcRebalanceAmounts(paramsRebalance);
+      return IdleRebalancerManagedScore(rebalancer).calcRebalanceAmounts(paramsRebalance);
   }
 
   /**
