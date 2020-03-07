@@ -32,6 +32,7 @@
   },
   "homepage": "https://idle.finance",
   "dependencies": {
+    "@0x/sol-trace": "^3.0.8",
     "@babel/polyfill": "^7.8.3",
     "@openzeppelin/contracts": "^2.4.0",
     "@openzeppelin/test-helpers": "^0.5.3",
@@ -39,18 +40,19 @@
     "@umaprotocol/truffle-ledger-provider": "^1.0.3",
     "dotenv": "^6.2.0",
     "solidity-coverage": "^0.6.7",
-    "truffle-security": "^1.5.5"
+    "truffle-security": "^1.5.5",
+    "web3-provider-engine": "^15.0.6"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "1.0.0-beta.8",
-    "@nomiclabs/buidler-truffle5": "1.0.0-beta.8",
-    "@nomiclabs/buidler-web3": "1.0.0-beta.8",
+    "@nomiclabs/buidler": "^1.2.0",
+    "@nomiclabs/buidler-truffle5": "^1.2.0",
+    "@nomiclabs/buidler-web3": "^1.2.0",
     "@openzeppelin/cli": "^2.5.1",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
     "eth-gas-reporter": "^0.2.1",
     "node-fetch": "^2.6.0",
     "truffle-assertions": "^0.9.1",
-    "web3": "1.0.0-beta.37"
+    "web3": "^1.2.6"
   }
 }
