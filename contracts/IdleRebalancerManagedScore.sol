@@ -7,15 +7,13 @@
  */
 pragma solidity 0.5.11;
 
-import "./interfaces/IIdleRebalancer.sol";
+import "./interfaces/IIdleRebalancerScore.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract IdleRebalancerManagedScore is IIdleRebalancer, Ownable {
+contract IdleRebalancerManagedScore is IIdleRebalancerScore, Ownable {
   using SafeMath for uint256;
-  // IdleToken address
-  address public idleToken;
   // protocol token (cToken) address
   address public cToken;
   // protocol token (iToken) address
@@ -42,33 +40,13 @@ contract IdleRebalancerManagedScore is IIdleRebalancer, Ownable {
   }
 
   /**
-   * Throws if called by any account other than IdleToken contract.
-   */
-  modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
-    _;
-  }
-  /**
    * Throws if called by any account other than rebalancerManager.
    */
   modifier onlyRebalancer() {
-    require(msg.sender == rebalancerManager, "Only rebalacer ");
+    require(msg.sender == rebalancerManager, "Only rebalacer");
     _;
   }
 
-  // onlyOwner
-  /**
-   * sets idleToken address
-   * NOTE: can be called only once. It's not on the constructor because we are deploying this contract
-   *       after the IdleToken contract
-   * @param _idleToken : idleToken address
-   */
-  function setIdleToken(address _idleToken)
-    external onlyOwner {
-      require(idleToken == address(0), "idleToken addr already set");
-      require(_idleToken != address(0), "_idleToken addr is 0");
-      idleToken = _idleToken;
-  }
   /**
    * It allows owner to set the allowed rebalancer address
    *
@@ -98,34 +76,5 @@ contract IdleRebalancerManagedScore is IIdleRebalancer, Ownable {
   function getAllocations()
     external view returns (uint256[] memory _allocations) {
     return lastAmounts;
-  }
-  /**
-   * Used by IdleToken contract to calculate the amount to be lended
-   * on each protocol in order to get the best available rate for all funds.
-   *
-   * @param _rebalanceParams : first param is the total amount to be rebalanced,
-   *                           all other elements are client side calculated amounts to put on each lending protocol
-   * @return tokenAddresses : array with all token addresses used,
-   *                          currently [cTokenAddress, iTokenAddress]
-   * @return amounts : array with all amounts for each protocol in order,
-   *                   currently [amountCompound, amountFulcrum]
-   */
-  function calcRebalanceAmounts(uint256[] calldata _rebalanceParams)
-    external view onlyIdle
-    returns (address[] memory tokenAddresses, uint256[] memory amounts)
-  {
-    uint256 totAmountToRebalance = _rebalanceParams[0];
-
-    tokenAddresses = new address[](3);
-    tokenAddresses[0] = cToken;
-    tokenAddresses[1] = iToken;
-    tokenAddresses[2] = aToken;
-
-    amounts = new uint256[](3);
-    amounts[0] = totAmountToRebalance.mul(lastAmounts[0]).div(10000);
-    amounts[1] = totAmountToRebalance.mul(lastAmounts[1]).div(10000);
-    amounts[2] = totAmountToRebalance.sub(amounts[0]).sub(amounts[1]);
-
-    return (tokenAddresses, amounts);
   }
 }
