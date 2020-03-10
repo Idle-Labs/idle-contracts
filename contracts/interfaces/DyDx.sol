@@ -14,7 +14,9 @@ contract DyDx is DyDxStructs {
   }
 
   function getEarningsRate() external view returns (val memory);
+  function getMarketInterestSetter(uint256 marketId) external view returns (address interestSetter);
   function getMarketInterestRate(uint256 marketId) external view returns (val memory);
+  function getMarketCurrentIndex(uint256 marketId) external view returns (set memory);
   function getMarketTotalPar(uint256 marketId) external view returns (set memory);
   function getAccountWei(Info memory account, uint256 marketId) public view returns (Wei memory);
   function operate(Info[] memory, ActionArgs[] memory) public;
