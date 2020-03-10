@@ -19,12 +19,12 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
-import "./interfaces/IIdleToken.sol";
+import "./interfaces/IIdleTokenV3.sol";
 
 import "./IdleRebalancerV3.sol";
 import "./IdlePriceCalculator.sol";
 
-contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
+contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3 {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -93,7 +93,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     ERC20Detailed(_name, _symbol, _decimals) {
       token = _token;
       tokenDecimals = ERC20Detailed(_token).decimals();
-      iToken = _iToken; // used for claimITokens and userClaimITokens methods
+      iToken = _iToken;
       rebalancer = _rebalancer;
       priceCalculator = _priceCalculator;
       protocolWrappers[_cToken] = _idleCompound;

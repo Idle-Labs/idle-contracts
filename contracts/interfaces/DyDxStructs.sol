@@ -1,22 +1,9 @@
 pragma solidity 0.5.11;
 
 contract DyDxStructs {
-  struct Val {
-    uint256 value;
-  }
-
-  enum ActionType {
-    Deposit,   // supply tokens
-    Withdraw  // borrow tokens
-  }
-
-  enum AssetDenomination {
-    Wei // the amount is denominated in wei
-  }
-
-  enum AssetReference {
-    Delta // the amount is given as a delta from the current value
-  }
+  enum ActionType { Deposit, Withdraw }
+  enum AssetDenomination { Wei }
+  enum AssetReference { Delta } // the amount is given as a delta from the current value
 
   struct AssetAmount {
     bool sign; // true if positive

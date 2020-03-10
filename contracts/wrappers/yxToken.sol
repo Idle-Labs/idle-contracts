@@ -6,6 +6,7 @@
  * @author: William Bergamo, idle.finance
  */
 pragma solidity 0.5.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 
 import "../interfaces/DyDx.sol";
-import "../interfaces/DyDxStructs.sol";
+import '../interfaces/DyDxStructs.sol';
 
 contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   using SafeERC20 for IERC20;
@@ -51,36 +52,38 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   /**
    * Gets all underlying tokens in this contract and mints yxTokens
    * tokens are then transferred to msg.sender
-   * NOTE: underlying tokens needs to be sended here before calling this
+   * NOTE: one must approve this contract before calling this method
    *
    * @return yxTokens minted
    */
   function mint(uint256 _amount)
-    external nonReentrant
+    external
     returns (uint256 newTokens) {
       // mint IERC20 for dydx tokenized position
-      uint256 price = price();
-      newTokens = _amount.mul(10**18).div(price);
+      newTokens = _amount.mul(10**18).div(price());
       _mint(msg.sender, newTokens);
 
       IERC20(underlying).safeTransferFrom(msg.sender, address(this), _amount);
 
       // Use underlying and supply it to dydx
-      Info[] memory infos = new Info[](1);
-      infos[0] = Info(address(this), 0);
+      _mintDyDx(_amount);
+  }
 
-      AssetAmount memory amt = AssetAmount(true, AssetDenomination.Wei, AssetReference.Delta, _amount);
-      ActionArgs memory act;
-      act.actionType = ActionType.Deposit;
-      act.accountId = 0;
-      act.amount = amt;
-      act.primaryMarketId = marketId;
-      act.otherAddress = address(this);
+  function _mintDyDx(uint256 _amount) internal {
+    Info[] memory infos = new Info[](1);
+    infos[0] = Info(address(this), 0);
+    AssetAmount memory amt = AssetAmount(true, AssetDenomination.Wei, AssetReference.Delta, _amount);
+    ActionArgs memory act;
+    act.actionType = ActionType.Deposit;
+    act.accountId = 0;
+    act.amount = amt;
+    act.primaryMarketId = marketId;
+    act.otherAddress = address(this);
 
-      ActionArgs[] memory args = new ActionArgs[](1);
-      args[0] = act;
+    ActionArgs[] memory args = new ActionArgs[](1);
+    args[0] = act;
 
-      DyDx(dydxAddressesProvider).operate(infos, args);
+    DyDx(dydxAddressesProvider).operate(infos, args);
   }
 
   /**
@@ -93,23 +96,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   function redeem(uint256 _amount, address _account)
     external
     returns (uint256 tokens) {
-      uint256 toRedeem = _amount.mul(price()).div(10**18);
-
-      Info[] memory infos = new Info[](1);
-      infos[0] = Info(address(this), 0);
-
-      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, toRedeem);
-      ActionArgs memory act;
-      act.actionType = ActionType.Withdraw;
-      act.accountId = 0;
-      act.amount = amt;
-      act.primaryMarketId = marketId;
-      act.otherAddress = address(this);
-
-      ActionArgs[] memory args = new ActionArgs[](1);
-      args[0] = act;
-
-      DyDx(dydxAddressesProvider).operate(infos, args);
+      _redeemDyDx(_amount.mul(price()).div(10**18));
 
       // transfer redeemed tokens to _account
       IERC20 _underlying = IERC20(underlying);
@@ -117,6 +104,24 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       _underlying.safeTransfer(_account, tokens);
 
       _burn(msg.sender, _amount);
+  }
+
+  function _redeemDyDx(uint256 _amount) internal {
+    Info[] memory infos = new Info[](1);
+    infos[0] = Info(address(this), 0);
+
+    AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, _amount);
+    ActionArgs memory act;
+    act.actionType = ActionType.Withdraw;
+    act.accountId = 0;
+    act.amount = amt;
+    act.primaryMarketId = marketId;
+    act.otherAddress = address(this);
+
+    ActionArgs[] memory args = new ActionArgs[](1);
+    args[0] = act;
+
+    DyDx(dydxAddressesProvider).operate(infos, args);
   }
 
   function availableLiquidity() external view returns (uint256) {

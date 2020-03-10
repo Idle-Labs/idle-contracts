@@ -13,11 +13,11 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/IInterestSetter.sol";
-import "../interfaces/DyDx.sol";
 import "../interfaces/DyDxStructs.sol";
+import "../interfaces/DyDx.sol";
 import "./yxToken.sol";
 
-contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
+contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -35,7 +35,7 @@ contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
    */
   constructor(address _token, address _underlying, uint256 _marketId)
     public {
-    require(_underlying != address(0), 'COMP: some addr is 0');
+    require(_underlying != address(0), '_underlying addr is 0');
 
     secondsInAYear = 31536000; // 60 * 60 * 24 * 356
     underlying = _underlying;
@@ -109,14 +109,20 @@ contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
     public view
     returns (uint256) {
       DyDx dydx = DyDx(dydxAddressesProvider);
-      address interestSetterAddr = dydx.getMarketInterestSetter(marketId);
-      uint256 borrow = uint256(dydx.getMarketTotalPar(marketId).borrow).mul(dydx.getMarketCurrentIndex(marketId).borrow).div(10**18);
-      uint256 supply = uint256(dydx.getMarketTotalPar(marketId).supply).mul(dydx.getMarketCurrentIndex(marketId).supply).div(10**18);
+      (uint256 borrow, uint256 supply) = dydx.getMarketTotalPar(marketId);
+      (uint256 borrowIndex, uint256 supplyIndex) = dydx.getMarketCurrentIndex(marketId);
+      borrow = borrow.mul(borrowIndex).div(10**18);
+      supply = supply.mul(supplyIndex).div(10**18);
       uint256 usage = borrow.mul(10**18).div(supply.add(_amount));
-      // Here we are calc the new borrow rate when we supply `_amount` liquidity
-      uint256 borrowRatePerSecond = IInterestSetter(IInterestSetter).getInterestRate(marketId, borrow, supply.add(_amount));
+      uint256 borrowRatePerSecond;
+      if (_amount == 0) {
+        borrowRatePerSecond = dydx.getMarketInterestRate(marketId);
+      } else {
+        // Here we are calc the new borrow rate when we supply `_amount` liquidity
+        borrowRatePerSecond = IInterestSetter(dydx.getMarketInterestSetter(marketId)).getInterestRate(underlying, borrow, supply.add(_amount));
+      }
       uint256 aprBorrow = borrowRatePerSecond.mul(secondsInAYear);
-      return aprBorrow.mul(usage).div(10**18).mul(dydx.getEarningsRate().value).mul(100).div(10**18);
+      return aprBorrow.mul(usage).div(10**18).mul(dydx.getEarningsRate()).mul(100).div(10**18);
   }
 
   /**
@@ -134,14 +140,7 @@ contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
   function getAPR()
     external view
     returns (uint256) {
-      DyDx dydx = DyDx(dydxAddressesProvider);
-      uint256 borrow = uint256(dydx.getMarketTotalPar(marketId).borrow).mul(dydx.getMarketCurrentIndex(marketId).borrow).div(10**18);
-      uint256 supply = uint256(dydx.getMarketTotalPar(marketId).supply).mul(dydx.getMarketCurrentIndex(marketId).supply).div(10**18);
-      uint256 usage = borrow.mul(10**18).div(supply);
-      // Here we get the current borrow rate
-      uint256 borrowRatePerSecond = dydx.getMarketInterestRate(marketId).value;
-      uint256 aprBorrow = borrowRatePerSecond.mul(secondsInAYear);
-      return aprBorrow.mul(usage).div(10**18).mul(dydx.getEarningsRate().value).mul(100).div(10**18);
+      return nextSupplyRate(0);
   }
 
   /**
@@ -156,7 +155,7 @@ contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
     returns (uint256 yxTokens) {
       uint256 balance = IERC20(underlying).balanceOf(address(this));
       if (balance == 0) {
-        return newTokens;
+        return yxTokens;
       }
       // approve the transfer to yxToken contract
       IERC20(underlying).safeIncreaseAllowance(token, balance);
@@ -181,21 +180,11 @@ contract IdleDyDx is ILendingProtocol, Ownable, DyDxStructs {
     external onlyIdle
     returns (uint256 tokens) {
       // Funds needs to be sended here before calling this
-      yxToken yxToken = yxToken(token);
-      IERC20 _underlying = IERC20(underlying);
       // redeem all underlying sent in this contract
-      yxToken.redeem(IERC20(token).balanceOf(address(this)));
-
-      tokens = _underlying.balanceOf(address(this));
-      _underlying.safeTransfer(_account, tokens);
+      tokens = yxToken(token).redeem(IERC20(token).balanceOf(address(this)), _account);
   }
 
   function availableLiquidity() external view returns (uint256) {
     return IERC20(underlying).balanceOf(dydxAddressesProvider);
-  }
-
-  function balanceInUnderlying(address who) public view returns (uint256) {
-    Wei memory bal = DyDx(dydxAddressesProvider).getAccountWei(Info(who, 0), marketId);
-    return bal.value;
   }
 }

@@ -73,13 +73,14 @@ contract IdleFactoryV3 is Ownable {
   /**
   * Used to add a new idleToken to the registry or modify an existent entry
   *
+  * @param _token : underlying token address
   * @param _idleToken : new idleToken address
   */
-  function setUnderlyingToToken(address _idleToken) external onlyOwner {
+  function setUnderlyingToToken(address _token, address _idleToken) external onlyOwner {
     if (underlyingToIdleTokenMap[_token] == address(0)) {
       tokensSupported.push(_token);
     }
-    underlyingToIdleTokenMap[_token] = address(idleToken);
+    underlyingToIdleTokenMap[_token] = address(_idleToken);
   }
 
 
