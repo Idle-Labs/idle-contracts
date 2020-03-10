@@ -21,10 +21,10 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleToken.sol";
 
-import "./IdleRebalancerManagedScore.sol";
+import "./IdleRebalancerV3.sol";
 import "./IdlePriceCalculator.sol";
 
-contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
+contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleToken {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -126,9 +126,9 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       iToken = _iToken;
   }
   /**
-   * It allows owner to set the IdleRebalancerManagedScore address
+   * It allows owner to set the IdleRebalancerV3 address
    *
-   * @param _rebalancer : new IdleRebalancerManagedScore address
+   * @param _rebalancer : new IdleRebalancerV3 address
    */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
@@ -162,7 +162,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
   /**
    * It allows owner to unpause the contract when iToken price decreased and didn't return to the expected level
    *
-   * @param _manualPlay : new IdleRebalancerManagedScore address
+   * @param _manualPlay : new IdleRebalancerV3 address
    */
   function setManualPlay(bool _manualPlay)
     external onlyOwner {
@@ -329,7 +329,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations = IdleRebalancerManagedScore(rebalancer).getAllocations();
+      uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
         if (lastAllocations[i] != rebalancerLastAllocations[i]) {
@@ -530,7 +530,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
 
   // internal
   /**
-   * Calls IdleRebalancerManagedScore `calcRebalanceAmounts` method
+   * Calls IdleRebalancerV3 `calcRebalanceAmounts` method
    *
    * @param _amount : amount of underlying tokens that needs to be allocated on lending protocols
    * @return tokenAddresses : array with all token addresses used,
@@ -541,7 +541,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
     returns (address[] memory, uint256[] memory) {
       uint256[] memory paramsRebalance = new uint256[](1);
       paramsRebalance[0] = _amount;
-      return IdleRebalancerManagedScore(rebalancer).calcRebalanceAmounts(paramsRebalance);
+      return IdleRebalancerV3(rebalancer).calcRebalanceAmounts(paramsRebalance);
   } */
 
   /**

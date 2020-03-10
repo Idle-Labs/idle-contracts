@@ -4,6 +4,6 @@
  */
 pragma solidity 0.5.11;
 
-interface IIdleRebalancerScore {
+interface IIdleRebalancerV3 {
   function getAllocations() external view returns (uint256[] memory _allocations);
 }
