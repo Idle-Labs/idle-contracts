@@ -28,9 +28,9 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _marketId : dydx market id
-   * @param _name : dydx market tokenized name
-   * @param _symbol : dydx market tokenized symbol
-   * @param _decimals : dydx market tokenized decimals
+   * @param _name : dydx tokenized name
+   * @param _symbol : dydx tokenized symbol
+   * @param _decimals : dydx tokenized decimals (same decimals as the underlying)
    */
   constructor(address _underlying, uint256 _marketId, string memory _name, string memory _symbol, uint8 _decimals)
     public ERC20Detailed(_name, _symbol, _decimals) {
@@ -38,15 +38,24 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
 
     underlying = _underlying;
     marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
+    IERC20(_underlying).approve(dydxAddressesProvider, uint256(-1));
   }
 
   /**
-   * @return current price of xyToken always 18 decimals
+   * @return current price of yxToken always 18 decimals
    */
-  function price()
-    public view
-    returns (uint256) {
-    return balanceInUnderlying(address(this)).mul(10**18).div(totalSupply());
+  function price() public view returns (uint256) {
+    (, uint256 supplyIndex) = DyDx(dydxAddressesProvider).getMarketCurrentIndex(marketId);
+    return supplyIndex;
+  }
+
+  function availableLiquidity() external view returns (uint256) {
+    return IERC20(underlying).balanceOf(dydxAddressesProvider);
+  }
+
+  function balanceInUnderlying(address who) external view returns (uint256) {
+    Wei memory bal = DyDx(dydxAddressesProvider).getAccountWei(Info(who, 0), marketId);
+    return bal.value;
   }
 
   /**
@@ -69,21 +78,22 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       _mintDyDx(_amount);
   }
 
-  function _mintDyDx(uint256 _amount) internal {
-    Info[] memory infos = new Info[](1);
-    infos[0] = Info(address(this), 0);
-    AssetAmount memory amt = AssetAmount(true, AssetDenomination.Wei, AssetReference.Delta, _amount);
-    ActionArgs memory act;
-    act.actionType = ActionType.Deposit;
-    act.accountId = 0;
-    act.amount = amt;
-    act.primaryMarketId = marketId;
-    act.otherAddress = address(this);
+  function _mintDyDx(uint256 _amount)
+    internal {
+      Info[] memory infos = new Info[](1);
+      infos[0] = Info(address(this), 0);
+      AssetAmount memory amt = AssetAmount(true, AssetDenomination.Wei, AssetReference.Delta, _amount);
+      ActionArgs memory act;
+      act.actionType = ActionType.Deposit;
+      act.accountId = 0;
+      act.amount = amt;
+      act.primaryMarketId = marketId;
+      act.otherAddress = address(this);
 
-    ActionArgs[] memory args = new ActionArgs[](1);
-    args[0] = act;
+      ActionArgs[] memory args = new ActionArgs[](1);
+      args[0] = act;
 
-    DyDx(dydxAddressesProvider).operate(infos, args);
+      DyDx(dydxAddressesProvider).operate(infos, args);
   }
 
   /**
@@ -106,30 +116,22 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       _burn(msg.sender, _amount);
   }
 
-  function _redeemDyDx(uint256 _amount) internal {
-    Info[] memory infos = new Info[](1);
-    infos[0] = Info(address(this), 0);
+  function _redeemDyDx(uint256 _amount)
+    internal {
+      Info[] memory infos = new Info[](1);
+      infos[0] = Info(address(this), 0);
 
-    AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, _amount);
-    ActionArgs memory act;
-    act.actionType = ActionType.Withdraw;
-    act.accountId = 0;
-    act.amount = amt;
-    act.primaryMarketId = marketId;
-    act.otherAddress = address(this);
+      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, _amount);
+      ActionArgs memory act;
+      act.actionType = ActionType.Withdraw;
+      act.accountId = 0;
+      act.amount = amt;
+      act.primaryMarketId = marketId;
+      act.otherAddress = address(this);
 
-    ActionArgs[] memory args = new ActionArgs[](1);
-    args[0] = act;
+      ActionArgs[] memory args = new ActionArgs[](1);
+      args[0] = act;
 
-    DyDx(dydxAddressesProvider).operate(infos, args);
-  }
-
-  function availableLiquidity() external view returns (uint256) {
-    return IERC20(underlying).balanceOf(dydxAddressesProvider);
-  }
-
-  function balanceInUnderlying(address who) public view returns (uint256) {
-    Wei memory bal = DyDx(dydxAddressesProvider).getAccountWei(Info(who, 0), marketId);
-    return bal.value;
+      DyDx(dydxAddressesProvider).operate(infos, args);
   }
 }

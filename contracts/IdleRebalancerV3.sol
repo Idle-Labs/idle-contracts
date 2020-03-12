@@ -30,6 +30,8 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
    * @param _cToken : cToken address
    * @param _iToken : iToken address
    * @param _aToken : aToken address
+   * @param _yxToken : yxToken address
+   * @param _rebalancerManager : rebalancerManager address
    */
   constructor(address _cToken, address _iToken, address _aToken, address _yxToken, address _rebalancerManager) public {
     require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0), 'some addr is 0');
