@@ -14,16 +14,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   using SafeMath for uint256;
-  // protocol token (cToken) address
-  address public cToken;
-  // protocol token (iToken) address
-  address public iToken;
-  // protocol token (aToken) address
-  address public aToken;
-  // protocol token (yxToken) address
-  address public yxToken;
-
-  uint256[] public lastAmounts = new uint256[](4);
+  uint256[] public lastAmounts;
+  address[] public lastAmountsAddresses;
   address public rebalancerManager;
 
   /**
@@ -35,14 +27,10 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
    */
   constructor(address _cToken, address _iToken, address _aToken, address _yxToken, address _rebalancerManager) public {
     require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0), 'some addr is 0');
-
-    cToken = _cToken;
-    iToken = _iToken;
-    aToken = _aToken;
-    yxToken = _yxToken;
     rebalancerManager = _rebalancerManager;
 
     lastAmounts = [10000, 0, 0, 0];
+    lastAmountsAddresses = [_cToken, _iToken, _aToken, _yxToken];
   }
 
   /**
@@ -56,11 +44,29 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   /**
    * It allows owner to set the allowed rebalancer address
    *
-   * @param _rebalancerManager : iToken address
+   * @param _rebalancerManager : rebalance manager address
    */
   function setRebalancerManager(address _rebalancerManager)
     external onlyOwner {
       rebalancerManager = _rebalancerManager;
+  }
+
+  /**
+   * It adds a new token address to lastAmountsAddresses list
+   *
+   * @param _newToken : new interest bearing token address
+   */
+  function setNewToken(address _newToken)
+    external onlyOwner {
+      require(_newToken != address(0), "New token should be != 0");
+      for (uint8 i = 0; i < lastAmountsAddresses.length; i++) {
+        if (lastAmountsAddresses[i] == _newToken) {
+          return;
+        }
+      }
+
+      lastAmountsAddresses.push(_newToken);
+      lastAmounts.push(0);
   }
   // end onlyOwner
 
@@ -68,16 +74,21 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
    * Used by Rebalance manager to set the new allocations
    *
    * @param _allocations : array with allocations in percentages (100% => 10000)
+   * @param _addresses : array with addresses of tokens used, should be equal to lastAmountsAddresses
    */
-  function setAllocations(uint256[] calldata _allocations)
+  function setAllocations(uint256[] calldata _allocations, address[] calldata _addresses)
     external onlyRebalancer
   {
-    require(_allocations[0].add(_allocations[1]).add(_allocations[2]).add(_allocations[3]) == 10000, "Not allocating 100%");
+    require(_allocations.length == lastAmounts.length, "Alloc lengths are different, allocations");
+    require(_allocations.length == _addresses.length, "Alloc lengths are different, addresses");
 
-    lastAmounts[0] = _allocations[0];
-    lastAmounts[1] = _allocations[1];
-    lastAmounts[2] = _allocations[2];
-    lastAmounts[3] = _allocations[3];
+    uint256 total;
+    for (uint8 i = 0; i < _allocations.length; i++) {
+      require(_addresses[i] == lastAmountsAddresses[i], "Addresses do not match");
+      total = total.add(_allocations[i]);
+      lastAmounts[i] = _allocations[i];
+    }
+    require(total == 10000, "Not allocating 100%");
   }
 
   function getAllocations()
