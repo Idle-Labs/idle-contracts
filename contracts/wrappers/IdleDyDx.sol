@@ -37,7 +37,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
     public {
     require(_underlying != address(0), '_underlying addr is 0');
 
-    secondsInAYear = 31536000; // 60 * 60 * 24 * 356
+    secondsInAYear = 31536000; // 60 * 60 * 24 * 365
     underlying = _underlying;
     token = _token;
     marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI

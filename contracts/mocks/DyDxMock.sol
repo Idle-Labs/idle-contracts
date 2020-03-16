@@ -33,19 +33,19 @@ contract DyDxMock is DyDx {
 
   mapping (address => Transfer) public transfers;
 
-  function getEarningsRate() external view returns (uint256 value) {
+  function getEarningsRate() external view returns (uint256) {
     return earningsRate;
   }
   function getMarketInterestSetter(uint256) external view returns (address) {
     return interestSetter;
   }
-  function getMarketInterestRate(uint256) external view returns (uint256 value) {
+  function getMarketInterestRate(uint256) external view returns (uint256) {
     return interestRate;
   }
-  function getMarketCurrentIndex(uint256) external view returns (uint256 borrow, uint256 supply) {
+  function getMarketCurrentIndex(uint256) external view returns (uint256, uint256) {
     return (borrowIndex, supplyIndex);
   }
-  function getMarketTotalPar(uint256) external view returns (uint256 borrow, uint256 supply) {
+  function getMarketTotalPar(uint256) external view returns (uint256, uint256) {
     return (borrowPar, supplyPar);
   }
   function getAccountWei(Info calldata, uint256) external view returns (Wei memory) {

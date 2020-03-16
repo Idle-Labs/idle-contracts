@@ -13,7 +13,7 @@ import "../wrappers/yxToken.sol";
 contract yxTokenMock is yxToken {
   constructor(address _underlying, uint256 _marketId, string memory _name, string memory _symbol, uint8 _decimals)
     public yxToken(_underlying, _marketId, _name, _symbol, _decimals) {
-    /* _mint(msg.sender, 10**21); // 1.000 yxDAI */
+    _mint(msg.sender, 10**21); // 1.000 yxDAI
   }
   function setDyDxProvider(address _dydxAddressesProvider) external {
     dydxAddressesProvider = _dydxAddressesProvider;
