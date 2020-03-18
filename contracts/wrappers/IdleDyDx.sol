@@ -129,7 +129,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
    * @return current price of yxToken in underlying
    */
   function getPriceInToken()
-    public view
+    external view
     returns (uint256) {
     return yxToken(token).price();
   }

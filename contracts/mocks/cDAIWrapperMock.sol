@@ -19,6 +19,7 @@ contract cDAIWrapperMock is ILendingProtocol, Ownable {
 
   uint256 public price;
   uint256 public apr;
+  uint256 public liquidity;
   uint256 public nextSupplyRateLocal;
   uint256 public nextSupplyRateWithParamsLocal;
 
@@ -81,5 +82,11 @@ contract cDAIWrapperMock is ILendingProtocol, Ownable {
   function setIdleToken(address) external {
 
   }
-  function availableLiquidity() external view returns (uint256) {}
+
+  function _setAvailableLiquidity(uint256 _availableLiquidity) external returns (uint256) {
+    liquidity = _availableLiquidity;
+  }
+  function availableLiquidity() external view returns (uint256) {
+    return liquidity;
+  }
 }

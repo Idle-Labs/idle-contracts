@@ -55,15 +55,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   address[] public currentTokensUsed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
-  // eg. [5000, 0, 5000] for 50% in compound, 0% fulcrum, 50% aave. same order of allAvailableTokens
+  // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
   uint256[] public lastAllocations;
 
   struct TokenProtocol {
     address tokenAddr;
     address protocolAddr;
   }
-
-  event Rebalance(uint256 amount);
 
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
@@ -215,6 +213,27 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       }
   }
 
+  /**
+   * Get current avg APR of this IdleToken
+   *
+   * @return avgApr: current weighted avg apr
+   */
+  function getAvgAPR()
+    public view
+    returns (uint256 avgApr) {
+      (, uint256[] memory amounts, uint256 total) = _getCurrentAllocations();
+      uint256 currApr;
+      uint256 weight;
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        if (amounts[i] == 0) {
+          continue;
+        }
+        currApr = ILendingProtocol(protocolWrappers[allAvailableTokens[i]]).getAPR();
+        weight = amounts[i].mul(10**18).div(total);
+        avgApr = avgApr.add(currApr.mul(weight).div(10**18));
+      }
+  }
+
   // external
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
@@ -331,24 +350,24 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       // check if we need to rebalance by looking at the allocations in rebalancer contract
       uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
-      for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
-        if (lastAllocations[i] != rebalancerLastAllocations[i]) {
-          areAllocationsEqual = false;
-          break;
+      if (areAllocationsEqual) {
+        for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
+          if (lastAllocations[i] != rebalancerLastAllocations[i]) {
+            areAllocationsEqual = false;
+            break;
+          }
         }
       }
       uint256 balance = IERC20(token).balanceOf(address(this));
       if (areAllocationsEqual && balance == 0) {
         return false;
       }
-
-      // use lastAllocations
+      // use rebalancerLastAllocations
       _mintWithAllocations(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
 
       if (areAllocationsEqual && balance > 0) {
         return false;
       }
-
       // Update lastAllocations with rebalancerLastAllocations
       delete lastAllocations;
       lastAllocations = rebalancerLastAllocations;
@@ -364,26 +383,28 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         );
       } else {
         // get current allocations in underlying
-        (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = getCurrentAllocations();
+        (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
         // calculate new allocations given the total
         uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
         (uint256[] memory toMintAllocations, uint256 totalRedeemed, uint256 totalToMint) =
           _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
-
-        // WARN: rounding issues?
-        if (totalRedeemed >= totalToMint.sub(1)) {
-          _mintWithAllocations(allAvailableTokens, toMintAllocations);
-          return true;
+        // possible rounding issues
+        if (totalRedeemed > 1 && totalToMint > 1) {
+          if (totalRedeemed >= totalToMint.sub(1)) {
+            _mintWithAllocations(allAvailableTokens, toMintAllocations);
+          } else {
+            // totalRedeemed < totalToMint. Not all liquidity was available
+            uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
+            // WARN: rounding issues not all balanc reallocated?
+            for (uint8 i = 0; i < toMintAllocations.length; i++) {
+              // Calc what would have been the correct allocations percentage if all was available
+              tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
+            }
+            // calc what to mint based on totalRedeemed
+            uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemed);
+            _mintWithAllocations(allAvailableTokens, partialAmounts);
+          }
         }
-
-        uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
-        // WARN: rounding issues not all balanc reallocated?
-        for (uint8 i = 0; i < toMintAllocations.length; i++) {
-          tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
-        }
-
-        uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalToMint);
-        _mintWithAllocations(allAvailableTokens, partialAmounts);
       }
 
       // remove all elements from `currentTokensUsed` even if they are still in use
@@ -398,6 +419,21 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       return true; // hasRebalanced
   }
 
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   * @return total : total aum in underlying
+   */
+  function getCurrentAllocations() external view
+    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
+    return _getCurrentAllocations();
+  }
+
+  // internal
   function _mintWithAllocations(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
     // mint for each protocol and update currentTokensUsed
     require(tokenAddresses.length == protocolAmounts.length, "All tokens length != allocations length");
@@ -421,7 +457,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     // - redeem everything available from each protocol
     uint256 redeemable;
     for (uint8 i = 0; i < tokenProtocols.length; i++) {
-      redeemable = allContractOrAvailableBalance(tokenProtocols[i].tokenAddr);
+      redeemable = _allContractOrAvailableBalance(tokenProtocols[i].tokenAddr);
 
       _redeemProtocolTokens(
         tokenProtocols[i].protocolAddr,
@@ -461,12 +497,15 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       uint256 totalToMint
     ) {
     require(amounts.length == newAmounts.length, 'Lengths not equal');
+    toMintAllocations = new uint256[](amounts.length);
+    ILendingProtocol protocol;
     // check the difference between amounts and newAmounts
     for (uint8 i = 0; i < amounts.length; i++) {
+      protocol = ILendingProtocol(protocolWrappers[tokenAddresses[i]]);
       if (amounts[i] > newAmounts[i]) {
         toMintAllocations[i] = 0;
         uint256 toRedeem = amounts[i].sub(newAmounts[i]);
-        uint256 availableLiquidity = ILendingProtocol(protocolWrappers[tokenAddresses[i]]).availableLiquidity();
+        uint256 availableLiquidity = protocol.availableLiquidity();
         if (availableLiquidity < toRedeem) {
           toRedeem = availableLiquidity;
         }
@@ -474,7 +513,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         _redeemProtocolTokens(
           protocolWrappers[tokenAddresses[i]],
           tokenAddresses[i],
-          toRedeem,
+          // convert amount from underlying to protocol token
+          toRedeem.mul(10**18).div(protocol.getPriceInToken()),
           address(this) // tokens are now in this contract
         );
         totalRedeemed = totalRedeemed.add(toRedeem);
@@ -485,7 +525,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     }
   }
 
-  function allContractOrAvailableBalance(address protocolToken) view internal returns (uint256) {
+  function _allContractOrAvailableBalance(address protocolToken) view internal returns (uint256) {
     uint256 contractBalance = IERC20(protocolToken).balanceOf(address(this));
     uint256 price = ILendingProtocol(protocolWrappers[protocolToken]).getPriceInToken();
     uint256 contractBalanceInUnderlying = contractBalance.mul(price).div(10**18);
@@ -505,7 +545,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
    * @return total : total aum in underlying
    */
-  function getCurrentAllocations() public view
+  function _getCurrentAllocations() internal view
     returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
       // Get balance of every protocol implemented
       tokenAddresses = new address[](allAvailableTokens.length);
@@ -527,22 +567,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       // return addresses and respective amounts in underlying
       return (tokenAddresses, amounts, total);
   }
-
-  // internal
-  /**
-   * Calls IdleRebalancerV3 `calcRebalanceAmounts` method
-   *
-   * @param _amount : amount of underlying tokens that needs to be allocated on lending protocols
-   * @return tokenAddresses : array with all token addresses used,
-   * @return amounts : array with all amounts for each protocol in order,
-   */
-  /* function _calcAmounts(uint256 _amount, uint256[] memory)
-    internal view
-    returns (address[] memory, uint256[] memory) {
-      uint256[] memory paramsRebalance = new uint256[](1);
-      paramsRebalance[0] = _amount;
-      return IdleRebalancerV3(rebalancer).calcRebalanceAmounts(paramsRebalance);
-  } */
 
   /**
    * Get addresses of current tokens and protocol wrappers used
