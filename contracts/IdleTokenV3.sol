@@ -48,7 +48,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
   // return to the normal level
   bool public manualPlay = false;
-  bool private isRedeemingEverything = false;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -165,15 +164,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function setManualPlay(bool _manualPlay)
     external onlyOwner {
       manualPlay = _manualPlay;
-  }
-  /**
-   * It allows owner to set if do partial rebalances or full rebalancer
-   *
-   * @param _isRedeemingEverything : bool flag
-   */
-  function setIsRedeemingEverything(bool _isRedeemingEverything)
-    external onlyOwner {
-      isRedeemingEverything = _isRedeemingEverything;
   }
 
   // view
@@ -333,7 +323,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function rebalance()
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
-      return rebalance(0, new uint256[](1));
+      return rebalance(0, new uint256[](0));
   }
   /**
    * Dynamic allocate all the pool across different lending protocols if needed
@@ -362,8 +352,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       if (areAllocationsEqual && balance == 0) {
         return false;
       }
-      // use rebalancerLastAllocations
-      _mintWithAllocations(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
+
+      _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
 
       if (areAllocationsEqual && balance > 0) {
         return false;
@@ -374,36 +364,27 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
 
       // Instead of redeeming everything during rebalance we redeem and mint only what needs
       // to be reallocated
-      if (isRedeemingEverything) {
-        // use old rebalance method, ie redeem everything available and then mint
-        _redeemAllAvailable();
-        _mintWithAllocations(
-          allAvailableTokens,
-          _amountsFromAllocations(rebalancerLastAllocations, IERC20(token).balanceOf(address(this)))
-        );
-      } else {
-        // get current allocations in underlying
-        (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
-        // calculate new allocations given the total
-        uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
-        (uint256[] memory toMintAllocations, uint256 totalRedeemed, uint256 totalToMint) =
-          _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
-        // possible rounding issues
-        if (totalRedeemed > 1 && totalToMint > 1) {
-          if (totalRedeemed >= totalToMint.sub(1)) {
-            _mintWithAllocations(allAvailableTokens, toMintAllocations);
-          } else {
-            // totalRedeemed < totalToMint. Not all liquidity was available
-            uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
-            // WARN: rounding issues not all balanc reallocated?
-            for (uint8 i = 0; i < toMintAllocations.length; i++) {
-              // Calc what would have been the correct allocations percentage if all was available
-              tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
-            }
-            // calc what to mint based on totalRedeemed
-            uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemed);
-            _mintWithAllocations(allAvailableTokens, partialAmounts);
+      // get current allocations in underlying
+      (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
+      // calculate new allocations given the total
+      uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
+      (uint256[] memory toMintAllocations, uint256 totalRedeemed, uint256 totalToMint) =
+        _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+      // possible rounding issues
+      if (totalRedeemed > 1 && totalToMint > 1) {
+        if (totalRedeemed >= totalToMint.sub(1)) {
+          _mintWithAmounts(allAvailableTokens, toMintAllocations);
+        } else {
+          // totalRedeemed < totalToMint. Not all liquidity was available
+          uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
+          // WARN: rounding issues not all balanc reallocated?
+          for (uint8 i = 0; i < toMintAllocations.length; i++) {
+            // Calc what would have been the correct allocations percentage if all was available
+            tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
           }
+          // calc what to mint based on totalRedeemed
+          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemed);
+          _mintWithAmounts(allAvailableTokens, partialAmounts);
         }
       }
 
@@ -434,7 +415,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
 
   // internal
-  function _mintWithAllocations(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
+  function _mintWithAmounts(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
     // mint for each protocol and update currentTokensUsed
     require(tokenAddresses.length == protocolAmounts.length, "All tokens length != allocations length");
 
@@ -448,24 +429,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       }
       currAddr = tokenAddresses[i];
       _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
-    }
-  }
-
-  function _redeemAllAvailable() internal {
-    // - get current protocol used
-    TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();
-    // - redeem everything available from each protocol
-    uint256 redeemable;
-    for (uint8 i = 0; i < tokenProtocols.length; i++) {
-      redeemable = _allContractOrAvailableBalance(tokenProtocols[i].tokenAddr);
-
-      _redeemProtocolTokens(
-        tokenProtocols[i].protocolAddr,
-        tokenProtocols[i].tokenAddr,
-        /* IERC20(tokenProtocols[i].tokenAddr).balanceOf(address(this)), */
-        redeemable,
-        address(this) // tokens are now in this contract
-      );
     }
   }
 
@@ -510,30 +473,20 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
           toRedeem = availableLiquidity;
         }
         // redeem the difference
-        _redeemProtocolTokens(
-          protocolWrappers[tokenAddresses[i]],
-          tokenAddresses[i],
-          // convert amount from underlying to protocol token
-          toRedeem.mul(10**18).div(protocol.getPriceInToken()),
-          address(this) // tokens are now in this contract
+        totalRedeemed = totalRedeemed.add(
+          _redeemProtocolTokens(
+            protocolWrappers[tokenAddresses[i]],
+            tokenAddresses[i],
+            // convert amount from underlying to protocol token
+            toRedeem.mul(10**18).div(protocol.getPriceInToken()),
+            address(this) // tokens are now in this contract
+          )
         );
-        totalRedeemed = totalRedeemed.add(toRedeem);
       } else {
         toMintAllocations[i] = newAmounts[i].sub(amounts[i]);
         totalToMint = totalToMint.add(toMintAllocations[i]);
       }
     }
-  }
-
-  function _allContractOrAvailableBalance(address protocolToken) view internal returns (uint256) {
-    uint256 contractBalance = IERC20(protocolToken).balanceOf(address(this));
-    uint256 price = ILendingProtocol(protocolWrappers[protocolToken]).getPriceInToken();
-    uint256 contractBalanceInUnderlying = contractBalance.mul(price).div(10**18);
-    uint256 protocolLiquidity = ILendingProtocol(protocolWrappers[protocolToken]).availableLiquidity();
-
-    return (
-      contractBalanceInUnderlying < protocolLiquidity ? contractBalanceInUnderlying : protocolLiquidity
-    );
   }
 
   /**

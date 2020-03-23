@@ -26,6 +26,7 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
       'yxDAI',
       'yxDAI',
       18,
+      creator,
       {from: creator}
     );
 

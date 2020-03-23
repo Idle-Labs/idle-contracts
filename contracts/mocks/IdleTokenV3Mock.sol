@@ -41,5 +41,25 @@ contract IdleTokenV3Mock is IdleTokenV3 {
     public
     IdleTokenV3(_name, _symbol, _decimals, _token, _cToken, _iToken, _rebalancer, _priceCalculator, _idleCompound, _idleFulcrum) {
   }
-
+  function amountsFromAllocations(uint256[] memory allocations, uint256 total)
+    public pure returns (uint256[] memory foo) {
+      return _amountsFromAllocations(allocations, total);
+  }
+  function mintWithAmounts(address[] memory tokenAddresses, uint256[] memory protocolAmounts) public {
+    _mintWithAmounts(tokenAddresses, protocolAmounts);
+  }
+  function setAllocations(uint256[] memory allocs) public {
+    lastAllocations = allocs;
+  }
+  function redeemAllNeeded(
+    address[] memory tokenAddresses,
+    uint256[] memory amounts,
+    uint256[] memory newAmounts
+    ) public returns (
+      uint256[] memory toMintAllocations,
+      uint256 totalRedeemed,
+      uint256 totalToMint
+    ) {
+      return _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+  }
 }

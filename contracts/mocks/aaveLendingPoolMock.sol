@@ -13,7 +13,7 @@ contract aaveLendingPoolMock is AaveLendingPool {
     aDai = _aDai;
   }
   function deposit(address, uint256 _amount, uint16) external {
-    /* require(IERC20(dai).transferFrom(msg.sender, address(this), _amount), "Error during transferFrom"); // 1 DAI */
+    /* require(IERC20(dai).transferFrom(msg.sender, address(this), _amount), "Error during transferFrom"); */
     IERC20(aDai).transfer(msg.sender, _amount);
   }
   function getReserveData(address _reserve) external view returns (

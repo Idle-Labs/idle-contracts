@@ -149,7 +149,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   /**
    * Gets all underlying tokens in this contract and mints aTokens
    * tokens are then transferred to msg.sender
-   * NOTE: underlying tokens needs to be sended here before calling this
+   * NOTE: underlying tokens needs to be sent here before calling this
    *
    * @return aTokens minted
    */
@@ -175,7 +175,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   /**
    * Gets all aTokens in this contract and redeems underlying tokens.
    * underlying tokens are then transferred to `_account`
-   * NOTE: aTokens needs to be sended here before calling this
+   * NOTE: aTokens needs to be sent here before calling this
    *
    * @return underlying tokens redeemd
    */
