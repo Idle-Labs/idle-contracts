@@ -1,6 +1,6 @@
 /**
- * @title: Compound wrapper
- * @summary: Used for interacting with Compound. Has
+ * @title: DyDx wrapper
+ * @summary: Used for interacting with DyDx. Has
  *           a common interface with all other protocol wrappers.
  *           This contract holds assets only during a tx, after tx it should be empty
  * @author: William Bergamo, idle.finance
@@ -86,7 +86,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   // end onlyOwner
 
   /**
-   * Calculate next supply rate for Compound, given an `_amount` supplied (last array param)
+   * Calculate next supply rate for DyDx, given an `_amount` supplied (last array param)
    * and all other params supplied. See `info_compound.md` for more info
    * on calculations.
    *
@@ -100,10 +100,10 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   }
 
   /**
-   * Calculate next supply rate for Compound, given an `_amount` supplied
+   * Calculate next supply rate for DyDx, given an `_amount` supplied
    *
    * @param _amount : new underlying amount supplied (eg DAI)
-   * @return : yearly net rate
+   * @return : yearly net rate eg (5.01 %)
    */
   function nextSupplyRate(uint256 _amount)
     public view
@@ -119,7 +119,11 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
         borrowRatePerSecond = dydx.getMarketInterestRate(marketId);
       } else {
         // Here we are calc the new borrow rate when we supply `_amount` liquidity
-        borrowRatePerSecond = IInterestSetter(dydx.getMarketInterestSetter(marketId)).getInterestRate(underlying, borrow, supply.add(_amount));
+        borrowRatePerSecond = IInterestSetter(dydx.getMarketInterestSetter(marketId)).getInterestRate(
+          underlying,
+          borrow,
+          supply.add(_amount)
+        );
       }
       uint256 aprBorrow = borrowRatePerSecond.mul(secondsInAYear);
       return aprBorrow.mul(usage).div(10**18).mul(dydx.getEarningsRate()).mul(100).div(10**18);
@@ -146,7 +150,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   /**
    * Gets all underlying tokens in this contract and mints yxTokens
    * tokens are then transferred to msg.sender
-   * NOTE: underlying tokens needs to be sended here before calling this
+   * NOTE: underlying tokens needs to be sent here before calling this
    *
    * @return yxTokens minted
    */
@@ -172,14 +176,14 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   /**
    * Gets all yxTokens in this contract and redeems underlying tokens.
    * underlying tokens are then transferred to `_account`
-   * NOTE: yxTokens needs to be sended here before calling this
+   * NOTE: yxTokens needs to be sent here before calling this
    *
    * @return underlying tokens redeemd
    */
   function redeem(address _account)
     external onlyIdle
     returns (uint256 tokens) {
-      // Funds needs to be sended here before calling this
+      // Funds needs to be sent here before calling this
       // redeem all underlying sent in this contract
       tokens = yxToken(token).redeem(IERC20(token).balanceOf(address(this)), _account);
   }
