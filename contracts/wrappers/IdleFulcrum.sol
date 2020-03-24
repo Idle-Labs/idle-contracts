@@ -10,6 +10,7 @@ pragma solidity 0.5.11;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/iERC20Fulcrum.sol";
 import "../interfaces/ILendingProtocol.sol";

@@ -10,6 +10,7 @@ pragma solidity 0.5.11;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/CERC20.sol";
 import "../interfaces/ILendingProtocol.sol";
@@ -35,7 +36,7 @@ contract IdleCompound is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
-    blocksPerYear = 2102400;
+    blocksPerYear = 2371428;
   }
 
   /**
