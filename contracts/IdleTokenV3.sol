@@ -353,7 +353,9 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         return false;
       }
 
-      _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
+      if (balance > 0) {
+        _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
+      }
 
       if (areAllocationsEqual && balance > 0) {
         return false;
@@ -370,22 +372,18 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
       (uint256[] memory toMintAllocations, uint256 totalRedeemed, uint256 totalToMint) =
         _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
-      // possible rounding issues
+
       if (totalRedeemed > 1 && totalToMint > 1) {
-        if (totalRedeemed >= totalToMint.sub(1)) {
-          _mintWithAmounts(allAvailableTokens, toMintAllocations);
-        } else {
-          // totalRedeemed < totalToMint. Not all liquidity was available
-          uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
-          // WARN: rounding issues not all balanc reallocated?
-          for (uint8 i = 0; i < toMintAllocations.length; i++) {
-            // Calc what would have been the correct allocations percentage if all was available
-            tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
-          }
-          // calc what to mint based on totalRedeemed
-          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemed);
-          _mintWithAmounts(allAvailableTokens, partialAmounts);
+        // Do not mint directly using toMintAllocations check with totalRedeemed
+        uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
+        for (uint8 i = 0; i < toMintAllocations.length; i++) {
+          // Calc what would have been the correct allocations percentage if all was available
+          tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
         }
+
+        // calc what to mint based on totalRedeemed
+        uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, IERC20(token).balanceOf(address(this)));
+        _mintWithAmounts(allAvailableTokens, partialAmounts);
       }
 
       // remove all elements from `currentTokensUsed` even if they are still in use
