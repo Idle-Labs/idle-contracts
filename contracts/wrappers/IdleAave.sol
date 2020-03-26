@@ -167,7 +167,7 @@ contract IdleAave is ILendingProtocol, Ownable {
         provider.getLendingPoolCore(),
         balance
       );
-      lendingPool.deposit(underlying, balance, 0);
+      lendingPool.deposit(underlying, balance, 29);
       aTokens = IERC20(token).balanceOf(address(this));
       // transfer them to the caller
       IERC20(token).safeTransfer(msg.sender, aTokens);
