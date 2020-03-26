@@ -115,17 +115,11 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
       borrow = borrow.mul(borrowIndex).div(10**18);
       supply = supply.mul(supplyIndex).div(10**18);
       uint256 usage = borrow.mul(10**18).div(supply.add(_amount));
-      uint256 borrowRatePerSecond;
-      if (_amount == 0) {
-        borrowRatePerSecond = dydx.getMarketInterestRate(marketId);
-      } else {
-        // Here we are calc the new borrow rate when we supply `_amount` liquidity
-        borrowRatePerSecond = IInterestSetter(dydx.getMarketInterestSetter(marketId)).getInterestRate(
-          underlying,
-          borrow,
-          supply.add(_amount)
-        );
-      }
+      uint256 borrowRatePerSecond = IInterestSetter(dydx.getMarketInterestSetter(marketId)).getInterestRate(
+        underlying,
+        borrow,
+        supply.add(_amount)
+      );
       uint256 aprBorrow = borrowRatePerSecond.mul(secondsInAYear);
       return aprBorrow.mul(usage).div(10**18).mul(dydx.getEarningsRate()).mul(100).div(10**18);
   }
