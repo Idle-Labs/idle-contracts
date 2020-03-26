@@ -1,10 +1,10 @@
 /**
- * @title: Compound wrapper
- * @summary: Used for interacting with Compound. Has
- *           a common interface with all other protocol wrappers.
- *           This contract holds assets only during a tx, after tx it should be empty
+ * @title: DyDx lending tokenization
+ * @summary: Used for crete and ERC20 representing lending positions
+ *           on DyDc protocol.
  * @author: William Bergamo, idle.finance
  */
+
 pragma solidity 0.5.11;
 pragma experimental ABIEncoderV2;
 
@@ -55,8 +55,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   }
 
   function balanceInUnderlying(address who) external view returns (uint256) {
-    Wei memory bal = DyDx(dydxAddressesProvider).getAccountWei(Info(who, 0), marketId);
-    return bal.value;
+    return balanceOf(who).times(price()).div(10**18);
   }
 
   /**
