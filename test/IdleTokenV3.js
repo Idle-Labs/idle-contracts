@@ -1328,8 +1328,6 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager]) {
     BNify(res.toMintAllocations[1]).should.be.bignumber.equal(BNify('0').mul(this.one));
     BNify(res.toMintAllocations[2]).should.be.bignumber.equal(BNify('0').mul(this.one));
     BNify(res.toMintAllocations[3]).should.be.bignumber.equal(BNify('0').mul(this.one));
-    // check what have been redeemed in the method
-    BNify(res.totalRedeemed).should.be.bignumber.equal(BNify('25').mul(this.one));
     // and in the contract
     const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
     BNify(DAIbalance).should.be.bignumber.equal(BNify('25').mul(this.one));
@@ -1363,8 +1361,6 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager]) {
     BNify(res.toMintAllocations[1]).should.be.bignumber.equal(BNify('5').mul(this.one));
     BNify(res.toMintAllocations[2]).should.be.bignumber.equal(BNify('0').mul(this.one));
     BNify(res.toMintAllocations[3]).should.be.bignumber.equal(BNify('0').mul(this.one));
-    // check what have been redeemed in the method
-    BNify(res.totalRedeemed).should.be.bignumber.equal(BNify('10').mul(this.one));
     // and in the contract
 
     const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
@@ -1404,8 +1400,6 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager]) {
     BNify(res.toMintAllocations[1]).should.be.bignumber.equal(BNify('5').mul(this.one));
     BNify(res.toMintAllocations[2]).should.be.bignumber.equal(BNify('0').mul(this.one));
     BNify(res.toMintAllocations[3]).should.be.bignumber.equal(BNify('0').mul(this.one));
-    // check what have been redeemed in the method
-    BNify(res.totalRedeemed).should.be.bignumber.equal(BNify('5').mul(this.one));
     // and in the contract
     const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
     BNify(DAIbalance).should.be.bignumber.equal(BNify('5').mul(this.one));
