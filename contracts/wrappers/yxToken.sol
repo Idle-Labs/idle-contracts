@@ -55,7 +55,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   }
 
   function balanceInUnderlying(address who) external view returns (uint256) {
-    return balanceOf(who).times(price()).div(10**18);
+    return balanceOf(who).mul(price()).div(10**18);
   }
 
   /**
