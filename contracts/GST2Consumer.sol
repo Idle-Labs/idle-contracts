@@ -24,6 +24,8 @@ contract GST2Consumer {
       tokens = safeNumTokens;
     }
 
-    return tokens > 0 ? gst2.freeFromUpTo(from, tokens) : 0;
+    if (tokens > 0) {
+      gst2.freeFromUpTo(from, tokens);
+    }
   }
 }

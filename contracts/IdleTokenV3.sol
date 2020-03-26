@@ -23,8 +23,9 @@ import "./interfaces/IIdleTokenV3.sol";
 
 import "./IdleRebalancerV3.sol";
 import "./IdlePriceCalculator.sol";
+import "./GST2Consumer.sol";
 
-contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3 {
+contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3, GST2Consumer {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -325,6 +326,20 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     returns (bool) {
       return rebalance(0, new uint256[](0));
   }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
+   *
+   * NOTE: this method can be paused
+   *
+   * @return : whether has rebalanced or not
+   */
+  function rebalanceWithGST()
+    public whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(msg.sender)
+    returns (bool) {
+      return rebalance(0, new uint256[](0));
+  }
+
   /**
    * Dynamic allocate all the pool across different lending protocols if needed
    *
