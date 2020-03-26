@@ -370,20 +370,18 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
       // calculate new allocations given the total
       uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
-      (uint256[] memory toMintAllocations, uint256 totalRedeemed, uint256 totalToMint) =
-        _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
-
-      if (totalRedeemed > 1 && totalToMint > 1) {
-        // Do not mint directly using toMintAllocations check with totalRedeemed
+      (uint256[] memory toMintAllocations, uint256 totalToMint) = _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+      uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
+      if (totalRedeemd > 1 && totalToMint > 1) {
+        // Do not mint directly using toMintAllocations check with totalRedeemd
         uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
         for (uint8 i = 0; i < toMintAllocations.length; i++) {
           // Calc what would have been the correct allocations percentage if all was available
-          tempAllocations[i] = toMintAllocations[i].mul(10000).div(totalToMint);
+          tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
         }
 
-        // calc what to mint based on totalRedeemed
-        uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, IERC20(token).balanceOf(address(this)));
-        _mintWithAmounts(allAvailableTokens, partialAmounts);
+          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd);
+          _mintWithAmounts(allAvailableTokens, partialAmounts);
       }
 
       // remove all elements from `currentTokensUsed` even if they are still in use
@@ -440,7 +438,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       if (i == allocations.length - 1) {
         newAmounts[i] = total.sub(allocatedBalance);
       } else {
-        currBalance = total.mul(allocations[i]).div(10000);
+        currBalance = total.mul(allocations[i]).div(100000);
         allocatedBalance = allocatedBalance.add(currBalance);
         newAmounts[i] = currBalance;
       }
@@ -454,7 +452,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     uint256[] memory newAmounts
     ) internal returns (
       uint256[] memory toMintAllocations,
-      uint256 totalRedeemed,
       uint256 totalToMint
     ) {
     require(amounts.length == newAmounts.length, 'Lengths not equal');
@@ -471,14 +468,12 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
           toRedeem = availableLiquidity;
         }
         // redeem the difference
-        totalRedeemed = totalRedeemed.add(
-          _redeemProtocolTokens(
-            protocolWrappers[tokenAddresses[i]],
-            tokenAddresses[i],
-            // convert amount from underlying to protocol token
-            toRedeem.mul(10**18).div(protocol.getPriceInToken()),
-            address(this) // tokens are now in this contract
-          )
+        _redeemProtocolTokens(
+          protocolWrappers[tokenAddresses[i]],
+          tokenAddresses[i],
+          // convert amount from underlying to protocol token
+          toRedeem.mul(10**18).div(protocol.getPriceInToken()),
+          address(this) // tokens are now in this contract
         );
       } else {
         toMintAllocations[i] = newAmounts[i].sub(amounts[i]);

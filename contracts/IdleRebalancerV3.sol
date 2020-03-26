@@ -29,7 +29,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
     require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0), 'some addr is 0');
     rebalancerManager = _rebalancerManager;
 
-    lastAmounts = [10000, 0, 0, 0];
+    lastAmounts = [100000, 0, 0, 0];
     lastAmountsAddresses = [_cToken, _iToken, _aToken, _yxToken];
   }
 
@@ -73,7 +73,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   /**
    * Used by Rebalance manager to set the new allocations
    *
-   * @param _allocations : array with allocations in percentages (100% => 10000)
+   * @param _allocations : array with allocations in percentages (100% => 100000)
    * @param _addresses : array with addresses of tokens used, should be equal to lastAmountsAddresses
    */
   function setAllocations(uint256[] calldata _allocations, address[] calldata _addresses)
@@ -88,7 +88,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
       total = total.add(_allocations[i]);
       lastAmounts[i] = _allocations[i];
     }
-    require(total == 10000, "Not allocating 100%");
+    require(total == 100000, "Not allocating 100%");
   }
 
   function getAllocations()

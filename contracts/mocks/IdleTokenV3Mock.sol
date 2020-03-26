@@ -57,7 +57,6 @@ contract IdleTokenV3Mock is IdleTokenV3 {
     uint256[] memory newAmounts
     ) public returns (
       uint256[] memory toMintAllocations,
-      uint256 totalRedeemed,
       uint256 totalToMint
     ) {
       return _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
