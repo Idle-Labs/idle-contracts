@@ -49,6 +49,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
   // return to the normal level
   bool public manualPlay = false;
+  // Flag for disabling openRebalance for the risk adjusted variant
+  bool public isRiskAdjusted = false;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -160,11 +162,21 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   /**
    * It allows owner to unpause the contract when iToken price decreased and didn't return to the expected level
    *
-   * @param _manualPlay : new IdleRebalancerV3 address
+   * @param _manualPlay : flag
    */
   function setManualPlay(bool _manualPlay)
     external onlyOwner {
       manualPlay = _manualPlay;
+  }
+
+  /**
+   * It allows owner to disable openRebalance
+   *
+   * @param _isRiskAdjusted : flag
+   */
+  function setIsRiskAdjusted(bool _isRiskAdjusted)
+    external onlyOwner {
+      isRiskAdjusted = _isRiskAdjusted;
   }
 
   // view
@@ -328,14 +340,47 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
 
   /**
+   * Allow any users to set new allocations as long as the new allocations
+   * give a better avg APR than before
+   * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
+   * as lastAllocations variable and the sum of all value should be == 100000
+   *
+   * This method is not callble if this instance of IdleToken is a risk adjusted instance
+   * NOTE: this method can be paused
+   *
+   * @return : whether has rebalanced or not
+   * @return avgApr : the new avg apr after rebalance
+   */
+  function openRebalance(uint256[] calldata _newAllocations)
+    external whenNotPaused whenITokenPriceHasNotDecreased
+    returns (bool, uint256 avgApr) {
+      require(!isRiskAdjusted, "Setting allocations not allowed");
+      uint256 initialAPR = getAvgAPR();
+
+      require(_newAllocations.length == lastAllocations.length, "Alloc lengths are different");
+      uint256 total;
+      for (uint8 i = 0; i < _newAllocations.length; i++) {
+        total = total.add(_newAllocations[i]);
+      }
+      require(total == 100000, "Not allocating 100%");
+      bool hasRebalanced = rebalance(0, _newAllocations);
+
+      uint256 newAprAfterRebalance = getAvgAPR();
+      require(newAprAfterRebalance > initialAPR, "APR not improved");
+      return (hasRebalanced, newAprAfterRebalance);
+  }
+
+  /**
    * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
    *
-   * NOTE: this method can be paused
+   * NOTE: this method can be paused.
+   * msg.sender should approve this contract to spend GST2 tokens before calling
+   * this method
    *
    * @return : whether has rebalanced or not
    */
   function rebalanceWithGST()
-    public whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(msg.sender)
+    external whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(msg.sender)
     returns (bool) {
       return rebalance(0, new uint256[](0));
   }
@@ -346,14 +391,20 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * NOTE: this method can be paused
    *
    * @param : not used
-   * @param : not used
+   * @param _newAllocations : _newAllocations
    * @return : whether has rebalanced or not
    */
-  function rebalance(uint256, uint256[] memory)
+  function rebalance(uint256, uint256[] memory _newAllocations)
     public whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
+      uint256[] memory rebalancerLastAllocations;
+      if (_newAllocations.length > 0 && _newAllocations.length == lastAllocations.length) {
+        rebalancerLastAllocations = _newAllocations;
+      } else {
+        rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
+      }
+
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       if (areAllocationsEqual) {
         for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
