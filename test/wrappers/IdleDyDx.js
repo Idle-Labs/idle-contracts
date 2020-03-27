@@ -58,12 +58,6 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
   it('constructor set an secondsInAYear', async function () {
     (await this.yxDAIWrapper.secondsInAYear()).should.be.bignumber.equal(BNify('31536000'));
   });
-  it('constructor set an dydxAddressesProvider', async function () {
-    // It should be this one below
-    // (await this.yxDAIWrapper.dydxAddressesProvider()).should.equal('0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e');
-    // but for testing we are mocking and setting a different address so
-    (await this.yxDAIWrapper.dydxAddressesProvider()).should.equal(this.DyDxMock.address);
-  });
   it('allows onlyOwner to setIdleToken', async function () {
     const val = this.someAddr;
     // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
@@ -74,15 +68,6 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
 
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.yxDAIWrapper.setIdleToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setDydxAddressesProvider', async function () {
-    const val = this.someAddr;
-    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
-    await this.yxDAIWrapper.setDydxAddressesProvider(val, { from: creator });
-    (await this.yxDAIWrapper.dydxAddressesProvider()).should.be.bignumber.equal(val);
-
-    // it will revert with unspecified reason for nonOwner
-    await expectRevert.unspecified(this.yxDAIWrapper.setDydxAddressesProvider(val, { from: nonOwner }));
   });
   it('allows onlyOwner to setSecondsInAYear', async function () {
     const val = this.one;
@@ -100,8 +85,9 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     // set mock data in yxDAIMock
     await this.DyDxMock.setMarketTotalPar(one.mul(BNify('100')), big2.mul(BNify('100')));
     await this.DyDxMock.setMarketCurrentIndex(big2, one);
-    await this.DyDxMock.setMarketInterestRate(big2.div(BNify('3153600000'))); // 31536000 * 100
     await this.DyDxMock.setEarningsRate(BNify('950000000000000000')); // 0.95
+    await this.DyDxMock.setMarketInterestSetter(this.InterestSetterMock.address);
+    await this.InterestSetterMock.setInterestRate(big2.div(BNify('3153600000')));
 
     // borrow = 100 * 2
     // supply = 200 * 1
@@ -167,7 +153,8 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     // set mock data in DyDxMock
     await this.DyDxMock.setMarketTotalPar(one.mul(BNify('100')), big2.mul(BNify('100')));
     await this.DyDxMock.setMarketCurrentIndex(big2, one);
-    await this.DyDxMock.setMarketInterestRate(big2.div(BNify('3153600000'))); // 31536000 * 100
+    await this.DyDxMock.setMarketInterestSetter(this.InterestSetterMock.address);
+    await this.InterestSetterMock.setInterestRate(big2.div(BNify('3153600000')));
     await this.DyDxMock.setEarningsRate(BNify('950000000000000000')); // 0.95
 
     // borrow = 100 * 2
@@ -197,6 +184,7 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     // deposit 100 DAI in yxDAIWrapper
     await this.DAIMock.transfer(this.yxDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
     await this.DyDxMock.setMarketCurrentIndex(this.one, this.one.mul(BNify('2'))); // price 2
+    await this.yxDAIMock.setPriceForTest(this.one.mul(BNify('2')));
     // mints in DyDx with 100 DAI
     const callRes = await this.yxDAIWrapper.mint.call({ from: nonOwner });
     // check return value
@@ -207,8 +195,9 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
   });
   it('redeem creates yxTokens and it sends them to msg.sender', async function () {
     // fund DyDxMock with 100 DAI
-    await this.DAIMock.transfer(this.DyDxMock.address, BNify('100').mul(this.one), {from: creator});
+    await this.DAIMock.transfer(this.yxDAIMock.address, BNify('100').mul(this.one), {from: creator});
     await this.DyDxMock.setMarketCurrentIndex(this.one, this.one.mul(BNify('2'))); // price 2
+    await this.yxDAIMock.setPriceForTest(this.one.mul(BNify('2')));
     // deposit 50 yxDAI in yxDAIWrapper
     await this.yxDAIMock.transfer(this.yxDAIWrapper.address, BNify('50').mul(this.one), {from: creator});
     // redeem in DyDx with 50 yxDAI * 2 (price) = 100 DAI

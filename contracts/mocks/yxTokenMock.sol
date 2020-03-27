@@ -12,7 +12,6 @@ import "../wrappers/yxToken.sol";
 
 contract yxTokenMock is yxToken {
   uint256 public priceFake;
-  event SomeEvent(uint256 x);
 
   constructor(address _underlying, uint256 _marketId, string memory _name, string memory _symbol, uint8 _decimals, address someone)
     public yxToken(_underlying, _marketId, _name, _symbol, _decimals) {
