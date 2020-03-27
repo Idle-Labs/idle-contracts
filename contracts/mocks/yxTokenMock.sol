@@ -8,13 +8,13 @@
 pragma solidity 0.5.11;
 pragma experimental ABIEncoderV2;
 
-import "../wrappers/yxToken.sol";
+import "./yxTokenNoConst.sol";
 
-contract yxTokenMock is yxToken {
+contract yxTokenMock is yxTokenNoConst {
   uint256 public priceFake;
 
   constructor(address _underlying, uint256 _marketId, string memory _name, string memory _symbol, uint8 _decimals, address someone)
-    public yxToken(_underlying, _marketId, _name, _symbol, _decimals) {
+    public yxTokenNoConst(_underlying, _marketId, _name, _symbol, _decimals) {
     _mint(address(this), 10**24); // 1.000.000 aDAI
     _mint(someone, 10**24); // 1.000 yxDAI
   }

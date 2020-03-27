@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/DyDx.sol";
 import '../interfaces/DyDxStructs.sol';
 
-contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
+contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -25,7 +25,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   uint256 public secondsInAYear;
   // underlying token (token eg DAI) address
   address public underlying;
-  address public constant dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  address public dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _marketId : dydx market id

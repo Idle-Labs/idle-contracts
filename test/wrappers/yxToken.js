@@ -1,7 +1,6 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 const yxTokenMock = artifacts.require('yxTokenMock');
-const yxToken = artifacts.require('yxToken');
 const DAIMock = artifacts.require('DAIMock');
 const DyDxMock = artifacts.require('DyDxMock');
 const BNify = n => new BN(String(n));

@@ -16,9 +16,9 @@ import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/IInterestSetter.sol";
 import "../interfaces/DyDxStructs.sol";
 import "../interfaces/DyDx.sol";
-import "./yxToken.sol";
+import "./yxTokenNoConst.sol";
 
-contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
+contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -28,7 +28,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   address public underlying;
   address public token;
   address public idleToken;
-  address public constant dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  address public dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _token : protocol token (eg cDAI) address
@@ -66,6 +66,15 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
       idleToken = _idleToken;
   }
 
+  /**
+   * sets dydxAddressesProvider address
+   * @param _dydxAddressesProvider : dydxAddressesProvider address
+   */
+  function setDydxAddressesProvider(address _dydxAddressesProvider)
+    external onlyOwner {
+      require(_dydxAddressesProvider != address(0), "_dydxAddressesProvider addr is 0");
+      dydxAddressesProvider = _dydxAddressesProvider;
+  }
   /**
    * sets secondsInAYear address
    * @param _secondsInAYear : secondsInAYear address
@@ -121,7 +130,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   function getPriceInToken()
     external view
     returns (uint256) {
-    return yxToken(token).price();
+    return yxTokenNoConst(token).price();
   }
 
   /**
@@ -150,7 +159,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
       // approve the transfer to yxToken contract
       IERC20(underlying).safeIncreaseAllowance(token, balance);
       // get a handle for the corresponding yxToken contract
-      yxToken yxToken = yxToken(token);
+      yxTokenNoConst yxToken = yxTokenNoConst(token);
       // mint the yxTokens
       yxToken.mint(balance);
       // yxTokens are now in this contract
@@ -171,7 +180,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
     returns (uint256 tokens) {
       // Funds needs to be sent here before calling this
       // redeem all underlying sent in this contract
-      tokens = yxToken(token).redeem(IERC20(token).balanceOf(address(this)), _account);
+      tokens = yxTokenNoConst(token).redeem(IERC20(token).balanceOf(address(this)), _account);
   }
 
   function availableLiquidity() external view returns (uint256) {

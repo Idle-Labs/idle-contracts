@@ -4,9 +4,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-import "../wrappers/IdleDyDx.sol";
+import "./IdleDyDxNoConst.sol";
 
-contract yxDAIWrapperMock is IdleDyDx {
+contract yxDAIWrapperMock is IdleDyDxNoConst {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -17,7 +17,7 @@ contract yxDAIWrapperMock is IdleDyDx {
   uint256 public nextSupplyRateWithParamsLocal;
 
   constructor(address _token, address _underlying, uint256 _marketId)
-    public IdleDyDx(_token, _underlying, _marketId) {
+    public IdleDyDxNoConst(_token, _underlying, _marketId) {
   }
 
   function nextSupplyRate(uint256) public view returns (uint256) {

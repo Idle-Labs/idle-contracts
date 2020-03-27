@@ -1,6 +1,6 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
-const IdleDyDx = artifacts.require('IdleDyDx');
+const IdleDyDxNoConst = artifacts.require('IdleDyDxNoConst');
 const yxTokenMock = artifacts.require('yxTokenMock');
 const DyDxMock = artifacts.require('DyDxMock');
 const DAIMock = artifacts.require('DAIMock');
@@ -34,7 +34,7 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     // Needed because dydx address is set on constructor
     await this.yxDAIMock.approveDyDx({ from: creator });
 
-    this.yxDAIWrapper = await IdleDyDx.new(
+    this.yxDAIWrapper = await IdleDyDxNoConst.new(
       this.yxDAIMock.address,
       this.DAIMock.address,
       marketId,
