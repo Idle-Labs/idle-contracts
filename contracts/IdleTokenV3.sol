@@ -1,5 +1,5 @@
 /**
- * @title: Idle Token main contract
+ * @title: Idle Token (V3) main contract
  * @summary: ERC20 that holds pooled user funds together
  *           Each token rapresent a share of the underlying pools
  *           and with each token user have the right to redeem a portion of these pools
@@ -29,9 +29,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
-  // protocolWrappers may be changed/updated/removed do not rely on their
-  // addresses to determine where funds are allocated
-
   // eg. cTokenAddress => IdleCompoundAddress
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
@@ -51,6 +48,12 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   bool public manualPlay = false;
   // Flag for disabling openRebalance for the risk adjusted variant
   bool public isRiskAdjusted = false;
+  // Max possibile fee on interest gain
+  uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
+  // Current fee on interest gained
+  uint256 public fee = 0;
+  // Address collecting underlying fees
+  address public feeAddress;
 
   // no one can directly change this
   // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
@@ -59,6 +62,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   address[] public allAvailableTokens;
   // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
   uint256[] public lastAllocations;
+
+  mapping(address => uint256) public userAvgPrices;
 
   struct TokenProtocol {
     address tokenAddr;
@@ -179,6 +184,27 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       isRiskAdjusted = _isRiskAdjusted;
   }
 
+  /**
+   * It allows owner to set the fee (1000 == 10% of gained interest)
+   *
+   * @param _fee : fee amount where 100000 is 100%, max settable is MAX_FEE constant
+   */
+  function setFee(uint256 _fee)
+    external onlyOwner {
+      require(_fee <= MAX_FEE, "Fee too high");
+      fee = _fee;
+  }
+
+  /**
+   * It allows owner to set the fee address
+   *
+   * @param _feeAddress : fee address
+   */
+  function setFeeAddress(address _feeAddress)
+    external onlyOwner {
+      feeAddress = _feeAddress;
+  }
+
   // view
   /**
    * IdleToken price calculation, in underlying
@@ -237,6 +263,52 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       }
   }
 
+  // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient
+  function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
+    return transferFrom(sender, recipient, amount) && _updateAvgPrice(recipient, amount, tokenPrice());
+  }
+  function transfer(address recipient, uint256 amount) public returns (bool) {
+    return transfer(recipient, amount) && _updateAvgPrice(recipient, amount, tokenPrice());
+  }
+  // #####
+
+  /**
+   * Update avg price paid for each idle token of a user
+   *
+   * @param usr : user that should have balance update
+   * @param qty : new amount deposited / transferred, in idleToken
+   * @param price : curr idleToken price in underlying
+   * @return : true
+   */
+  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal returns (bool) {
+    uint256 totBalance = balanceOf(usr);
+    uint256 oldAvgPrice = userAvgPrices[usr];
+    uint256 oldBalance = totBalance.sub(qty);
+
+    userAvgPrices[usr] = oldAvgPrice.mul(oldBalance.div(totBalance)).add(price.mul(qty.div(totBalance)));
+    return true;
+  }
+
+  /**
+   * Calculate fee and send them to feeAddress
+   *
+   * @param amount : in idleTokens
+   * @param redeemed : in underlying
+   * @return : net value in underlying
+   */
+  function _getFee(uint256 amount, uint256 redeemed) internal returns (uint256) {
+    uint256 totalValPaid = amount.mul(userAvgPrices[msg.sender]).div(10**18);
+    uint256 currVal = amount.mul(tokenPrice()).div(10**18);
+    if (currVal < totalValPaid) {
+      return redeemed;
+    }
+    uint256 gain = currVal.sub(totalValPaid);
+    uint256 feeDue = gain.mul(fee).div(100000);
+    IERC20(token).safeTransfer(feeAddress, feeDue);
+
+    return currVal.sub(feeDue);
+  }
+
   // external
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
@@ -261,6 +333,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
       _mint(msg.sender, mintedTokens);
+
+      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
   }
 
   /**
@@ -288,10 +362,17 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
             currentToken,
             // _amount * protocolPoolBalance / idleSupply
             _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(totalSupply()), // amount to redeem
-            msg.sender
+            address(this)
           )
         );
       }
+
+      if (fee > 0) {
+        redeemedTokens = _getFee(_amount, redeemedTokens);
+      }
+
+      // send underlying minus fee to msg.sender
+      IERC20(token).safeTransfer(msg.sender, redeemedTokens);
 
       _burn(msg.sender, _amount);
 
@@ -348,6 +429,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * This method is not callble if this instance of IdleToken is a risk adjusted instance
    * NOTE: this method can be paused
    *
+   * @param _newAllocations : array with new allocations in percentage
    * @return : whether has rebalanced or not
    * @return avgApr : the new avg apr after rebalance
    */
@@ -477,6 +559,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
 
   // internal
+  /**
+   * Mint specific amounts of protocols tokens
+   *
+   * @param tokenAddresses : array of protocol tokens
+   * @param protocolAmounts : array of amounts to be minted
+   * @return : net value in underlying
+   */
   function _mintWithAmounts(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
     // mint for each protocol and update currentTokensUsed
     require(tokenAddresses.length == protocolAmounts.length, "All tokens length != allocations length");
@@ -494,6 +583,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     }
   }
 
+  /**
+   * Calculate amounts from percentage allocations (100000 => 100%)
+   *
+   * @param allocations : array of protocol allocations in percentage
+   * @param total : total amount
+   * @return : array with mounts
+   */
   function _amountsFromAllocations(uint256[] memory allocations, uint256 total)
     internal pure returns (uint256[] memory) {
     uint256[] memory newAmounts = new uint256[](allocations.length);
@@ -512,6 +608,15 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     return newAmounts;
   }
 
+  /**
+   * Redeem all underlying needed from each protocol
+   *
+   * @param tokenAddresses : array of protocol tokens addresses
+   * @param amounts : array with current allocations in underlying
+   * @param newAmounts : array with new allocations in underlying
+   * @return toMintAllocations : array with amounts to be minted
+   * @return totalToMint : total amount that needs to be minted
+   */
   function _redeemAllNeeded(
     address[] memory tokenAddresses,
     uint256[] memory amounts,
