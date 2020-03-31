@@ -71,20 +71,6 @@ contract IdleFactoryV3Mock is Ownable {
   }
 
   /**
-  * Used to add a new idleToken to the registry or modify an existent entry
-  *
-  * @param _token : underlying token address
-  * @param _idleToken : new idleToken address
-  */
-  function setUnderlyingToToken(address _token, address _idleToken) external onlyOwner {
-    if (underlyingToIdleTokenMap[_token] == address(0)) {
-      tokensSupported.push(_token);
-    }
-    underlyingToIdleTokenMap[_token] = address(_idleToken);
-  }
-
-
-  /**
   * Used to transfer ownership and the ability to pause from IdleFactory to owner
   *
   * @param _idleToken : idleToken address who needs to change owner and pauser

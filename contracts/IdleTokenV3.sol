@@ -265,10 +265,15 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-    return transferFrom(sender, recipient, amount) && _updateAvgPrice(recipient, amount, tokenPrice());
+    _transfer(sender, recipient, amount);
+    _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
+    _updateAvgPrice(recipient, amount, userAvgPrices[sender]);
+    return true;
   }
   function transfer(address recipient, uint256 amount) public returns (bool) {
-    return transfer(recipient, amount) && _updateAvgPrice(recipient, amount, tokenPrice());
+    _transfer(msg.sender, recipient, amount);
+    _updateAvgPrice(recipient, amount, userAvgPrices[msg.sender]);
+    return true;
   }
   // #####
 
@@ -284,8 +289,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     uint256 totBalance = balanceOf(usr);
     uint256 oldAvgPrice = userAvgPrices[usr];
     uint256 oldBalance = totBalance.sub(qty);
-
-    userAvgPrices[usr] = oldAvgPrice.mul(oldBalance.div(totBalance)).add(price.mul(qty.div(totBalance)));
+    userAvgPrices[usr] = oldAvgPrice.mul(oldBalance).div(totBalance).add(price.mul(qty).div(totBalance));
     return true;
   }
 
@@ -367,14 +371,12 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         );
       }
 
-      if (fee > 0) {
+      _burn(msg.sender, _amount);
+      if (fee > 0 && feeAddress != address(0)) {
         redeemedTokens = _getFee(_amount, redeemedTokens);
       }
-
       // send underlying minus fee to msg.sender
       IERC20(token).safeTransfer(msg.sender, redeemedTokens);
-
-      _burn(msg.sender, _amount);
 
       if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice || _skipRebalance) {
         return redeemedTokens;
