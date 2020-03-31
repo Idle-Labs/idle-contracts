@@ -45,13 +45,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   uint256 public lastITokenPrice;
   // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
   // return to the normal level
-  bool public manualPlay = false;
+  bool public manualPlay;
   // Flag for disabling openRebalance for the risk adjusted variant
-  bool public isRiskAdjusted = false;
+  bool public isRiskAdjusted;
   // Max possibile fee on interest gain
   uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
   // Current fee on interest gained
-  uint256 public fee = 0;
+  uint256 public fee;
   // Address collecting underlying fees
   address public feeAddress;
 
@@ -64,6 +64,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   uint256[] public lastAllocations;
 
   mapping(address => uint256) public userAvgPrices;
+  mapping(address => uint256) private userNoFeeQty;
 
   struct TokenProtocol {
     address tokenAddr;
@@ -283,14 +284,17 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @param usr : user that should have balance update
    * @param qty : new amount deposited / transferred, in idleToken
    * @param price : curr idleToken price in underlying
-   * @return : true
    */
-  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal returns (bool) {
-    uint256 totBalance = balanceOf(usr);
+  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal {
+    if (fee == 0) {
+      userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
+      return;
+    }
+
+    uint256 totBalance = balanceOf(usr).sub(userNoFeeQty[usr]);
     uint256 oldAvgPrice = userAvgPrices[usr];
     uint256 oldBalance = totBalance.sub(qty);
     userAvgPrices[usr] = oldAvgPrice.mul(oldBalance).div(totBalance).add(price.mul(qty).div(totBalance));
-    return true;
   }
 
   /**
@@ -301,15 +305,21 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @return : net value in underlying
    */
   function _getFee(uint256 amount, uint256 redeemed) internal returns (uint256) {
-    uint256 totalValPaid = amount.mul(userAvgPrices[msg.sender]).div(10**18);
-    uint256 currVal = amount.mul(tokenPrice()).div(10**18);
+    uint256 noFeeQty = userNoFeeQty[msg.sender];
+    uint256 currPrice = tokenPrice();
+    if (noFeeQty > 0 && noFeeQty > amount) {
+      noFeeQty = amount;
+    }
+
+    uint256 totalValPaid = noFeeQty.mul(currPrice).add(amount.sub(noFeeQty).mul(userAvgPrices[msg.sender])).div(10**18);
+    uint256 currVal = amount.mul(currPrice).div(10**18);
     if (currVal < totalValPaid) {
       return redeemed;
     }
     uint256 gain = currVal.sub(totalValPaid);
     uint256 feeDue = gain.mul(fee).div(100000);
     IERC20(token).safeTransfer(feeAddress, feeDue);
-
+    userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
     return currVal.sub(feeDue);
   }
 

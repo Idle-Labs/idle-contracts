@@ -1889,6 +1889,62 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
     BNify(await this.token.balanceOf.call(nonOwner)).should.be.bignumber.equal(this.one.mul(BNify('0')));
     BNify(await this.token.allowance.call(nonOwner, someone)).should.be.bignumber.equal(this.one.mul(BNify('0')));
   });
+  it('charges no fee to whom previously deposited when there was not fee', async function () {
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // Set prices in DAI => [0.04, 2.50, 1, 2]
+    await this.setPrices(['400000000000000000000000000', '2500000000000000000', this.one, '2000000000000000000']);
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('10000'), {from: creator});
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['10', '10', '0', '0']);
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), true, [], {from: nonOwner});
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('20').mul(this.one));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
+  });
+  it('charges fee only to some part to whom previously deposited when there was not fee and deposited also when there was a fee', async function () {
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // Set prices in DAI => [0.04, 2.50, 1, 2]
+    await this.setPrices(['400000000000000000000000000', '2500000000000000000', this.one, '2000000000000000000']);
 
-  // test fee after some time
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('10000'), {from: creator});
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // nonOwner has 15 idleDAI
+
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['30', '30', '0', '0']);
+    // total dai deposited 20, total IdleDAI 15, totValue now 30, totGain 10, fee should be 0
+    await this.setPrices(['800000000000000000000000000', '5000000000000000000', this.one, '2000000000000000000']);
+    // price is 4 now so totValue 60, initially nonOwner had 10 idle with no fee so 10 * 4 = 40 no fee
+    // of the 20 DAI remained, we have 5 idleToken paid 10 so gain is 20-10 = 10 and fee is 1
+    await this.token.redeemIdleToken(BNify('15').mul(this.one), true, [], {from: nonOwner});
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('59').mul(this.one));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(this.one);
+  });
 });
