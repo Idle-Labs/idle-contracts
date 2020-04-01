@@ -26,6 +26,8 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
   // underlying token (token eg DAI) address
   address public underlying;
   address public dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  DyDx dydx = DyDx(dydxAddressesProvider);
+
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _marketId : dydx market id

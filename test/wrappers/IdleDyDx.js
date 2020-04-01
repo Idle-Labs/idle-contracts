@@ -69,15 +69,6 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.yxDAIWrapper.setIdleToken(val, { from: nonOwner }));
   });
-  it('allows onlyOwner to setSecondsInAYear', async function () {
-    const val = this.one;
-    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
-    await this.yxDAIWrapper.setSecondsInAYear(val, { from: creator });
-    (await this.yxDAIWrapper.secondsInAYear()).should.be.bignumber.equal(val);
-
-    // it will revert with unspecified reason for nonOwner
-    await expectRevert.unspecified(this.yxDAIWrapper.setSecondsInAYear(val, { from: nonOwner }));
-  });
   it('returns next supply rate given 0 amount', async function () {
     const one = this.one;
     const big2 = this.one.mul(BNify('2'));

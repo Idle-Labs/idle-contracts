@@ -9,6 +9,7 @@ pragma solidity 0.5.11;
 pragma experimental ABIEncoderV2;
 
 import "./yxTokenNoConst.sol";
+import "./DyDxMock.sol";
 
 contract yxTokenMock is yxTokenNoConst {
   uint256 public priceFake;
@@ -20,6 +21,7 @@ contract yxTokenMock is yxTokenNoConst {
   }
   function setDyDxProvider(address _dydxAddressesProvider) external {
     dydxAddressesProvider = _dydxAddressesProvider;
+    dydx = DyDxMock(_dydxAddressesProvider);
   }
   function approveDyDx() external {
     IERC20(underlying).approve(dydxAddressesProvider, uint256(-1));

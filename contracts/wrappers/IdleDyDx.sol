@@ -23,12 +23,13 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   using SafeMath for uint256;
 
   uint256 public marketId;
-  uint256 public secondsInAYear;
+  uint256 public constant secondsInAYear = 31536000;
   // underlying token (token eg DAI) address
   address public underlying;
   address public token;
   address public idleToken;
   address public constant dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  DyDx dydx = DyDx(dydxAddressesProvider);
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _token : protocol token (eg cDAI) address
@@ -38,7 +39,6 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
     public {
     require(_underlying != address(0), '_underlying addr is 0');
 
-    secondsInAYear = 31536000; // 60 * 60 * 24 * 365
     underlying = _underlying;
     token = _token;
     marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
@@ -65,16 +65,6 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
   }
-
-  /**
-   * sets secondsInAYear address
-   * @param _secondsInAYear : secondsInAYear address
-   */
-  function setSecondsInAYear(uint256 _secondsInAYear)
-    external onlyOwner {
-      require(_secondsInAYear != 0, "_secondsInAYear addr is 0");
-      secondsInAYear = _secondsInAYear;
-  }
   // end onlyOwner
 
   /**
@@ -100,7 +90,6 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
   function nextSupplyRate(uint256 _amount)
     public view
     returns (uint256) {
-      DyDx dydx = DyDx(dydxAddressesProvider);
       (uint256 borrow, uint256 supply) = dydx.getMarketTotalPar(marketId);
       (uint256 borrowIndex, uint256 supplyIndex) = dydx.getMarketCurrentIndex(marketId);
       borrow = borrow.mul(borrowIndex).div(10**18);

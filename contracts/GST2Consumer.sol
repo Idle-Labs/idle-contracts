@@ -25,7 +25,11 @@ contract GST2Consumer {
     }
 
     if (tokens > 0) {
-      gst2.freeFromUpTo(from, tokens);
+      if (from == address(this)) {
+        gst2.freeUpTo(tokens);
+      } else {
+        gst2.freeFromUpTo(from, tokens);
+      }
     }
   }
 }

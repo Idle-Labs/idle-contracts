@@ -26,6 +26,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   // underlying token (token eg DAI) address
   address public underlying;
   address public constant dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  DyDx dydx = DyDx(dydxAddressesProvider);
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _marketId : dydx market id
@@ -46,7 +47,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
    * @return current price of yxToken always 18 decimals
    */
   function price() public view returns (uint256) {
-    (, uint256 supplyIndex) = DyDx(dydxAddressesProvider).getMarketCurrentIndex(marketId);
+    (, uint256 supplyIndex) = dydx.getMarketCurrentIndex(marketId);
     return supplyIndex;
   }
 
@@ -93,7 +94,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       ActionArgs[] memory args = new ActionArgs[](1);
       args[0] = act;
 
-      DyDx(dydxAddressesProvider).operate(infos, args);
+      dydx.operate(infos, args);
   }
 
   /**
@@ -132,6 +133,6 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       ActionArgs[] memory args = new ActionArgs[](1);
       args[0] = act;
 
-      DyDx(dydxAddressesProvider).operate(infos, args);
+      dydx.operate(infos, args);
   }
 }

@@ -329,13 +329,14 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * This method triggers a rebalance of the pools if needed
    * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
    * NOTE 2: this method can be paused
+   * This method use GasTokens of this contract (if present) to get a gas discount
    *
    * @param _amount : amount of underlying token to be lended
    * @param : not used
    * @return mintedTokens : amount of IdleTokens minted
    */
   function mintIdleToken(uint256 _amount, uint256[] memory)
-    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
+    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(address(this))
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
       uint256 idlePrice = tokenPrice();

@@ -17,6 +17,7 @@ import "../interfaces/IInterestSetter.sol";
 import "../interfaces/DyDxStructs.sol";
 import "../interfaces/DyDx.sol";
 import "./yxTokenNoConst.sol";
+import "./DyDxMock.sol";
 
 contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
   using SafeERC20 for IERC20;
@@ -29,6 +30,8 @@ contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
   address public token;
   address public idleToken;
   address public dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  DyDx dydx = DyDx(dydxAddressesProvider);
+
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _token : protocol token (eg cDAI) address
@@ -74,6 +77,7 @@ contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
     external onlyOwner {
       require(_dydxAddressesProvider != address(0), "_dydxAddressesProvider addr is 0");
       dydxAddressesProvider = _dydxAddressesProvider;
+      dydx = DyDxMock(_dydxAddressesProvider);
   }
   /**
    * sets secondsInAYear address
