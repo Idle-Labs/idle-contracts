@@ -1,6 +1,6 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
-const IdleAave = artifacts.require('IdleAave');
+const IdleAaveNoConst = artifacts.require('IdleAaveNoConst');
 const DAIMock = artifacts.require('DAIMock');
 const aDAIMock = artifacts.require('aDAIMock');
 const aaveLendingPoolProviderMock = artifacts.require('aaveLendingPoolProviderMock');
@@ -32,7 +32,7 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     await this.aaveInterestRateStrategyMock._setSupplyRate(this.oneRay.div(BNify('100')).mul(BNify('2')));
     await this.aaveInterestRateStrategyMock._setBorrowRate(this.oneRay.div(BNify('100')).mul(BNify('3')));
 
-    this.aDAIWrapper = await IdleAave.new(
+    this.aDAIWrapper = await IdleAaveNoConst.new(
       this.aDAIMock.address,
       this.DAIMock.address,
       {from: creator}
@@ -57,14 +57,6 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
 
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.aDAIWrapper.setIdleToken(val, { from: nonOwner }));
-  });
-  it('allows onlyOwner to setAaveAddressesProvider', async function () {
-    const val = this.someAddr;
-    await this.aDAIWrapper.setAaveAddressesProvider(val, { from: creator }),
-    (await this.aDAIWrapper.aaveAddressesProvider()).should.equal(val);
-
-    // it will revert with unspecified reason for nonOwner
-    await expectRevert.unspecified(this.aDAIWrapper.setAaveAddressesProvider(val, { from: nonOwner }));
   });
   it('returns next supply rate given amount', async function () {
     const nextSupplyInterestRateAave = await this.aDAIWrapper.nextSupplyRate.call(BNify('1'));

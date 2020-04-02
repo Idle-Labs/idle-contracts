@@ -97,8 +97,6 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
     );
 
     await this.yxDAIMock.setDyDxProvider(this.DyDxMock.address);
-    // Needed because dydx address is set on constructor
-    await this.yxDAIMock.approveDyDx({ from: creator });
 
     this.yxDAIWrapper = await yxDAIWrapperMock.new(
       this.yxDAIMock.address,

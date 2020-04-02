@@ -22,8 +22,6 @@ contract yxTokenMock is yxTokenNoConst {
   function setDyDxProvider(address _dydxAddressesProvider) external {
     dydxAddressesProvider = _dydxAddressesProvider;
     dydx = DyDxMock(_dydxAddressesProvider);
-  }
-  function approveDyDx() external {
     IERC20(underlying).approve(dydxAddressesProvider, uint256(-1));
   }
   function mintDyDx(uint256 _amount)

@@ -4,9 +4,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-import "../wrappers/IdleAave.sol";
+import "../mocks/IdleAaveNoConst.sol";
 
-contract aDAIWrapperMock is IdleAave {
+contract aDAIWrapperMock is IdleAaveNoConst {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -17,7 +17,7 @@ contract aDAIWrapperMock is IdleAave {
   uint256 public nextSupplyRateWithParamsLocal;
 
   constructor(address _token, address _underlying)
-    public IdleAave(_token, _underlying) {
+    public IdleAaveNoConst(_token, _underlying) {
   }
 
   function nextSupplyRate(uint256) external view returns (uint256) {

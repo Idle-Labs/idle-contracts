@@ -15,12 +15,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/AaveLendingPoolProvider.sol";
+import "./aaveLendingPoolProviderMock.sol";
 import "../interfaces/AaveLendingPool.sol";
 import "../interfaces/AaveLendingPoolCore.sol";
 import "../interfaces/AToken.sol";
 import "../interfaces/AaveInterestRateStrategy.sol";
 
-contract IdleAave is ILendingProtocol, Ownable {
+contract IdleAaveNoConst is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -30,7 +31,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   address public underlying;
   address public idleToken;
 
-  address public constant aaveAddressesProvider = address(0x24a42fD28C976A61Df5D00D0599C34c4f90748c8);
+  address public aaveAddressesProvider = address(0x24a42fD28C976A61Df5D00D0599C34c4f90748c8);
   AaveLendingPoolProvider provider = AaveLendingPoolProvider(aaveAddressesProvider);
 
   /**
@@ -42,10 +43,11 @@ contract IdleAave is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
-    IERC20(_underlying).safeApprove(
+    // it tries to get core from the real contract which is not correct
+    /* IERC20(_underlying).approve(
       provider.getLendingPoolCore(),
       uint256(-1)
-    );
+    ); */
   }
 
   /**
@@ -68,6 +70,15 @@ contract IdleAave is ILendingProtocol, Ownable {
       require(idleToken == address(0), "idleToken addr already set");
       require(_idleToken != address(0), "_idleToken addr is 0");
       idleToken = _idleToken;
+  }
+  function setAaveAddressesProvider(address _aave)
+    external onlyOwner {
+      aaveAddressesProvider = _aave;
+      provider = aaveLendingPoolProviderMock(aaveAddressesProvider);
+      IERC20(underlying).approve(
+        provider.getLendingPoolCore(),
+        uint256(-1)
+      );
   }
   // end onlyOwner
 

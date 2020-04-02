@@ -26,8 +26,6 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     await this.yxDAI.setDyDxProvider(this.DyDxMock.address);
-    // Needed because dydx address is set on constructor
-    await this.yxDAI.approveDyDx({ from: creator });
   });
 
   it('constructor set a underlying address', async function () {

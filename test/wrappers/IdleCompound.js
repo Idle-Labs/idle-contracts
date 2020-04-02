@@ -61,7 +61,7 @@ contract('IdleCompound', function ([_, creator, nonOwner, someone, foo]) {
     val[4] = BNify('107742405685625342683992'), // cToken.totalReserves();
     val[5] = BNify('950000000000000000'), // j.sub(cToken.reserveFactorMantissa());
     val[6] = BNify('11945633145364637018215366'), // cToken.getCash();
-    val[7] = BNify('2102400'), // cToken.blocksPerYear();
+    val[7] = BNify('2371428'), // cToken.blocksPerYear();
     val[8] = BNify('100'), // 100;
     val[9] = BNify('10000000000000000000000') // 10**22 -> 10000 DAI newAmountSupplied;
 
@@ -135,7 +135,7 @@ contract('IdleCompound', function ([_, creator, nonOwner, someone, foo]) {
     const res = await this.cDAIWrapper.getAPR.call({ from: nonOwner });
 
     const rate = await this.cDAIMock.supplyRatePerBlock.call();
-    const blocksPerYear = await this.WhitePaperMock.blocksPerYear.call();
+    const blocksPerYear = 2371428;
     const expectedRes = BNify(rate).mul(BNify(blocksPerYear)).mul(BNify('100'));
     res.should.not.be.bignumber.equal(BNify('0'));
     res.should.be.bignumber.equal(expectedRes);

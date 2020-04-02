@@ -31,8 +31,6 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     );
 
     await this.yxDAIMock.setDyDxProvider(this.DyDxMock.address);
-    // Needed because dydx address is set on constructor
-    await this.yxDAIMock.approveDyDx({ from: creator });
 
     this.yxDAIWrapper = await IdleDyDxNoConst.new(
       this.yxDAIMock.address,
@@ -42,8 +40,6 @@ contract('IdleDyDx', function ([_, creator, nonOwner, someone, foo]) {
     );
     await this.yxDAIWrapper.setIdleToken(nonOwner, {from: creator});
     await this.yxDAIWrapper.setDydxAddressesProvider(this.DyDxMock.address, {from: creator});
-    // Do the approve only once?
-    // await this.yxDAIWrapper.approveDyDx({ from: creator });
   });
 
   it('constructor set a token address', async function () {

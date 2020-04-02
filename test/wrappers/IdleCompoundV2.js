@@ -71,7 +71,7 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
 
     const nextSupplyInterestRateCompound = await this.cDAIWrapper.nextSupplyRate.call(BNify('10000000000000000000000'));
     // minor rounding issue due to the calculation of the rate per block for the actual annual rate
-    nextSupplyInterestRateCompound.should.be.bignumber.equal(BNify('1999999999972800000'));
+    nextSupplyInterestRateCompound.should.be.bignumber.equal(BNify('2255924657503566000'));
   });
   it('returns next supply rate given params (counting fee)', async function () {
     // tested with data and formula from task idleDAI:rebalanceCalc -> targetSupplyRateWithFeeCompound
@@ -98,7 +98,7 @@ contract('IdleCompoundV2', function ([_, creator, nonOwner, someone, foo]) {
     const res = await this.cDAIWrapper.getAPR.call({ from: nonOwner });
 
     const rate = await this.cDAIMock.supplyRatePerBlock.call();
-    const blocksPerYear = await this.WhitePaperMock.blocksPerYear.call();
+    const blocksPerYear = 2371428;
     const expectedRes = BNify(rate).mul(BNify(blocksPerYear)).mul(BNify('100'));
     res.should.not.be.bignumber.equal(BNify('0'));
     res.should.be.bignumber.equal(expectedRes);

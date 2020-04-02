@@ -45,6 +45,7 @@ contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
     underlying = _underlying;
     token = _token;
     marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
+    IERC20(_underlying).approve(_token, uint256(-1));
   }
 
   /**
@@ -78,16 +79,9 @@ contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
       require(_dydxAddressesProvider != address(0), "_dydxAddressesProvider addr is 0");
       dydxAddressesProvider = _dydxAddressesProvider;
       dydx = DyDxMock(_dydxAddressesProvider);
+      IERC20(underlying).approve(token, uint256(-1));
   }
-  /**
-   * sets secondsInAYear address
-   * @param _secondsInAYear : secondsInAYear address
-   */
-  function setSecondsInAYear(uint256 _secondsInAYear)
-    external onlyOwner {
-      require(_secondsInAYear != 0, "_secondsInAYear addr is 0");
-      secondsInAYear = _secondsInAYear;
-  }
+
   // end onlyOwner
 
   /**
@@ -160,8 +154,6 @@ contract IdleDyDxNoConst is ILendingProtocol, DyDxStructs, Ownable {
       if (balance == 0) {
         return yxTokens;
       }
-      // approve the transfer to yxToken contract
-      IERC20(underlying).safeIncreaseAllowance(token, balance);
       // get a handle for the corresponding yxToken contract
       yxTokenNoConst yxToken = yxTokenNoConst(token);
       // mint the yxTokens
