@@ -37,6 +37,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
     token = _token;
     underlying = _underlying;
     blocksPerYear = 2371428;
+    IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**
@@ -148,8 +149,6 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
       if (balance == 0) {
         return cTokens;
       }
-      // approve the transfer to cToken contract
-      IERC20(underlying).safeIncreaseAllowance(token, balance);
       // get a handle for the corresponding cToken contract
       CERC20 _cToken = CERC20(token);
       // mint the cTokens and assert there is no error

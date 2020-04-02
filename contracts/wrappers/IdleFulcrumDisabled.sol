@@ -33,6 +33,7 @@ contract IdleFulcrumDisabled is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
+    IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**
@@ -116,8 +117,6 @@ contract IdleFulcrumDisabled is ILendingProtocol, Ownable {
       if (balance == 0) {
         return iTokens;
       }
-      // approve the transfer to iToken contract
-      IERC20(underlying).safeIncreaseAllowance(token, balance);
       // mint the iTokens and transfer to msg.sender
       iTokens = iERC20Fulcrum(token).mint(msg.sender, balance);
   }

@@ -35,6 +35,7 @@ contract IdleAave is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
+    IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**

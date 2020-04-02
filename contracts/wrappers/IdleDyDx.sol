@@ -42,6 +42,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
     underlying = _underlying;
     token = _token;
     marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
+    IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**
@@ -136,8 +137,6 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
       if (balance == 0) {
         return yxTokens;
       }
-      // approve the transfer to yxToken contract
-      IERC20(underlying).safeIncreaseAllowance(token, balance);
       // get a handle for the corresponding yxToken contract
       yxToken yxToken = yxToken(token);
       // mint the yxTokens
