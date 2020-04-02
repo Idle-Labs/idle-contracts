@@ -30,7 +30,7 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
     (await this.RebalancerV3.rebalancerManager()).should.equal(manager);
   });
   it('constructor set default allocations', async function () {
-    (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('10000'));
+    (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('100000'));
     (await this.RebalancerV3.lastAmounts(1)).should.be.bignumber.equal(BNify('0'));
     (await this.RebalancerV3.lastAmounts(2)).should.be.bignumber.equal(BNify('0'));
     (await this.RebalancerV3.lastAmounts(3)).should.be.bignumber.equal(BNify('0'));
@@ -71,19 +71,19 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
   });
   it('getAllocations', async function () {
     const alloc = await this.RebalancerV3.getAllocations();
-    alloc[0].should.be.bignumber.equal(BNify('10000'));
+    alloc[0].should.be.bignumber.equal(BNify('100000'));
     alloc[1].should.be.bignumber.equal(BNify('0'));
     alloc[2].should.be.bignumber.equal(BNify('0'));
     alloc[3].should.be.bignumber.equal(BNify('0'));
   });
   it('allows onlyRebalancer to setAllocations', async function () {
     await this.RebalancerV3.setAllocations(
-      [BNify('5000'), BNify('5000'), BNify('0'), BNify('0')],
+      [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
       [this.addr1, this.addr2, this.addr3, this.addr4],
       { from: manager }
     );
-    (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('5000'));
-    (await this.RebalancerV3.lastAmounts(1)).should.be.bignumber.equal(BNify('5000'));
+    (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('50000'));
+    (await this.RebalancerV3.lastAmounts(1)).should.be.bignumber.equal(BNify('50000'));
     (await this.RebalancerV3.lastAmounts(2)).should.be.bignumber.equal(BNify('0'));
     (await this.RebalancerV3.lastAmounts(3)).should.be.bignumber.equal(BNify('0'));
 
