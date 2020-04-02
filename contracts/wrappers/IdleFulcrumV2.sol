@@ -33,7 +33,7 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
-    IERC20(_underlying).approve(_token, uint256(-1));
+    IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**
