@@ -7,26 +7,10 @@
  */
 pragma solidity 0.5.11;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "@openzeppelin/contracts/lifecycle/Pausable.sol";
+import "./IdleTokenV3NoGSTConst.sol";
+import "./GasTokenMock.sol";
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
-import "../interfaces/iERC20Fulcrum.sol";
-import "../interfaces/ILendingProtocol.sol";
-import "../interfaces/IIdleTokenV3.sol";
-
-import "../IdleTokenV3.sol";
-
-contract IdleTokenV3Mock is IdleTokenV3 {
-  using SafeERC20 for IERC20;
-  using SafeMath for uint256;
-
+contract IdleTokenV3Mock is IdleTokenV3NoGSTConst {
   constructor(
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
@@ -39,23 +23,26 @@ contract IdleTokenV3Mock is IdleTokenV3 {
     address _idleCompound,
     address _idleFulcrum)
     public
-    IdleTokenV3(_name, _symbol, _decimals, _token, _cToken, _iToken, _rebalancer, _priceCalculator, _idleCompound, _idleFulcrum) {
+    IdleTokenV3NoGSTConst(_name, _symbol, _decimals, _token, _cToken, _iToken, _rebalancer, _priceCalculator, _idleCompound, _idleFulcrum) {
   }
-  function amountsFromAllocations(uint256[] memory allocations, uint256 total)
-    public pure returns (uint256[] memory foo) {
+  function amountsFromAllocations(uint256[] calldata allocations, uint256 total)
+    external pure returns (uint256[] memory foo) {
       return _amountsFromAllocations(allocations, total);
   }
-  function mintWithAmounts(address[] memory tokenAddresses, uint256[] memory protocolAmounts) public {
+  function mintWithAmounts(address[] calldata tokenAddresses, uint256[] calldata protocolAmounts) external {
     _mintWithAmounts(tokenAddresses, protocolAmounts);
   }
-  function setAllocations(uint256[] memory allocs) public {
+  function setAllocations(uint256[] calldata allocs) external {
     lastAllocations = allocs;
   }
+  function setGST(address _gst) external {
+    gst2 = GasTokenMock(_gst);
+  }
   function redeemAllNeeded(
-    address[] memory tokenAddresses,
-    uint256[] memory amounts,
-    uint256[] memory newAmounts
-    ) public returns (
+    address[] calldata tokenAddresses,
+    uint256[] calldata amounts,
+    uint256[] calldata newAmounts
+    ) external returns (
       uint256[] memory toMintAllocations,
       uint256 totalToMint
     ) {

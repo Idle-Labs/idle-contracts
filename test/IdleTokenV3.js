@@ -10,6 +10,7 @@ const iDAIMock = artifacts.require('iDAIMock');
 const cDAIWrapperMock = artifacts.require('cDAIWrapperMock');
 const iDAIWrapperMock = artifacts.require('iDAIWrapperMock');
 const DAIMock = artifacts.require('DAIMock');
+const GasTokenMock = artifacts.require('GasTokenMock');
 
 const yxDAIWrapperMock = artifacts.require('yxDAIWrapperMock');
 const yxTokenMock = artifacts.require('yxTokenMock');
@@ -25,7 +26,7 @@ const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
 
 const BNify = n => new BN(String(n));
 
-contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver]) {
+contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.oneCToken = new BN('100000000'); // 8 decimals
@@ -37,6 +38,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
 
     // 1000 DAI are given to creator in DAIMock constructor
     this.DAIMock = await DAIMock.new({from: creator});
+    this.GSTMock = await GasTokenMock.new({from: creator});
     this.WhitePaperMock = await WhitePaperMock.new({from: creator});
     // 100.000 cDAI are given to creator in cDAIMock constructor
     this.cDAIMock = await cDAIMock.new(this.DAIMock.address, creator, this.WhitePaperMock.address, {from: creator});
@@ -146,12 +148,15 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
     this.token = await IdleTokenV3Mock.at(this.idleTokenAddr);
     await this.token.setProtocolWrapper(this.aDAIMock.address, this.aDAIWrapper.address, {from: creator});
     await this.token.setProtocolWrapper(this.yxDAIMock.address, this.yxDAIWrapper.address, {from: creator});
+    await this.token.setGST(this.GSTMock.address);
 
     // helper methods
     this.mintIdle = async (amount, who) => {
       // Give DAI to `who`
       await this.DAIMock.transfer(who, amount, { from: creator });
       await this.DAIMock.approve(this.token.address, amount, { from: who });
+      const balance = await this.DAIMock.balanceOf(who);
+      const allowance = await this.DAIMock.allowance(who, this.token.address);
       await this.token.mintIdleToken(amount, [], { from: who });
     };
 
@@ -314,22 +319,12 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
     res.should.be.bignumber.equal(expectedRes);
   });
   it('calculates current tokenPrice when funds are all in one pool', async function () {
-    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
-    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
-
-    // set same rates so to use _calcAmounts from IdleRebalancer
-    await this.cDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
-    await this.iDAIWrapper._setAPR(BNify('2200000000000000000')); // 2.2%
-    // await this.cDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
-    // await this.iDAIWrapper._setNextSupplyRate(BNify('2000000000000000000')); // 2.0%
-
-    // First mint with tokenPrice = 1
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1100000000000000000', this.one, '2000000000000000000']);
     // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
-      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address],
-      {from: manager}
-    );
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // First mint with tokenPrice = 1
     // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
     // tokenPrice is 1 here
     await this.mintIdle(BNify('10').mul(this.one), nonOwner);
@@ -373,6 +368,7 @@ contract('IdleToken', function ([_, creator, nonOwner, someone, foo, manager, fe
     // currTokenPrice = 32.5 / 26 = 1.25
     price2.should.be.bignumber.equal(BNify('1250000000000000000'));
 
+    await this.cDAIMock._setExchangeRateStored(BNify('300000000000000000000000000')); // 0.03DAI
     await this.cDAIWrapper._setPriceInToken(BNify('300000000000000000000000000')); // 0.03
 
     const res = await this.token.tokenPrice.call();

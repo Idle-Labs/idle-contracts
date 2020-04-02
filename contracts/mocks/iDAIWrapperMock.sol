@@ -25,6 +25,7 @@ contract iDAIWrapperMock is ILendingProtocol, Ownable {
     token = _token;
     underlying = _underlying;
     nextSupplyRateWithParamsLocal = 2850000000000000000;
+    IERC20(_underlying).approve(_token, uint256(-1));
   }
 
   function mint() external returns (uint256 iTokens) {
@@ -32,8 +33,6 @@ contract iDAIWrapperMock is ILendingProtocol, Ownable {
     if (balance == 0) {
       return iTokens;
     }
-    // approve the transfer to iToken contract
-    IERC20(underlying).safeIncreaseAllowance(token, balance);
     // mint the iTokens and transfer to msg.sender
     iTokens = iERC20Fulcrum(token).mint(msg.sender, balance);
   }
