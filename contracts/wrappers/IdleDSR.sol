@@ -33,7 +33,7 @@ contract IdleDSR is ILendingProtocol, Ownable, DSMath {
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
-    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+    require(_token != address(0) && _underlying != address(0), 'DSR: some addr is 0');
 
     token = _token;
     underlying = _underlying;
@@ -44,7 +44,7 @@ contract IdleDSR is ILendingProtocol, Ownable, DSMath {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 

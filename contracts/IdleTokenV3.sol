@@ -66,11 +66,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   mapping(address => uint256) public userAvgPrices;
   mapping(address => uint256) private userNoFeeQty;
 
-  struct TokenProtocol {
-    address tokenAddr;
-    address protocolAddr;
-  }
-
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
    *
@@ -231,7 +226,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @return aprs: array of aprs (ordered in respect to the `addresses` array)
    */
   function getAPRs()
-    public view
+    external view
     returns (address[] memory addresses, uint256[] memory aprs) {
       address currToken;
       addresses = new address[](allAvailableTokens.length);
@@ -278,51 +273,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
   // #####
 
-  /**
-   * Update avg price paid for each idle token of a user
-   *
-   * @param usr : user that should have balance update
-   * @param qty : new amount deposited / transferred, in idleToken
-   * @param price : curr idleToken price in underlying
-   */
-  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal {
-    if (fee == 0) {
-      userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
-      return;
-    }
-
-    uint256 totBalance = balanceOf(usr).sub(userNoFeeQty[usr]);
-    uint256 oldAvgPrice = userAvgPrices[usr];
-    uint256 oldBalance = totBalance.sub(qty);
-    userAvgPrices[usr] = oldAvgPrice.mul(oldBalance).div(totBalance).add(price.mul(qty).div(totBalance));
-  }
-
-  /**
-   * Calculate fee and send them to feeAddress
-   *
-   * @param amount : in idleTokens
-   * @param redeemed : in underlying
-   * @return : net value in underlying
-   */
-  function _getFee(uint256 amount, uint256 redeemed) internal returns (uint256) {
-    uint256 noFeeQty = userNoFeeQty[msg.sender];
-    uint256 currPrice = tokenPrice();
-    if (noFeeQty > 0 && noFeeQty > amount) {
-      noFeeQty = amount;
-    }
-
-    uint256 totalValPaid = noFeeQty.mul(currPrice).add(amount.sub(noFeeQty).mul(userAvgPrices[msg.sender])).div(10**18);
-    uint256 currVal = amount.mul(currPrice).div(10**18);
-    if (currVal < totalValPaid) {
-      return redeemed;
-    }
-    uint256 gain = currVal.sub(totalValPaid);
-    uint256 feeDue = gain.mul(fee).div(100000);
-    IERC20(token).safeTransfer(feeAddress, feeDue);
-    userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
-    return currVal.sub(feeDue);
-  }
-
   // external
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
@@ -335,8 +285,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @param : not used
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] memory)
-    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(address(this))
+  function mintIdleToken(uint256 _amount, uint256[] calldata)
+    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(address(this))
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
       uint256 idlePrice = tokenPrice();
@@ -344,7 +294,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 
       // Rebalance the current pool if needed and mint new supplyied amount
-      rebalance();
+      _rebalance(0, new uint256[](0));
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
       _mint(msg.sender, mintedTokens);
@@ -364,8 +314,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @param : not used
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory)
-    public nonReentrant
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
+    external nonReentrant
     returns (uint256 redeemedTokens) {
       address currentToken;
 
@@ -393,7 +343,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         return redeemedTokens;
       }
 
-      rebalance();
+      _rebalance(0, new uint256[](0));
   }
 
 
@@ -421,19 +371,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
 
   /**
-   * Dynamic allocate all the pool across different lending protocols if needed
-   *
-   * NOTE: this method can be paused
-   *
-   * @return : whether has rebalanced or not
-   */
-  function rebalance()
-    public whenNotPaused whenITokenPriceHasNotDecreased
-    returns (bool) {
-      return rebalance(0, new uint256[](0));
-  }
-
-  /**
    * Allow any users to set new allocations as long as the new allocations
    * give a better avg APR than before
    * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
@@ -458,7 +395,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         total = total.add(_newAllocations[i]);
       }
       require(total == 100000, "Not allocating 100%");
-      bool hasRebalanced = rebalance(0, _newAllocations);
+      bool hasRebalanced = _rebalance(0, _newAllocations);
 
       uint256 newAprAfterRebalance = getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "APR not improved");
@@ -475,11 +412,53 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @return : whether has rebalanced or not
    */
   function rebalanceWithGST()
-    external whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(msg.sender)
+    external gasDiscountFrom(msg.sender)
     returns (bool) {
-      return rebalance(0, new uint256[](0));
+      return _rebalance(0, new uint256[](0));
   }
 
+  /**
+   * DEPRECATED: Dynamic allocate all the pool across different lending protocols if needed,
+   * Used to ensure backcompatibility with IdleV2
+   *
+   * NOTE: this method can be paused
+   *
+   * @param : not used
+   * @param : not used
+   * @return : whether has rebalanced or not
+   */
+  function rebalance(uint256, uint256[] calldata)
+    external returns (bool) {
+    return _rebalance(0, new uint256[](0));
+  }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed,
+   * rebalance without params
+   *
+   * NOTE: this method can be paused
+   *
+   * @return : whether has rebalanced or not
+   */
+  function rebalance() external returns (bool) {
+    return _rebalance(0, new uint256[](0));
+  }
+
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   * @return total : total aum in underlying
+   */
+  function getCurrentAllocations() external view
+    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
+    return _getCurrentAllocations();
+  }
+
+  // internal
   /**
    * Dynamic allocate all the pool across different lending protocols if needed
    *
@@ -489,8 +468,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @param _newAllocations : _newAllocations
    * @return : whether has rebalanced or not
    */
-  function rebalance(uint256, uint256[] memory _newAllocations)
-    public whenNotPaused whenITokenPriceHasNotDecreased
+  function _rebalance(uint256, uint256[] memory _newAllocations)
+    internal whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
       uint256[] memory rebalancerLastAllocations;
@@ -558,20 +537,50 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   }
 
   /**
-   * Get the contract balance of every protocol currently used
+   * Update avg price paid for each idle token of a user
    *
-   * @return tokenAddresses : array with all token addresses used,
-   *                          eg [cTokenAddress, iTokenAddress]
-   * @return amounts : array with all amounts for each protocol in order,
-   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
-   * @return total : total aum in underlying
+   * @param usr : user that should have balance update
+   * @param qty : new amount deposited / transferred, in idleToken
+   * @param price : curr idleToken price in underlying
    */
-  function getCurrentAllocations() external view
-    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
-    return _getCurrentAllocations();
+  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal {
+    if (fee == 0) {
+      userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
+      return;
+    }
+
+    uint256 totBalance = balanceOf(usr).sub(userNoFeeQty[usr]);
+    uint256 oldAvgPrice = userAvgPrices[usr];
+    uint256 oldBalance = totBalance.sub(qty);
+    userAvgPrices[usr] = oldAvgPrice.mul(oldBalance).div(totBalance).add(price.mul(qty).div(totBalance));
   }
 
-  // internal
+  /**
+   * Calculate fee and send them to feeAddress
+   *
+   * @param amount : in idleTokens
+   * @param redeemed : in underlying
+   * @return : net value in underlying
+   */
+  function _getFee(uint256 amount, uint256 redeemed) internal returns (uint256) {
+    uint256 noFeeQty = userNoFeeQty[msg.sender];
+    uint256 currPrice = tokenPrice();
+    if (noFeeQty > 0 && noFeeQty > amount) {
+      noFeeQty = amount;
+    }
+
+    uint256 totalValPaid = noFeeQty.mul(currPrice).add(amount.sub(noFeeQty).mul(userAvgPrices[msg.sender])).div(10**18);
+    uint256 currVal = amount.mul(currPrice).div(10**18);
+    if (currVal < totalValPaid) {
+      return redeemed;
+    }
+    uint256 gain = currVal.sub(totalValPaid);
+    uint256 feeDue = gain.mul(fee).div(100000);
+    IERC20(token).safeTransfer(feeAddress, feeDue);
+    userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
+    return currVal.sub(feeDue);
+  }
+
   /**
    * Mint specific amounts of protocols tokens
    *
@@ -698,38 +707,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       return (tokenAddresses, amounts, total);
   }
 
-  /**
-   * Get addresses of current tokens and protocol wrappers used
-   *
-   * @return currentProtocolsUsed : array of `TokenProtocol` (currentToken address, protocolWrapper address)
-   */
-  function _getCurrentProtocols()
-    internal view
-    returns (TokenProtocol[] memory currentProtocolsUsed) {
-      currentProtocolsUsed = new TokenProtocol[](currentTokensUsed.length);
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentProtocolsUsed[i] = TokenProtocol(
-          currentTokensUsed[i],
-          protocolWrappers[currentTokensUsed[i]]
-        );
-      }
-  }
-
   // ILendingProtocols calls
-  /**
-   * Get next rate of a lending protocol given an amount to be lended
-   *
-   * @param _wrapperAddr : address of protocol wrapper
-   * @param _amount : amount of underlying to be lended
-   * @return apr : new apr one will get after lending `_amount`
-   */
-  function _getProtocolNextRate(address _wrapperAddr, uint256 _amount)
-    internal view
-    returns (uint256 apr) {
-      ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
-      apr = _wrapper.nextSupplyRate(_amount);
-  }
-
   /**
    * Mint protocol tokens through protocol wrapper
    *

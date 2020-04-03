@@ -44,7 +44,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 
@@ -102,7 +102,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
    * @return : yearly net rate
    */
   function nextSupplyRate(uint256 _amount)
-    public view
+    external view
     returns (uint256) {
       CERC20 cToken = CERC20(token);
       WhitePaperInterestRateModel white = WhitePaperInterestRateModel(cToken.interestRateModel());
@@ -152,7 +152,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
       // get a handle for the corresponding cToken contract
       CERC20 _cToken = CERC20(token);
       // mint the cTokens and assert there is no error
-      require(_cToken.mint(balance) == 0, "Error minting");
+      require(_cToken.mint(balance) == 0, "Error minting cTokens");
       // cTokens are now in this contract
       cTokens = IERC20(token).balanceOf(address(this));
       // transfer them to the caller
@@ -173,7 +173,7 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
       CERC20 _cToken = CERC20(token);
       IERC20 _underlying = IERC20(underlying);
       // redeem all underlying sent in this contract
-      require(_cToken.redeem(IERC20(token).balanceOf(address(this))) == 0, "Something went wrong when redeeming in cTokens");
+      require(_cToken.redeem(IERC20(token).balanceOf(address(this))) == 0, "Error redeeming cTokens");
 
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);

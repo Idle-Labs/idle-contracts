@@ -52,7 +52,7 @@ contract IdleAave is ILendingProtocol, Ownable {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 
@@ -79,8 +79,8 @@ contract IdleAave is ILendingProtocol, Ownable {
    * @param params : array with all params needed for calculation (see below)
    * @return : yearly net rate
    */
-  function nextSupplyRateWithParams(uint256[] memory params)
-    public view
+  function nextSupplyRateWithParams(uint256[] calldata params)
+    external view
     returns (uint256) {
       AaveLendingPoolCore core = AaveLendingPoolCore(provider.getLendingPoolCore());
       AaveInterestRateStrategy apr = AaveInterestRateStrategy(core.getReserveInterestRateStrategyAddress(underlying));

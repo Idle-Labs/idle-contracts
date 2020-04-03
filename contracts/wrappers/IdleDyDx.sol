@@ -49,7 +49,7 @@ contract IdleDyDx is ILendingProtocol, DyDxStructs, Ownable {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 

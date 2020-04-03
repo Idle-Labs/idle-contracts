@@ -31,7 +31,7 @@ contract IdleAave is ILendingProtocol, Ownable {
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
-    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+    require(_token != address(0) && _underlying != address(0), 'some addr is 0');
 
     token = _token;
     underlying = _underlying;
@@ -42,7 +42,7 @@ contract IdleAave is ILendingProtocol, Ownable {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 
@@ -69,8 +69,8 @@ contract IdleAave is ILendingProtocol, Ownable {
    * @param params : array with all params needed for calculation (see below)
    * @return : yearly net rate
    */
-  function nextSupplyRateWithParams(uint256[] memory params)
-    public view
+  function nextSupplyRateWithParams(uint256[] calldata params)
+    external view
     returns (uint256) {
 
   }

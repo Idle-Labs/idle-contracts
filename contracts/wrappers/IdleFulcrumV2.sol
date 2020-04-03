@@ -29,7 +29,7 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
-    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+    require(_token != address(0) && _underlying != address(0), 'FULC: some addr is 0');
 
     token = _token;
     underlying = _underlying;
@@ -40,7 +40,7 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    * Throws if called by any account other than IdleToken contract.
    */
   modifier onlyIdle() {
-    require(msg.sender == idleToken, "Ownable: caller is not IdleToken contract");
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
     _;
   }
 
@@ -67,7 +67,7 @@ contract IdleFulcrumV2 is ILendingProtocol, Ownable {
    * @return nextRate : yearly net rate
    */
   function nextSupplyRate(uint256 _amount)
-    public view
+    external view
     returns (uint256) {
       return iERC20Fulcrum(token).nextSupplyInterestRate(_amount);
   }
