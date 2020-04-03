@@ -276,30 +276,33 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   // external
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * This method triggers a rebalance of the pools if needed
+   * This method triggers a rebalance of the pools if needed and if _skipWholeRebalance is false
    * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
    * NOTE 2: this method can be paused
    * This method use GasTokens of this contract (if present) to get a gas discount
    *
    * @param _amount : amount of underlying token to be lended
-   * @param : not used
+   * @param _skipWholeRebalance : flag to choose whter to do a full rebalance or not
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] calldata)
-    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(address(this))
+  function mintIdleToken(uint256 _amount, bool _skipWholeRebalance)
+    external nonReentrant gasDiscountFrom(address(this))
     returns (uint256 mintedTokens) {
-      // Get current IdleToken price
-      uint256 idlePrice = tokenPrice();
-      // transfer tokens to this contract
-      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+    return _mintIdleToken(_amount, new uint256[](0), _skipWholeRebalance);
+  }
 
-      // Rebalance the current pool if needed and mint new supplyied amount
-      _rebalance(0, new uint256[](0));
-
-      mintedTokens = _amount.mul(10**18).div(idlePrice);
-      _mint(msg.sender, mintedTokens);
-
-      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+  /**
+   * DEPRECATED: Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * Keep for backward compatibility with IdleV2
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @param params : not used, pass empty array
+   * @return mintedTokens : amount of IdleTokens minted
+   */
+  function mintIdleToken(uint256 _amount, uint256[] calldata params)
+    external nonReentrant gasDiscountFrom(address(this))
+    returns (uint256 mintedTokens) {
+    return _mintIdleToken(_amount, params, false);
   }
 
   /**
@@ -343,9 +346,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         return redeemedTokens;
       }
 
-      _rebalance(0, new uint256[](0));
+      _rebalance(0, new uint256[](0), false);
   }
-
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
@@ -395,7 +397,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         total = total.add(_newAllocations[i]);
       }
       require(total == 100000, "Not allocating 100%");
-      bool hasRebalanced = _rebalance(0, _newAllocations);
+      bool hasRebalanced = _rebalance(0, _newAllocations, false);
 
       uint256 newAprAfterRebalance = getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "APR not improved");
@@ -414,12 +416,12 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function rebalanceWithGST()
     external gasDiscountFrom(msg.sender)
     returns (bool) {
-      return _rebalance(0, new uint256[](0));
+      return _rebalance(0, new uint256[](0), false);
   }
 
   /**
    * DEPRECATED: Dynamic allocate all the pool across different lending protocols if needed,
-   * Used to ensure backcompatibility with IdleV2
+   * Keep for backward compatibility with IdleV2
    *
    * NOTE: this method can be paused
    *
@@ -429,7 +431,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    */
   function rebalance(uint256, uint256[] calldata)
     external returns (bool) {
-    return _rebalance(0, new uint256[](0));
+    return _rebalance(0, new uint256[](0), false);
   }
 
   /**
@@ -441,7 +443,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @return : whether has rebalanced or not
    */
   function rebalance() external returns (bool) {
-    return _rebalance(0, new uint256[](0));
+    return _rebalance(0, new uint256[](0), false);
   }
 
   /**
@@ -460,6 +462,35 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
 
   // internal
   /**
+   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * This method triggers a rebalance of the pools if needed
+   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
+   * NOTE 2: this method can be paused
+   * This method use GasTokens of this contract (if present) to get a gas discount
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @param : not used
+   * @param _skipWholeRebalance : flag to decide if doing a simple mint or mint + rebalance
+   * @return mintedTokens : amount of IdleTokens minted
+   */
+  function _mintIdleToken(uint256 _amount, uint256[] memory, bool _skipWholeRebalance)
+    internal whenNotPaused whenITokenPriceHasNotDecreased
+    returns (uint256 mintedTokens) {
+      // Get current IdleToken price
+      uint256 idlePrice = tokenPrice();
+      // transfer tokens to this contract
+      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+
+      // Rebalance the current pool if needed and mint new supplyied amount
+      _rebalance(0, new uint256[](0), _skipWholeRebalance);
+
+      mintedTokens = _amount.mul(10**18).div(idlePrice);
+      _mint(msg.sender, mintedTokens);
+
+      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+  }
+
+  /**
    * Dynamic allocate all the pool across different lending protocols if needed
    *
    * NOTE: this method can be paused
@@ -468,7 +499,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @param _newAllocations : _newAllocations
    * @return : whether has rebalanced or not
    */
-  function _rebalance(uint256, uint256[] memory _newAllocations)
+  function _rebalance(uint256, uint256[] memory _newAllocations, bool _skipWholeRebalance)
     internal whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
@@ -497,7 +528,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
       }
 
-      if (areAllocationsEqual && balance > 0) {
+      if (_skipWholeRebalance || (areAllocationsEqual && balance > 0)) {
         return false;
       }
       // Update lastAllocations with rebalancerLastAllocations
