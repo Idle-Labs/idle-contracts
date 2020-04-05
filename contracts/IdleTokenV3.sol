@@ -296,13 +296,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * Keep for backward compatibility with IdleV2
    *
    * @param _amount : amount of underlying token to be lended
-   * @param params : not used, pass empty array
+   * @param : not used, pass empty array
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] calldata params)
+  function mintIdleToken(uint256 _amount, uint256[] calldata)
     external nonReentrant gasDiscountFrom(address(this))
     returns (uint256 mintedTokens) {
-    return _mintIdleToken(_amount, params, false);
+    return _mintIdleToken(_amount, new uint256[](0), false);
   }
 
   /**

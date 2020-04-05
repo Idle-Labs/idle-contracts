@@ -66,11 +66,6 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
   mapping(address => uint256) public userAvgPrices;
   mapping(address => uint256) private userNoFeeQty;
 
-  struct TokenProtocol {
-    address tokenAddr;
-    address protocolAddr;
-  }
-
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
    *
@@ -231,7 +226,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
    * @return aprs: array of aprs (ordered in respect to the `addresses` array)
    */
   function getAPRs()
-    public view
+    external view
     returns (address[] memory addresses, uint256[] memory aprs) {
       address currToken;
       addresses = new address[](allAvailableTokens.length);
@@ -278,6 +273,300 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
   }
   // #####
 
+  // external
+  /**
+   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * This method triggers a rebalance of the pools if needed and if _skipWholeRebalance is false
+   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
+   * NOTE 2: this method can be paused
+   * This method use GasTokens of this contract (if present) to get a gas discount
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @param _skipWholeRebalance : flag to choose whter to do a full rebalance or not
+   * @return mintedTokens : amount of IdleTokens minted
+   */
+  function mintIdleToken(uint256 _amount, bool _skipWholeRebalance)
+    external nonReentrant gasDiscountFrom(address(this))
+    returns (uint256 mintedTokens) {
+    return _mintIdleToken(_amount, new uint256[](0), _skipWholeRebalance);
+  }
+
+  /**
+   * DEPRECATED: Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * Keep for backward compatibility with IdleV2
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @param : not used, pass empty array
+   * @return mintedTokens : amount of IdleTokens minted
+   */
+  function mintIdleToken(uint256 _amount, uint256[] calldata)
+    external nonReentrant gasDiscountFrom(address(this))
+    returns (uint256 mintedTokens) {
+    return _mintIdleToken(_amount, new uint256[](0), false);
+  }
+
+  /**
+   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+   * This method triggers a rebalance of the pools if needed
+   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
+   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
+   *         Ideally one should wait until the black swan event is terminated
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   * @param _skipRebalance : whether to skip the rebalance process or not
+   * @param : not used
+   * @return redeemedTokens : amount of underlying tokens redeemed
+   */
+  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
+    external nonReentrant
+    returns (uint256 redeemedTokens) {
+      address currentToken;
+
+      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+        currentToken = currentTokensUsed[i];
+        redeemedTokens = redeemedTokens.add(
+          _redeemProtocolTokens(
+            protocolWrappers[currentToken],
+            currentToken,
+            // _amount * protocolPoolBalance / idleSupply
+            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(totalSupply()), // amount to redeem
+            address(this)
+          )
+        );
+      }
+
+      _burn(msg.sender, _amount);
+      if (fee > 0 && feeAddress != address(0)) {
+        redeemedTokens = _getFee(_amount, redeemedTokens);
+      }
+      // send underlying minus fee to msg.sender
+      IERC20(token).safeTransfer(msg.sender, redeemedTokens);
+
+      if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice || _skipRebalance) {
+        return redeemedTokens;
+      }
+
+      _rebalance(0, new uint256[](0), false);
+  }
+
+  /**
+   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
+   * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.
+   * Underlying (eg. DAI) is not redeemed here.
+   *
+   * @param _amount : amount of IdleTokens to be burned
+   */
+  function redeemInterestBearingTokens(uint256 _amount)
+    external nonReentrant {
+      uint256 idleSupply = totalSupply();
+      address currentToken;
+
+      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+        currentToken = currentTokensUsed[i];
+        IERC20(currentToken).safeTransfer(
+          msg.sender,
+          _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply) // amount to redeem
+        );
+      }
+
+      _burn(msg.sender, _amount);
+  }
+
+  /**
+   * Allow any users to set new allocations as long as the new allocations
+   * give a better avg APR than before
+   * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
+   * as lastAllocations variable and the sum of all value should be == 100000
+   *
+   * This method is not callble if this instance of IdleToken is a risk adjusted instance
+   * NOTE: this method can be paused
+   *
+   * @param _newAllocations : array with new allocations in percentage
+   * @return : whether has rebalanced or not
+   * @return avgApr : the new avg apr after rebalance
+   */
+  function openRebalance(uint256[] calldata _newAllocations)
+    external whenNotPaused whenITokenPriceHasNotDecreased
+    returns (bool, uint256 avgApr) {
+      require(!isRiskAdjusted, "Setting allocations not allowed");
+      uint256 initialAPR = getAvgAPR();
+
+      require(_newAllocations.length == lastAllocations.length, "Alloc lengths are different");
+      uint256 total;
+      for (uint8 i = 0; i < _newAllocations.length; i++) {
+        total = total.add(_newAllocations[i]);
+      }
+      require(total == 100000, "Not allocating 100%");
+      bool hasRebalanced = _rebalance(0, _newAllocations, false);
+
+      uint256 newAprAfterRebalance = getAvgAPR();
+      require(newAprAfterRebalance > initialAPR, "APR not improved");
+      return (hasRebalanced, newAprAfterRebalance);
+  }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
+   *
+   * NOTE: this method can be paused.
+   * msg.sender should approve this contract to spend GST2 tokens before calling
+   * this method
+   *
+   * @return : whether has rebalanced or not
+   */
+  function rebalanceWithGST()
+    external gasDiscountFrom(msg.sender)
+    returns (bool) {
+      return _rebalance(0, new uint256[](0), false);
+  }
+
+  /**
+   * DEPRECATED: Dynamic allocate all the pool across different lending protocols if needed,
+   * Keep for backward compatibility with IdleV2
+   *
+   * NOTE: this method can be paused
+   *
+   * @param : not used
+   * @param : not used
+   * @return : whether has rebalanced or not
+   */
+  function rebalance(uint256, uint256[] calldata)
+    external returns (bool) {
+    return _rebalance(0, new uint256[](0), false);
+  }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed,
+   * rebalance without params
+   *
+   * NOTE: this method can be paused
+   *
+   * @return : whether has rebalanced or not
+   */
+  function rebalance() external returns (bool) {
+    return _rebalance(0, new uint256[](0), false);
+  }
+
+  /**
+   * Get the contract balance of every protocol currently used
+   *
+   * @return tokenAddresses : array with all token addresses used,
+   *                          eg [cTokenAddress, iTokenAddress]
+   * @return amounts : array with all amounts for each protocol in order,
+   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
+   * @return total : total aum in underlying
+   */
+  function getCurrentAllocations() external view
+    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
+    return _getCurrentAllocations();
+  }
+
+  // internal
+  /**
+   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
+   * This method triggers a rebalance of the pools if needed
+   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
+   * NOTE 2: this method can be paused
+   * This method use GasTokens of this contract (if present) to get a gas discount
+   *
+   * @param _amount : amount of underlying token to be lended
+   * @param : not used
+   * @param _skipWholeRebalance : flag to decide if doing a simple mint or mint + rebalance
+   * @return mintedTokens : amount of IdleTokens minted
+   */
+  function _mintIdleToken(uint256 _amount, uint256[] memory, bool _skipWholeRebalance)
+    internal whenNotPaused whenITokenPriceHasNotDecreased
+    returns (uint256 mintedTokens) {
+      // Get current IdleToken price
+      uint256 idlePrice = tokenPrice();
+      // transfer tokens to this contract
+      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+
+      // Rebalance the current pool if needed and mint new supplyied amount
+      _rebalance(0, new uint256[](0), _skipWholeRebalance);
+
+      mintedTokens = _amount.mul(10**18).div(idlePrice);
+      _mint(msg.sender, mintedTokens);
+
+      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+  }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed
+   *
+   * NOTE: this method can be paused
+   *
+   * @param : not used
+   * @param _newAllocations : _newAllocations
+   * @return : whether has rebalanced or not
+   */
+  function _rebalance(uint256, uint256[] memory _newAllocations, bool _skipWholeRebalance)
+    internal whenNotPaused whenITokenPriceHasNotDecreased
+    returns (bool) {
+      // check if we need to rebalance by looking at the allocations in rebalancer contract
+      uint256[] memory rebalancerLastAllocations;
+      if (_newAllocations.length > 0 && _newAllocations.length == lastAllocations.length) {
+        rebalancerLastAllocations = _newAllocations;
+      } else {
+        rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
+      }
+
+      bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
+      if (areAllocationsEqual) {
+        for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
+          if (lastAllocations[i] != rebalancerLastAllocations[i]) {
+            areAllocationsEqual = false;
+            break;
+          }
+        }
+      }
+      uint256 balance = IERC20(token).balanceOf(address(this));
+      if (areAllocationsEqual && balance == 0) {
+        return false;
+      }
+
+      if (balance > 0) {
+        _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
+      }
+
+      if (_skipWholeRebalance || (areAllocationsEqual && balance > 0)) {
+        return false;
+      }
+      // Update lastAllocations with rebalancerLastAllocations
+      delete lastAllocations;
+      lastAllocations = rebalancerLastAllocations;
+
+      // Instead of redeeming everything during rebalance we redeem and mint only what needs
+      // to be reallocated
+      // get current allocations in underlying
+      (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
+      // calculate new allocations given the total
+      uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
+      (uint256[] memory toMintAllocations, uint256 totalToMint) = _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+      uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
+      if (totalRedeemd > 1 && totalToMint > 1) {
+        // Do not mint directly using toMintAllocations check with totalRedeemd
+        uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
+        for (uint8 i = 0; i < toMintAllocations.length; i++) {
+          // Calc what would have been the correct allocations percentage if all was available
+          tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
+        }
+
+          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd);
+          _mintWithAmounts(allAvailableTokens, partialAmounts);
+      }
+
+      // remove all elements from `currentTokensUsed` even if they are still in use
+      delete currentTokensUsed;
+      // update current tokens used in IdleToken storage
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        if (IERC20(allAvailableTokens[i]).balanceOf(address(this)) > 0) {
+          currentTokensUsed.push(allAvailableTokens[i]);
+        }
+      }
+
+      return true; // hasRebalanced
+  }
+
   /**
    * Update avg price paid for each idle token of a user
    *
@@ -323,255 +612,6 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     return currVal.sub(feeDue);
   }
 
-  // external
-  /**
-   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * This method triggers a rebalance of the pools if needed
-   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
-   * NOTE 2: this method can be paused
-   * This method use GasTokens of this contract (if present) to get a gas discount
-   *
-   * @param _amount : amount of underlying token to be lended
-   * @param : not used
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function mintIdleToken(uint256 _amount, uint256[] memory)
-    public nonReentrant whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(address(this))
-    returns (uint256 mintedTokens) {
-      // Get current IdleToken price
-      uint256 idlePrice = tokenPrice();
-      // transfer tokens to this contract
-      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
-
-      // Rebalance the current pool if needed and mint new supplyied amount
-      rebalance();
-
-      mintedTokens = _amount.mul(10**18).div(idlePrice);
-      _mint(msg.sender, mintedTokens);
-
-      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
-  }
-
-  /**
-   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * This method triggers a rebalance of the pools if needed
-   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
-   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
-   *         Ideally one should wait until the black swan event is terminated
-   *
-   * @param _amount : amount of IdleTokens to be burned
-   * @param _skipRebalance : whether to skip the rebalance process or not
-   * @param : not used
-   * @return redeemedTokens : amount of underlying tokens redeemed
-   */
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] memory)
-    public nonReentrant
-    returns (uint256 redeemedTokens) {
-      address currentToken;
-
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentToken = currentTokensUsed[i];
-        redeemedTokens = redeemedTokens.add(
-          _redeemProtocolTokens(
-            protocolWrappers[currentToken],
-            currentToken,
-            // _amount * protocolPoolBalance / idleSupply
-            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(totalSupply()), // amount to redeem
-            address(this)
-          )
-        );
-      }
-
-      _burn(msg.sender, _amount);
-      if (fee > 0 && feeAddress != address(0)) {
-        redeemedTokens = _getFee(_amount, redeemedTokens);
-      }
-      // send underlying minus fee to msg.sender
-      IERC20(token).safeTransfer(msg.sender, redeemedTokens);
-
-      if (this.paused() || iERC20Fulcrum(iToken).tokenPrice() < lastITokenPrice || _skipRebalance) {
-        return redeemedTokens;
-      }
-
-      rebalance();
-  }
-
-
-  /**
-   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.
-   * Underlying (eg. DAI) is not redeemed here.
-   *
-   * @param _amount : amount of IdleTokens to be burned
-   */
-  function redeemInterestBearingTokens(uint256 _amount)
-    external nonReentrant {
-      uint256 idleSupply = totalSupply();
-      address currentToken;
-
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentToken = currentTokensUsed[i];
-        IERC20(currentToken).safeTransfer(
-          msg.sender,
-          _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply) // amount to redeem
-        );
-      }
-
-      _burn(msg.sender, _amount);
-  }
-
-  /**
-   * Dynamic allocate all the pool across different lending protocols if needed
-   *
-   * NOTE: this method can be paused
-   *
-   * @return : whether has rebalanced or not
-   */
-  function rebalance()
-    public whenNotPaused whenITokenPriceHasNotDecreased
-    returns (bool) {
-      return rebalance(0, new uint256[](0));
-  }
-
-  /**
-   * Allow any users to set new allocations as long as the new allocations
-   * give a better avg APR than before
-   * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
-   * as lastAllocations variable and the sum of all value should be == 100000
-   *
-   * This method is not callble if this instance of IdleToken is a risk adjusted instance
-   * NOTE: this method can be paused
-   *
-   * @param _newAllocations : array with new allocations in percentage
-   * @return : whether has rebalanced or not
-   * @return avgApr : the new avg apr after rebalance
-   */
-  function openRebalance(uint256[] calldata _newAllocations)
-    external whenNotPaused whenITokenPriceHasNotDecreased
-    returns (bool, uint256 avgApr) {
-      require(!isRiskAdjusted, "Setting allocations not allowed");
-      uint256 initialAPR = getAvgAPR();
-
-      require(_newAllocations.length == lastAllocations.length, "Alloc lengths are different");
-      uint256 total;
-      for (uint8 i = 0; i < _newAllocations.length; i++) {
-        total = total.add(_newAllocations[i]);
-      }
-      require(total == 100000, "Not allocating 100%");
-      bool hasRebalanced = rebalance(0, _newAllocations);
-
-      uint256 newAprAfterRebalance = getAvgAPR();
-      require(newAprAfterRebalance > initialAPR, "APR not improved");
-      return (hasRebalanced, newAprAfterRebalance);
-  }
-
-  /**
-   * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
-   *
-   * NOTE: this method can be paused.
-   * msg.sender should approve this contract to spend GST2 tokens before calling
-   * this method
-   *
-   * @return : whether has rebalanced or not
-   */
-  function rebalanceWithGST()
-    external whenNotPaused whenITokenPriceHasNotDecreased gasDiscountFrom(msg.sender)
-    returns (bool) {
-      return rebalance(0, new uint256[](0));
-  }
-
-  /**
-   * Dynamic allocate all the pool across different lending protocols if needed
-   *
-   * NOTE: this method can be paused
-   *
-   * @param : not used
-   * @param _newAllocations : _newAllocations
-   * @return : whether has rebalanced or not
-   */
-  function rebalance(uint256, uint256[] memory _newAllocations)
-    public whenNotPaused whenITokenPriceHasNotDecreased
-    returns (bool) {
-      // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations;
-      if (_newAllocations.length > 0 && _newAllocations.length == lastAllocations.length) {
-        rebalancerLastAllocations = _newAllocations;
-      } else {
-        rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
-      }
-
-      bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
-      if (areAllocationsEqual) {
-        for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
-          if (lastAllocations[i] != rebalancerLastAllocations[i]) {
-            areAllocationsEqual = false;
-            break;
-          }
-        }
-      }
-      uint256 balance = IERC20(token).balanceOf(address(this));
-      if (areAllocationsEqual && balance == 0) {
-        return false;
-      }
-
-      if (balance > 0) {
-        _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
-      }
-
-      if (areAllocationsEqual && balance > 0) {
-        return false;
-      }
-      // Update lastAllocations with rebalancerLastAllocations
-      delete lastAllocations;
-      lastAllocations = rebalancerLastAllocations;
-
-      // Instead of redeeming everything during rebalance we redeem and mint only what needs
-      // to be reallocated
-      // get current allocations in underlying
-      (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
-      // calculate new allocations given the total
-      uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
-      (uint256[] memory toMintAllocations, uint256 totalToMint) = _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
-      uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
-      if (totalRedeemd > 1 && totalToMint > 1) {
-        // Do not mint directly using toMintAllocations check with totalRedeemd
-        uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
-        for (uint8 i = 0; i < toMintAllocations.length; i++) {
-          // Calc what would have been the correct allocations percentage if all was available
-          tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
-        }
-
-          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd);
-          _mintWithAmounts(allAvailableTokens, partialAmounts);
-      }
-
-      // remove all elements from `currentTokensUsed` even if they are still in use
-      delete currentTokensUsed;
-      // update current tokens used in IdleToken storage
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
-        if (IERC20(allAvailableTokens[i]).balanceOf(address(this)) > 0) {
-          currentTokensUsed.push(allAvailableTokens[i]);
-        }
-      }
-
-      return true; // hasRebalanced
-  }
-
-  /**
-   * Get the contract balance of every protocol currently used
-   *
-   * @return tokenAddresses : array with all token addresses used,
-   *                          eg [cTokenAddress, iTokenAddress]
-   * @return amounts : array with all amounts for each protocol in order,
-   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
-   * @return total : total aum in underlying
-   */
-  function getCurrentAllocations() external view
-    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
-    return _getCurrentAllocations();
-  }
-
-  // internal
   /**
    * Mint specific amounts of protocols tokens
    *
@@ -698,38 +738,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       return (tokenAddresses, amounts, total);
   }
 
-  /**
-   * Get addresses of current tokens and protocol wrappers used
-   *
-   * @return currentProtocolsUsed : array of `TokenProtocol` (currentToken address, protocolWrapper address)
-   */
-  function _getCurrentProtocols()
-    internal view
-    returns (TokenProtocol[] memory currentProtocolsUsed) {
-      currentProtocolsUsed = new TokenProtocol[](currentTokensUsed.length);
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentProtocolsUsed[i] = TokenProtocol(
-          currentTokensUsed[i],
-          protocolWrappers[currentTokensUsed[i]]
-        );
-      }
-  }
-
   // ILendingProtocols calls
-  /**
-   * Get next rate of a lending protocol given an amount to be lended
-   *
-   * @param _wrapperAddr : address of protocol wrapper
-   * @param _amount : amount of underlying to be lended
-   * @return apr : new apr one will get after lending `_amount`
-   */
-  function _getProtocolNextRate(address _wrapperAddr, uint256 _amount)
-    internal view
-    returns (uint256 apr) {
-      ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
-      apr = _wrapper.nextSupplyRate(_amount);
-  }
-
   /**
    * Mint protocol tokens through protocol wrapper
    *
