@@ -55,9 +55,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   // Address collecting underlying fees
   address public feeAddress;
 
-  // no one can directly change this
-  // Idle pool current investments eg. [cTokenAddress, iTokenAddress]
-  address[] public currentTokensUsed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
   // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
@@ -210,12 +207,12 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function tokenPrice()
     public view
     returns (uint256 price) {
-      address[] memory protocolWrappersAddresses = new address[](currentTokensUsed.length);
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        protocolWrappersAddresses[i] = protocolWrappers[currentTokensUsed[i]];
+      address[] memory protocolWrappersAddresses = new address[](allAvailableTokens.length);
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        protocolWrappersAddresses[i] = protocolWrappers[allAvailableTokens[i]];
       }
       price = IdlePriceCalculator(priceCalculator).tokenPrice(
-        totalSupply(), address(this), currentTokensUsed, protocolWrappersAddresses
+        totalSupply(), address(this), allAvailableTokens, protocolWrappersAddresses
       );
   }
 
@@ -320,16 +317,19 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-      address currentToken;
+      uint256 balance;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentToken = currentTokensUsed[i];
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        balance = IERC20(allAvailableTokens[i]).balanceOf(address(this));
+        if (balance == 0) {
+          continue;
+        }
         redeemedTokens = redeemedTokens.add(
           _redeemProtocolTokens(
-            protocolWrappers[currentToken],
-            currentToken,
+            protocolWrappers[allAvailableTokens[i]],
+            allAvailableTokens[i],
             // _amount * protocolPoolBalance / idleSupply
-            _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(totalSupply()), // amount to redeem
+            _amount.mul(balance).div(totalSupply()), // amount to redeem
             address(this)
           )
         );
@@ -360,12 +360,17 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     external nonReentrant {
       uint256 idleSupply = totalSupply();
       address currentToken;
+      uint256 balance;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
-        currentToken = currentTokensUsed[i];
+      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+        currentToken = allAvailableTokens[i];
+        balance = IERC20(currentToken).balanceOf(address(this));
+        if (balance == 0) {
+          continue;
+        }
         IERC20(currentToken).safeTransfer(
           msg.sender,
-          _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply) // amount to redeem
+          _amount.mul(balance).div(idleSupply) // amount to redeem
         );
       }
 
@@ -525,6 +530,10 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       }
 
       if (balance > 0) {
+        if (lastAllocations.length == 0 && _skipWholeRebalance) {
+          // set in storage
+          lastAllocations = rebalancerLastAllocations;
+        }
         _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
       }
 
@@ -534,7 +543,6 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       // Update lastAllocations with rebalancerLastAllocations
       delete lastAllocations;
       lastAllocations = rebalancerLastAllocations;
-
       // Instead of redeeming everything during rebalance we redeem and mint only what needs
       // to be reallocated
       // get current allocations in underlying
@@ -551,17 +559,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
           tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
         }
 
-          uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd);
-          _mintWithAmounts(allAvailableTokens, partialAmounts);
-      }
-
-      // remove all elements from `currentTokensUsed` even if they are still in use
-      delete currentTokensUsed;
-      // update current tokens used in IdleToken storage
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
-        if (IERC20(allAvailableTokens[i]).balanceOf(address(this)) > 0) {
-          currentTokensUsed.push(allAvailableTokens[i]);
-        }
+        uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd);
+        _mintWithAmounts(allAvailableTokens, partialAmounts);
       }
 
       return true; // hasRebalanced
@@ -641,7 +640,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    *
    * @param allocations : array of protocol allocations in percentage
    * @param total : total amount
-   * @return : array with mounts
+   * @return : array with amounts
    */
   function _amountsFromAllocations(uint256[] memory allocations, uint256 total)
     internal pure returns (uint256[] memory) {
