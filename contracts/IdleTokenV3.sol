@@ -99,6 +99,11 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       allAvailableTokens = [_cToken, _iToken];
   }
 
+  // During a black swan event is possible that iToken price decreases instead of increasing,
+  // with the consequence of lowering the IdleToken price. To mitigate this we implemented a
+  // check on the iToken price that prevents users from minting cheap IdleTokens or rebalancing
+  // the pool in this specific case. The redeemIdleToken won't be paused but the rebalance process
+  // won't be triggered in this case.
   modifier whenITokenPriceHasNotDecreased() {
     uint256 iTokenPrice = iERC20Fulcrum(iToken).tokenPrice();
     require(
