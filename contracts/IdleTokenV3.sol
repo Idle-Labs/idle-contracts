@@ -536,7 +536,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance));
       }
 
-      if (_skipWholeRebalance || (areAllocationsEqual && balance > 0)) {
+      if (_skipWholeRebalance || areAllocationsEqual) {
         return false;
       }
       // Update lastAllocations with rebalancerLastAllocations
