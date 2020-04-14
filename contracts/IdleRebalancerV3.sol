@@ -26,7 +26,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
    * @param _rebalancerManager : rebalancerManager address
    */
   constructor(address _cToken, address _iToken, address _aToken, address _yxToken, address _rebalancerManager) public {
-    require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0) && _yxToken != 0 && _rebalancerManager != 0, 'some addr is 0');
+    require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0) && _yxToken != address(0) && _rebalancerManager != address(0), 'some addr is 0');
     rebalancerManager = _rebalancerManager;
 
     // Initially 100% on first lending protocol
