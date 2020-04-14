@@ -115,21 +115,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
 
   // onlyOwner
   /**
-   * It allows owner to set the iToken (Fulcrum) address
-   *
-   * @param _iToken : iToken address
-   */
-  function setIToken(address _iToken)
-    external onlyOwner {
-      iToken = _iToken;
-  }
-  /**
    * It allows owner to set the IdleRebalancerV3 address
    *
    * @param _rebalancer : new IdleRebalancerV3 address
    */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
+      require(_rebalancer != address(0), 'Addr is 0');
       rebalancer = _rebalancer;
   }
   /**
@@ -139,6 +131,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    */
   function setPriceCalculator(address _priceCalculator)
     external onlyOwner {
+      require(_priceCalculator != address(0), 'Addr is 0');
       priceCalculator = _priceCalculator;
   }
   /**
@@ -195,6 +188,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    */
   function setFeeAddress(address _feeAddress)
     external onlyOwner {
+      require(_feeAddress != address(0), 'Addr is 0');
       feeAddress = _feeAddress;
   }
 
