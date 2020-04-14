@@ -29,6 +29,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
     require(_cToken != address(0) && _iToken != address(0) && _aToken != address(0), 'some addr is 0');
     rebalancerManager = _rebalancerManager;
 
+    // Initially 100% on first lending protocol
     lastAmounts = [100000, 0, 0, 0];
     lastAmountsAddresses = [_cToken, _iToken, _aToken, _yxToken];
   }

@@ -38,7 +38,7 @@ contract IdleAave is ILendingProtocol, Ownable {
    * @param _underlying : underlying token (eg DAI) address
    */
   constructor(address _token, address _underlying) public {
-    require(_token != address(0) && _underlying != address(0), 'COMP: some addr is 0');
+    require(_token != address(0) && _underlying != address(0), 'AAVE: some addr is 0');
 
     token = _token;
     underlying = _underlying;
@@ -99,6 +99,10 @@ contract IdleAave is ILendingProtocol, Ownable {
         params[2],
         params[3]
       );
+
+      // newLiquidityRate is in RAY (ie 1e27)
+      // also newLiquidityRate is in the form 0.03 * 1e27
+      // while we need the result in the form 3 * 1e18
       return newLiquidityRate.mul(100).div(10**9);
   }
 
@@ -158,7 +162,7 @@ contract IdleAave is ILendingProtocol, Ownable {
         return aTokens;
       }
       AaveLendingPool lendingPool = AaveLendingPool(provider.getLendingPool());
-      lendingPool.deposit(underlying, balance, 29);
+      lendingPool.deposit(underlying, balance, 29); // 29 -> referral
       aTokens = IERC20(token).balanceOf(address(this));
       // transfer them to the caller
       IERC20(token).safeTransfer(msg.sender, aTokens);
