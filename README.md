@@ -119,7 +119,7 @@ For `IdleRebalancer`:
 
 ### Edge cases
 - If Compound or Fulcrum do not have all the liquidity requested available during a `rebalance` or a `redeemIdleToken` the tx will revert.
-During a `redeemIdleToken` is possibile that a user wants to redeem only a small amount of his funds (and the protocols' liquidity can sustain that small amount) but if a rebalance is triggered the tx will revert, due to the fact that we are redeeming everything from every protocol. In this case `redeemIdleToken` accepts a flag `_skipRebalance` that should be set to `true` in order to disable the rebalance process
+During a `redeemIdleToken` is possible that a user wants to redeem only a small amount of his funds (and the protocols' liquidity can sustain that small amount) but if a rebalance is triggered the tx will revert, due to the fact that we are redeeming everything from every protocol. In this case `redeemIdleToken` accepts a flag `_skipRebalance` that should be set to `true` in order to disable the rebalance process
 
 - During a black swan event is possible that iToken price decreases instead of increasing, with the consequence of lowering the IdleToken price. In this case the `whenITokenPriceHasNotDecreased` modifier prevents users from minting cheap IdleTokens or rebalancing the pool. The `redeemIdleToken` won't be paused but the rebalance process won't be triggered. If a user decide to call `redeemIdleToken` during a black swan event he would capitalize a loss.
 

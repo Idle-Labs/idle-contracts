@@ -1,7 +1,7 @@
 /**
  * @title: DyDx lending tokenization
  * @summary: Used for crete and ERC20 representing lending positions
- *           on DyDc protocol.
+ *           on DyDx protocol.
  * @author: William Bergamo, idle.finance
  */
 

@@ -48,7 +48,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
   bool public manualPlay;
   // Flag for disabling openRebalance for the risk adjusted variant
   bool public isRiskAdjusted;
-  // Max possibile fee on interest gain
+  // Max possible fee on interest gain
   uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
   // Current fee on interest gained
   uint256 public fee;
@@ -461,7 +461,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
    *                          eg [cTokenAddress, iTokenAddress]
    * @return amounts : array with all amounts for each protocol in order,
    *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
-   * @return total : total aum in underlying
+   * @return total : total AUM in underlying
    */
   function getCurrentAllocations() external view
     returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
@@ -489,7 +489,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       // transfer tokens to this contract
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 
-      // Rebalance the current pool if needed and mint new supplyied amount
+      // Rebalance the current pool if needed and mint new supplied amount
       _rebalance(0, new uint256[](0), _skipWholeRebalance);
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
@@ -715,7 +715,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
    *                          eg [cTokenAddress, iTokenAddress]
    * @return amounts : array with all amounts for each protocol in order,
    *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
-   * @return total : total aum in underlying
+   * @return total : total AUM in underlying
    */
   function _getCurrentAllocations() internal view
     returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {

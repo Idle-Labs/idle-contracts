@@ -129,7 +129,7 @@ contract IdleAave is ILendingProtocol, Ownable {
   }
 
   /**
-   * @return current price of aToken in underlying
+   * @return current price of aToken in underlying, Aave price is always 1
    */
   function getPriceInToken()
     external view

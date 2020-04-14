@@ -244,7 +244,7 @@ contract IdleToken is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, 
       uint256 idlePrice = tokenPrice();
       // transfer tokens to this contract
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
-      // Rebalance the current pool if needed and mint new supplyied amount
+      // Rebalance the current pool if needed and mint new supplied amount
       rebalance(_amount, _clientProtocolAmounts);
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
