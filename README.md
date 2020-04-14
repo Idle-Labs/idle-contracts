@@ -145,4 +145,11 @@ Migrations files `3_setup_ganache_test.js` and `4_test_ganache_idle.js` (only us
 ganache-cli --fork https://mainnet.infura.io/v3/{INFURA_API_KEY} -e 100000 --unlock 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359
 
 truffle migrate --network local
+
+```
+
+### Coverage
+
+```
+truffle run coverage --network coverage
 ```

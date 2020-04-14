@@ -14,7 +14,7 @@ const ledgerOptions = {
 };
 
 module.exports = {
-  plugins: ["truffle-security"],
+  plugins: ["truffle-security", "solidity-coverage"],
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!
   compilers: {

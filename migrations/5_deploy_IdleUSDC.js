@@ -44,7 +44,7 @@ const USDC = {
 };
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test') {
+  if (network === 'test' || network === 'coverage') {
     return;
   }
   console.log('Network', network);
