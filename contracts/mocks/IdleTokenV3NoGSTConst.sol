@@ -234,6 +234,16 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       feeAddress = _feeAddress;
   }
 
+  /**
+   * It allows owner to set gas parameters
+   *
+   * @param _amounts : fee amount where 100000 is 100%, max settable is MAX_FEE constant
+   */
+  /* function setGasParams(uint256[] calldata _amounts)
+    external onlyOwner {
+      gasAmounts = _amounts;
+  } */
+
   // view
   /**
    * IdleToken price calculation, in underlying

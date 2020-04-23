@@ -4,6 +4,7 @@ import "./interfaces/GasToken.sol";
 
 contract GST2Consumer {
   GasToken public constant gst2 = GasToken(0x0000000000b3F879cb30FE243b4Dfee438691c04);
+  uint256[] internal gasAmounts = [14154, 41130, 27710, 7020];
 
   modifier gasDiscountFrom(address from) {
     uint256 initialGasLeft = gasleft();
@@ -15,13 +16,13 @@ contract GST2Consumer {
     // For more info https://gastoken.io/
     // 14154 -> FREE_BASE -> base cost of freeing
     // 41130 -> 2 * REIMBURSE - FREE_TOKEN -> 2 * 24000 - 6870
-    uint256 tokens = (gasSpent + 14154) / 41130;
+    uint256 tokens = (gasSpent + gasAmounts[0]) / gasAmounts[1];
     uint256 safeNumTokens;
     uint256 gas = gasleft();
 
     // For more info https://github.com/projectchicago/gastoken/blob/master/contract/gst2_free_example.sol
-    if (gas >= 27710) {
-      safeNumTokens = (gas - 27710) / 7020;
+    if (gas >= gasAmounts[2]) {
+      safeNumTokens = (gas - gasAmounts[2]) / gasAmounts[3];
     }
 
     if (tokens > safeNumTokens) {
