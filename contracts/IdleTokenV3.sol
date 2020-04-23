@@ -33,27 +33,31 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
   address public token;
-  // eg. 18 for DAI
-  uint256 public tokenDecimals;
   // eg. iDAI address
   address public iToken; // used for claimITokens and userClaimITokens
   // Idle rebalancer current implementation address
   address public rebalancer;
   // Idle price calculator current implementation address
   address public priceCalculator;
+  // Address collecting underlying fees
+  address public feeAddress;
   // Last iToken price, used to pause contract in case of a black swan event
   uint256 public lastITokenPrice;
+  // eg. 18 for DAI
+  uint256 public tokenDecimals;
+  // Max possible fee on interest gain
+  uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
+  // Min delay for adding a new protocol
+  uint256 constant NEW_PROTOCOL_DELAY = 60 * 60 * 24 * 3; // 3 days in seconds
+  // Current fee on interest gained
+  uint256 public fee;
   // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
   // return to the normal level
   bool public manualPlay;
   // Flag for disabling openRebalance for the risk adjusted variant
   bool public isRiskAdjusted;
-  // Max possible fee on interest gain
-  uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
-  // Current fee on interest gained
-  uint256 public fee;
-  // Address collecting underlying fees
-  address public feeAddress;
+  // Flag for disabling instant new protocols additions
+  bool public isNewProtocolDelayed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
   // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
@@ -62,6 +66,9 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   mapping(address => uint256) public userAvgPrices;
   // Map that saves amount with no fee for each user
   mapping(address => uint256) private userNoFeeQty;
+  // timestamp when new protocol wrapper has been queued for change
+  // protocol_wrapper_address -> timestamp
+  mapping(address => uint256) public releaseTimes;
 
   /**
    * @dev constructor, initialize some variables, mainly addresses of other contracts
@@ -137,8 +144,14 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function setPriceCalculator(address _priceCalculator)
     external onlyOwner {
       require(_priceCalculator != address(0), 'Addr is 0');
-      priceCalculator = _priceCalculator;
+      if (!isNewProtocolDelayed || (releaseTimes[_priceCalculator] != 0 && now - releaseTimes[_priceCalculator] > NEW_PROTOCOL_DELAY)) {
+        priceCalculator = _priceCalculator;
+        releaseTimes[_priceCalculator] = 0;
+        return;
+      }
+      releaseTimes[_priceCalculator] = now;
   }
+
   /**
    * It allows owner to set a protocol wrapper address
    *
@@ -148,11 +161,18 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function setProtocolWrapper(address _token, address _wrapper)
     external onlyOwner {
       require(_token != address(0) && _wrapper != address(0), 'some addr is 0');
-      // update allAvailableTokens if needed
-      if (protocolWrappers[_token] == address(0)) {
-        allAvailableTokens.push(_token);
+
+      if (!isNewProtocolDelayed || (releaseTimes[_wrapper] != 0 && now - releaseTimes[_wrapper] > NEW_PROTOCOL_DELAY)) {
+        // update allAvailableTokens if needed
+        if (protocolWrappers[_token] == address(0)) {
+          allAvailableTokens.push(_token);
+        }
+        protocolWrappers[_token] = _wrapper;
+        releaseTimes[_wrapper] = 0;
+        return;
       }
-      protocolWrappers[_token] = _wrapper;
+
+      releaseTimes[_wrapper] = now;
   }
 
   /**
@@ -173,6 +193,14 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function setIsRiskAdjusted(bool _isRiskAdjusted)
     external onlyOwner {
       isRiskAdjusted = _isRiskAdjusted;
+  }
+
+  /**
+   * It permanently disable instant new protocols additions
+   */
+  function delayNewProtocols()
+    external onlyOwner {
+      isNewProtocolDelayed = true;
   }
 
   /**

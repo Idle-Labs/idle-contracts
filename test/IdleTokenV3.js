@@ -220,7 +220,7 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
       );
     }
   });
-  
+
   it('constructor set a name', async function () {
     (await this.token.name()).should.equal('IdleDAI');
   });
@@ -258,6 +258,9 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
   it('constructor set manualPlay', async function () {
     (await this.token.manualPlay()).should.equal(false);
   });
+  it('constructor set isNewProtocolDelayed', async function () {
+    (await this.token.isNewProtocolDelayed()).should.equal(false);
+  });
   it('allows onlyOwner to setManualPlay', async function () {
     const val = true;
     await this.token.setManualPlay(val, { from: creator });
@@ -265,12 +268,12 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
 
     await expectRevert.unspecified(this.token.setManualPlay(val, { from: nonOwner }));
   });
-  it('allows onlyOwner to setIToken', async function () {
-    const val = this.someAddr;
-    await this.token.setIToken(val, { from: creator });
-    (await this.token.iToken()).should.be.equal(val);
+  it('allows onlyOwner to delayNewProtocols', async function () {
+    const val = true;
+    await this.token.delayNewProtocols({ from: creator });
+    (await this.token.isNewProtocolDelayed()).should.be.equal(val);
 
-    await expectRevert.unspecified(this.token.setIToken(val, { from: nonOwner }));
+    await expectRevert.unspecified(this.token.delayNewProtocols({ from: nonOwner }));
   });
   it('allows onlyOwner to setRebalancer', async function () {
     const val = this.someAddr;
@@ -279,12 +282,31 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
 
     await expectRevert.unspecified(this.token.setRebalancer(val, { from: nonOwner }));
   });
-  it('allows onlyOwner to setPriceCalculator', async function () {
+  it('allows onlyOwner to setPriceCalculator (when isNewProtocolDelayed is false)', async function () {
     const val = this.someAddr;
     await this.token.setPriceCalculator(val, { from: creator });
     (await this.token.priceCalculator()).should.be.equal(val);
 
     await expectRevert.unspecified(this.token.setPriceCalculator(val, { from: nonOwner }));
+  });
+  it('onlyOwner cannot instantly setPriceCalculator (when isNewProtocolDelayed is true)', async function () {
+    await this.token.delayNewProtocols({ from: creator });
+
+    const _token = this.someAddr;
+    await this.token.setPriceCalculator(_token, { from: creator });
+    (await this.token.priceCalculator()).should.equal(this.PriceCalculator.address); // addr not changed
+  });
+  it('onlyOwner can setPriceCalculator after some time (when isNewProtocolDelayed is true)', async function () {
+    await this.token.delayNewProtocols({ from: creator });
+
+    const _token = this.someAddr;
+    await this.token.setPriceCalculator(_token, { from: creator });
+    (await this.token.priceCalculator()).should.equal(this.PriceCalculator.address); // addr not changed
+
+    await this.token.mockBackInTime(_token, 60*60*24*4); // 4 days
+
+    await this.token.setPriceCalculator(_token, { from: creator });
+    (await this.token.priceCalculator()).should.equal(_token);
   });
   it('allows onlyOwner to setFeeAddress', async function () {
     const val = this.someAddr;
@@ -300,7 +322,7 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
 
     await expectRevert.unspecified(this.token.setFee(val, { from: nonOwner }));
   });
-  it('allows onlyOwner to setProtocolWrapper', async function () {
+  it('allows onlyOwner to setProtocolWrapper (when isNewProtocolDelayed is false)', async function () {
     const _token = this.someAddr;
     const _wrapper = this.someOtherAddr;
     await this.token.setProtocolWrapper(_token, _wrapper, { from: creator });
@@ -315,6 +337,32 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
     // nonOwner
     await expectRevert.unspecified(this.token.setProtocolWrapper(_token, _wrapper, { from: nonOwner }));
   });
+  it('onlyOwner cannot instantly setProtocolWrapper (when isNewProtocolDelayed is true)', async function () {
+    await this.token.delayNewProtocols({ from: creator });
+
+    const _token = this.someAddr;
+    const _wrapper = this.someOtherAddr;
+    await this.token.setProtocolWrapper(_token, _wrapper, { from: creator });
+    (await this.token.protocolWrappers(_token)).should.equal(this.ETHAddr); // addr(0)
+    await expectRevert.assertion(this.token.allAvailableTokens(4)); // array out-of-bound
+  });
+  it('onlyOwner can setProtocolWrapper after some time (when isNewProtocolDelayed is true)', async function () {
+    await this.token.delayNewProtocols({ from: creator });
+
+    const _token = this.someAddr;
+    const _wrapper = this.someOtherAddr;
+    await this.token.setProtocolWrapper(_token, _wrapper, { from: creator });
+    (await this.token.protocolWrappers(_token)).should.equal(this.ETHAddr); // addr(0)
+    await expectRevert.assertion(this.token.allAvailableTokens(4)); // array out-of-bound
+
+    await this.token.mockBackInTime(_wrapper, 60*60*24*4); // 4 days
+
+    await this.token.setProtocolWrapper(_token, _wrapper, { from: creator });
+    (await this.token.protocolWrappers(_token)).should.equal(_wrapper);
+    (await this.token.allAvailableTokens(4)).should.equal(_token);
+    await expectRevert.assertion(this.token.allAvailableTokens(5)); // array out-of-bound
+  });
+
   it('calculates current tokenPrice when IdleToken supply is 0', async function () {
     const res = await this.token.tokenPrice.call();
     const expectedRes = this.one;
