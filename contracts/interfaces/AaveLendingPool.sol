@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface AaveLendingPool {
   function deposit(address _reserve, uint256 _amount, uint16 _referralCode) external;

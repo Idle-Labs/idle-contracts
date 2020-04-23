@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface CERC20 {
   function mint(uint256 mintAmount) external returns (uint256);

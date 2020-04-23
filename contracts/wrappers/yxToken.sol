@@ -5,7 +5,7 @@
  * @author: William Bergamo, idle.finance
  */
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";

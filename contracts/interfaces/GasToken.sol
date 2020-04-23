@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface GasToken {
   function freeUpTo(uint256 value) external returns (uint256 freed);

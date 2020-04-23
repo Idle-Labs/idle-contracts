@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IIdleV1 {
     // _amount is the amount of idleSAI that one wants to burn
@@ -21,7 +21,7 @@ interface IIdleV1 {
 
 // File: contracts/interfaces/IIToken.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IIToken {
     function mint(
@@ -41,7 +41,7 @@ interface IIToken {
 
 // File: contracts/libraries/Utils.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -60,7 +60,7 @@ library Utils {
 
 // File: contracts/partials/PartialIdleV1.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -86,7 +86,7 @@ library PartialIdleV1 {
 
 // File: contracts/interfaces/IIdleV2.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IIdleV2 {
   // one should approve the contract as spender for DAI before calling this method
@@ -98,7 +98,7 @@ interface IIdleV2 {
 
 // File: contracts/partials/PartialIdleV2.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -123,7 +123,7 @@ library PartialIdleV2 {
 
 // File: contracts/interfaces/IScdMcdMigration.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IScdMcdMigration {
     function swapSaiToDai(uint256 _amount) external;
@@ -132,7 +132,7 @@ interface IScdMcdMigration {
 
 // File: contracts/Registry.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 contract Registry is Ownable {
@@ -157,7 +157,7 @@ contract Registry is Ownable {
 
 // File: contracts/libraries/RL.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 library RL {
@@ -216,7 +216,7 @@ library RL {
 
 // File: contracts/partials/PartialMcdMigration.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -243,7 +243,7 @@ library PartialMcdMigration {
 
 // File: contracts/partials/PartialPull.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -263,7 +263,7 @@ library PartialPull {
 
 // File: contracts/partials/PartialPush.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -284,7 +284,7 @@ library PartialPush {
 
 // File: contracts/TokenSaver.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 
@@ -304,7 +304,7 @@ contract TokenSaver is Ownable {
 
 // File: contracts/static-recipes/IdleMcdBridge.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 
 

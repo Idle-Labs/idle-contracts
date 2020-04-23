@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface AaveLendingPoolCore {
   function getReserveCurrentLiquidityRate(address _reserve) external view returns (uint256);

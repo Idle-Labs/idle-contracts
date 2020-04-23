@@ -5,7 +5,7 @@
  *           when a new protocol will be added this should be replaced
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 import "./interfaces/IIdleRebalancer.sol";
 

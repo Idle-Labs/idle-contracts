@@ -5,7 +5,7 @@
  *           This contract holds assets only during a tx, after tx it should be empty
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";

@@ -5,7 +5,7 @@
  *           and with each token user have the right to redeem a portion of these pools
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 import "./IdleTokenV3NoGSTConst.sol";
 import "./GasTokenMock.sol";

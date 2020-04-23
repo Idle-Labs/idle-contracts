@@ -2,7 +2,7 @@
  * @title: Idle Rebalancer interface
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IIdleRebalancer {
   function calcRebalanceAmounts(uint256[] calldata _rebalanceParams)

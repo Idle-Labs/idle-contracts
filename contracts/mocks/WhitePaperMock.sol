@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
 contract WhitePaperMock is WhitePaperInterestRateModel {

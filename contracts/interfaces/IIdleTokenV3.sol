@@ -2,7 +2,7 @@
  * @title: Idle Token interface
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 interface IIdleTokenV3 {
   // view

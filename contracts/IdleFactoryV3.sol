@@ -3,7 +3,7 @@
  * @summary: Used for deploying and keeping track of IdleTokens instances
  * @author: William Bergamo, idle.finance
  */
-pragma solidity 0.5.11;
+pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./IdleTokenV3.sol";
