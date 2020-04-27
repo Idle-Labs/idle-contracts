@@ -6,7 +6,7 @@ const iDAIMock = artifacts.require('iDAIMock');
 const DAIMock = artifacts.require('DAIMock');
 const BNify = n => new BN(String(n));
 
-contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, foo]) {
+contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, foo, idle]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.ETHAddr = '0x0000000000000000000000000000000000000000';
@@ -24,6 +24,7 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
       manager,
       { from: creator }
     );
+    await this.RebalancerV3.setIdleToken(idle, {from: creator});
   });
 
   it('constructor set rebalanceManager addr', async function () {
@@ -48,6 +49,17 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
     newManager.should.be.equal(manager);
     // it will revert with unspecified reason for nonOwner
     await expectRevert.unspecified(this.RebalancerV3.setRebalancerManager(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setIdleToken', async function () {
+    const val = this.addr1;
+    // it will revert with reason `idleToken addr already set` because it has already been set in beforeEach
+    await expectRevert(
+      this.RebalancerV3.setIdleToken(val, { from: creator }),
+      'idleToken addr already set'
+    );
+
+    // it will revert with unspecified reason for nonOwner
+    await expectRevert.unspecified(this.RebalancerV3.setIdleToken(val, { from: nonOwner }));
   });
   it('do not allow onlyOwner to setNewToken if the token is already present', async function () {
     const val = this.addr1;
@@ -76,7 +88,7 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
     alloc[2].should.be.bignumber.equal(BNify('0'));
     alloc[3].should.be.bignumber.equal(BNify('0'));
   });
-  it('allows onlyRebalancer to setAllocations', async function () {
+  it('allows onlyRebalancer and Idle to setAllocations', async function () {
     await this.RebalancerV3.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
       [this.addr1, this.addr2, this.addr3, this.addr4],
@@ -84,6 +96,16 @@ contract('IdleRebalancerV3', function ([_, creator, manager, nonOwner, someone, 
     );
     (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('50000'));
     (await this.RebalancerV3.lastAmounts(1)).should.be.bignumber.equal(BNify('50000'));
+    (await this.RebalancerV3.lastAmounts(2)).should.be.bignumber.equal(BNify('0'));
+    (await this.RebalancerV3.lastAmounts(3)).should.be.bignumber.equal(BNify('0'));
+
+    await this.RebalancerV3.setAllocations(
+      [BNify('20000'), BNify('80000'), BNify('0'), BNify('0')],
+      [this.addr1, this.addr2, this.addr3, this.addr4],
+      { from: idle }
+    );
+    (await this.RebalancerV3.lastAmounts(0)).should.be.bignumber.equal(BNify('20000'));
+    (await this.RebalancerV3.lastAmounts(1)).should.be.bignumber.equal(BNify('80000'));
     (await this.RebalancerV3.lastAmounts(2)).should.be.bignumber.equal(BNify('0'));
     (await this.RebalancerV3.lastAmounts(3)).should.be.bignumber.equal(BNify('0'));
 

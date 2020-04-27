@@ -17,6 +17,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   uint256[] public lastAmounts;
   address[] public lastAmountsAddresses;
   address public rebalancerManager;
+  address public idleToken;
 
   /**
    * @param _cToken : cToken address
@@ -37,8 +38,8 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   /**
    * Throws if called by any account other than rebalancerManager.
    */
-  modifier onlyRebalancer() {
-    require(msg.sender == rebalancerManager, "Only rebalacer");
+  modifier onlyRebalancerAndIdle() {
+    require(msg.sender == rebalancerManager || msg.sender == idleToken, "Only rebalacer and IdleToken");
     _;
   }
 
@@ -52,6 +53,13 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
       require(_rebalancerManager != address(0), "_rebalancerManager addr is 0");
 
       rebalancerManager = _rebalancerManager;
+  }
+
+  function setIdleToken(address _idleToken)
+    external onlyOwner {
+      require(idleToken == address(0), "idleToken addr already set");
+      require(_idleToken != address(0), "_idleToken addr is 0");
+      idleToken = _idleToken;
   }
 
   /**
@@ -80,7 +88,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
    * @param _addresses : array with addresses of tokens used, should be equal to lastAmountsAddresses
    */
   function setAllocations(uint256[] calldata _allocations, address[] calldata _addresses)
-    external onlyRebalancer
+    external onlyRebalancerAndIdle
   {
     require(_allocations.length == lastAmounts.length, "Alloc lengths are different, allocations");
     require(_allocations.length == _addresses.length, "Alloc lengths are different, addresses");
@@ -97,5 +105,10 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   function getAllocations()
     external view returns (uint256[] memory _allocations) {
     return lastAmounts;
+  }
+
+  function getAllocationsLength()
+    external view returns (uint256) {
+    return lastAmounts.length;
   }
 }

@@ -382,7 +382,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         return redeemedTokens;
       }
 
-      _rebalance(0, new uint256[](0), false);
+      _rebalance(0, false);
   }
 
   /**
@@ -431,15 +431,9 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     returns (bool, uint256 avgApr) {
       require(!isRiskAdjusted, "Setting allocations not allowed");
       uint256 initialAPR = getAvgAPR();
-
-      require(_newAllocations.length == lastAllocations.length, "Alloc lengths are different");
-      uint256 total;
-      for (uint8 i = 0; i < _newAllocations.length; i++) {
-        total = total.add(_newAllocations[i]);
-      }
-      require(total == 100000, "Not allocating 100%");
-      bool hasRebalanced = _rebalance(0, _newAllocations, false);
-
+      // Validate and update rebalancer allocations
+      IdleRebalancerV3(rebalancer).setAllocations(_newAllocations, allAvailableTokens);
+      bool hasRebalanced = _rebalance(0, false);
       uint256 newAprAfterRebalance = getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "APR not improved");
       return (hasRebalanced, newAprAfterRebalance);
@@ -457,7 +451,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   function rebalanceWithGST()
     external gasDiscountFrom(msg.sender)
     returns (bool) {
-      return _rebalance(0, new uint256[](0), false);
+      return _rebalance(0, false);
   }
 
   /**
@@ -472,7 +466,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    */
   function rebalance(uint256, uint256[] calldata)
     external returns (bool) {
-    return _rebalance(0, new uint256[](0), false);
+    return _rebalance(0, false);
   }
 
   /**
@@ -484,7 +478,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * @return : whether has rebalanced or not
    */
   function rebalance() external returns (bool) {
-    return _rebalance(0, new uint256[](0), false);
+    return _rebalance(0, false);
   }
 
   /**
@@ -523,7 +517,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 
       // Rebalance the current pool if needed and mint new supplied amount
-      _rebalance(0, new uint256[](0), _skipWholeRebalance);
+      _rebalance(0, _skipWholeRebalance);
 
       mintedTokens = _amount.mul(10**18).div(idlePrice);
       _mint(msg.sender, mintedTokens);
@@ -537,20 +531,13 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
    * NOTE: this method can be paused
    *
    * @param : not used
-   * @param _newAllocations : _newAllocations
    * @return : whether has rebalanced or not
    */
-  function _rebalance(uint256, uint256[] memory _newAllocations, bool _skipWholeRebalance)
+  function _rebalance(uint256, bool _skipWholeRebalance)
     internal whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations;
-      if (_newAllocations.length > 0 && _newAllocations.length == lastAllocations.length) {
-        rebalancerLastAllocations = _newAllocations;
-      } else {
-        rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
-      }
-
+      uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       if (areAllocationsEqual) {
         for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
