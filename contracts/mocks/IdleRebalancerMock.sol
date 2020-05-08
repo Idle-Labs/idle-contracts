@@ -178,7 +178,7 @@ contract IdleRebalancerMock is Ownable {
     // interest is earned between when tx was submitted and when it is mined so params sent by users
     // should always be slightly less than what should be rebalanced
     uint256 totAmountSentByUser;
-    for (uint8 i = 1; i < rebalanceParams.length; i++) {
+    for (uint256 i = 1; i < rebalanceParams.length; i++) {
       totAmountSentByUser = totAmountSentByUser.add(rebalanceParams[i]);
     }
 

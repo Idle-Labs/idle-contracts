@@ -29,6 +29,14 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
+  // Fake methods
+  function mockBackInTime(address _wrapper, uint256 _time) external {
+    releaseTimes[_wrapper] = _time;
+  }
+
+  function createTokens(uint256 amount) external {
+    _mint(address(1), amount);
+  }
   // eg. cTokenAddress => IdleCompoundAddress
   mapping(address => address) public protocolWrappers;
   // eg. DAI address
@@ -45,7 +53,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
   uint256 public lastITokenPrice;
   // eg. 18 for DAI
   uint256 public tokenDecimals;
-  // Max possible fee on interest gain
+  // Max possible fee on interest gained
   uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
   // Min delay for adding a new protocol
   uint256 constant NEW_PROTOCOL_DELAY = 60 * 60 * 24 * 3; // 3 days in seconds
@@ -104,15 +112,6 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       protocolWrappers[_cToken] = _idleCompound;
       protocolWrappers[_iToken] = _idleFulcrum;
       allAvailableTokens = [_cToken, _iToken];
-  }
-
-  // Fake methods
-  function mockBackInTime(address _wrapper, uint256 _time) external {
-    releaseTimes[_wrapper] = _time;
-  }
-
-  function createTokens(uint256 amount) external {
-    _mint(address(1), amount);
   }
 
   // During a black swan event is possible that iToken price decreases instead of increasing,
@@ -253,7 +252,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     public view
     returns (uint256 price) {
       address[] memory protocolWrappersAddresses = new address[](allAvailableTokens.length);
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         protocolWrappersAddresses[i] = protocolWrappers[allAvailableTokens[i]];
       }
       price = IdlePriceCalculator(priceCalculator).tokenPrice(
@@ -273,7 +272,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       address currToken;
       addresses = new address[](allAvailableTokens.length);
       aprs = new uint256[](allAvailableTokens.length);
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currToken = allAvailableTokens[i];
         addresses[i] = currToken;
         aprs[i] = ILendingProtocol(protocolWrappers[currToken]).getAPR();
@@ -291,7 +290,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       (, uint256[] memory amounts, uint256 total) = _getCurrentAllocations();
       uint256 currApr;
       uint256 weight;
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         if (amounts[i] == 0) {
           continue;
         }
@@ -363,8 +362,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     external nonReentrant
     returns (uint256 redeemedTokens) {
       uint256 balance;
-
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         balance = IERC20(allAvailableTokens[i]).balanceOf(address(this));
         if (balance == 0) {
           continue;
@@ -407,7 +405,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       address currentToken;
       uint256 balance;
 
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currentToken = allAvailableTokens[i];
         balance = IERC20(currentToken).balanceOf(address(this));
         if (balance == 0) {
@@ -549,7 +547,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       if (areAllocationsEqual) {
-        for (uint8 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
+        for (uint256 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
           if (lastAllocations[i] != rebalancerLastAllocations[i]) {
             areAllocationsEqual = false;
             break;
@@ -586,7 +584,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       if (totalRedeemd > 1 && totalToMint > 1) {
         // Do not mint directly using toMintAllocations check with totalRedeemd
         uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
-        for (uint8 i = 0; i < toMintAllocations.length; i++) {
+        for (uint256 i = 0; i < toMintAllocations.length; i++) {
           // Calc what would have been the correct allocations percentage if all was available
           tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
         }
@@ -655,15 +653,13 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     require(tokenAddresses.length == protocolAmounts.length, "All tokens length != allocations length");
 
     uint256 currAmount;
-    address currAddr;
 
-    for (uint8 i = 0; i < protocolAmounts.length; i++) {
+    for (uint256 i = 0; i < protocolAmounts.length; i++) {
       currAmount = protocolAmounts[i];
       if (currAmount == 0) {
         continue;
       }
-      currAddr = tokenAddresses[i];
-      _mintProtocolTokens(protocolWrappers[currAddr], currAmount);
+      _mintProtocolTokens(protocolWrappers[tokenAddresses[i]], currAmount);
     }
   }
 
@@ -680,7 +676,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     uint256 currBalance = 0;
     uint256 allocatedBalance = 0;
 
-    for (uint8 i = 0; i < allocations.length; i++) {
+    for (uint256 i = 0; i < allocations.length; i++) {
       if (i == allocations.length - 1) {
         newAmounts[i] = total.sub(allocatedBalance);
       } else {
@@ -712,26 +708,32 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
     require(amounts.length == newAmounts.length, 'Lengths not equal');
     toMintAllocations = new uint256[](amounts.length);
     ILendingProtocol protocol;
+    uint256 currAmount;
+    uint256 newAmount;
+    address currToken;
     // check the difference between amounts and newAmounts
-    for (uint8 i = 0; i < amounts.length; i++) {
-      protocol = ILendingProtocol(protocolWrappers[tokenAddresses[i]]);
-      if (amounts[i] > newAmounts[i]) {
+    for (uint256 i = 0; i < amounts.length; i++) {
+      currToken = tokenAddresses[i];
+      newAmount = newAmounts[i];
+      currAmount = amounts[i];
+      protocol = ILendingProtocol(protocolWrappers[currToken]);
+      if (currAmount > newAmount) {
         toMintAllocations[i] = 0;
-        uint256 toRedeem = amounts[i].sub(newAmounts[i]);
+        uint256 toRedeem = currAmount.sub(newAmount);
         uint256 availableLiquidity = protocol.availableLiquidity();
         if (availableLiquidity < toRedeem) {
           toRedeem = availableLiquidity;
         }
         // redeem the difference
         _redeemProtocolTokens(
-          protocolWrappers[tokenAddresses[i]],
-          tokenAddresses[i],
+          protocolWrappers[currToken],
+          currToken,
           // convert amount from underlying to protocol token
           toRedeem.mul(10**18).div(protocol.getPriceInToken()),
           address(this) // tokens are now in this contract
         );
       } else {
-        toMintAllocations[i] = newAmounts[i].sub(amounts[i]);
+        toMintAllocations[i] = newAmount.sub(currAmount);
         totalToMint = totalToMint.add(toMintAllocations[i]);
       }
     }
@@ -755,7 +757,7 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       address currentToken;
       uint256 currTokenPrice;
 
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currentToken = allAvailableTokens[i];
         tokenAddresses[i] = currentToken;
         currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
@@ -783,10 +785,9 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       if (_amount == 0) {
         return tokens;
       }
-      ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       // Transfer _amount underlying token (eg. DAI) to _wrapperAddr
       IERC20(token).safeTransfer(_wrapperAddr, _amount);
-      tokens = _wrapper.mint();
+      tokens = ILendingProtocol(_wrapperAddr).mint();
   }
 
   /**
@@ -804,9 +805,8 @@ contract IdleTokenV3NoGSTConst is ERC20, ERC20Detailed, ReentrancyGuard, Ownable
       if (_amount == 0) {
         return tokens;
       }
-      ILendingProtocol _wrapper = ILendingProtocol(_wrapperAddr);
       // Transfer _amount of _protocolToken (eg. cDAI) to _wrapperAddr
       IERC20(_token).safeTransfer(_wrapperAddr, _amount);
-      tokens = _wrapper.redeem(_account);
+      tokens = ILendingProtocol(_wrapperAddr).redeem(_account);
   }
 }

@@ -38,7 +38,7 @@ contract IdlePriceCalculator {
       uint256 currNav;
       uint256 totNav;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+      for (uint256 i = 0; i < currentTokensUsed.length; i++) {
         currPrice = ILendingProtocol(protocolWrappersAddresses[i]).getPriceInToken();
         // NAV = price * poolSupply
         currNav = currPrice.mul(IERC20(currentTokensUsed[i]).balanceOf(idleToken));

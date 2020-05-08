@@ -70,7 +70,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
   function setNewToken(address _newToken)
     external onlyOwner {
       require(_newToken != address(0), "New token should be != 0");
-      for (uint8 i = 0; i < lastAmountsAddresses.length; i++) {
+      for (uint256 i = 0; i < lastAmountsAddresses.length; i++) {
         if (lastAmountsAddresses[i] == _newToken) {
           return;
         }
@@ -94,7 +94,7 @@ contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
     require(_allocations.length == _addresses.length, "Alloc lengths are different, addresses");
 
     uint256 total;
-    for (uint8 i = 0; i < _allocations.length; i++) {
+    for (uint256 i = 0; i < _allocations.length; i++) {
       require(_addresses[i] == lastAmountsAddresses[i], "Addresses do not match");
       total = total.add(_allocations[i]);
       lastAmounts[i] = _allocations[i];

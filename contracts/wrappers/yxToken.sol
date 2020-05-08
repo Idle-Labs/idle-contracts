@@ -39,7 +39,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
     require(_underlying != address(0), 'Underlying is 0');
 
     underlying = _underlying;
-    marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
+    marketId = _marketId; // 0 ETH, (1 SAI not available), 2 USDC, 3 DAI
     IERC20(_underlying).approve(dydxAddressesProvider, uint256(-1));
   }
 
@@ -60,7 +60,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   }
 
   /**
-   * Gets all underlying tokens in this contract and mints yxTokens
+   * Lend _amount in DyDx and mints yxTokens
    * tokens are then transferred to msg.sender
    * NOTE: one must approve this contract before calling this method
    *
@@ -98,9 +98,8 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   }
 
   /**
-   * Gets all yxTokens in this contract and redeems underlying tokens.
+   * Redeems _amount of yxTokens
    * underlying tokens are then transferred to `_account`
-   * NOTE: yxTokens needs to be sended here before calling this
    *
    * @return underlying tokens redeemd
    */
@@ -109,7 +108,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
     returns (uint256 tokens) {
       _redeemDyDx(_amount.mul(price()).div(10**18));
 
-      // transfer redeemed tokens to _account
+      // transfer redeemd tokens to _account
       IERC20 _underlying = IERC20(underlying);
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);

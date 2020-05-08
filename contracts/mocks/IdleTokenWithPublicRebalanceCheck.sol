@@ -190,7 +190,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
     public view
     returns (uint256 price) {
       address[] memory protocolWrappersAddresses = new address[](currentTokensUsed.length);
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+      for (uint256 i = 0; i < currentTokensUsed.length; i++) {
         protocolWrappersAddresses[i] = protocolWrappers[currentTokensUsed[i]];
       }
       price = IdlePriceCalculator(priceCalculator).tokenPrice(
@@ -210,7 +210,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       address currToken;
       addresses = new address[](allAvailableTokens.length);
       aprs = new uint256[](allAvailableTokens.length);
-      for (uint8 i = 0; i < allAvailableTokens.length; i++) {
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currToken = allAvailableTokens[i];
         addresses[i] = currToken;
         aprs[i] = ILendingProtocol(protocolWrappers[currToken]).getAPR();
@@ -260,7 +260,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
     returns (uint256 redeemedTokens) {
       address currentToken;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+      for (uint256 i = 0; i < currentTokensUsed.length; i++) {
         currentToken = currentTokensUsed[i];
         redeemedTokens = redeemedTokens.add(
           _redeemProtocolTokens(
@@ -297,7 +297,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
 
       address currentToken;
 
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+      for (uint256 i = 0; i < currentTokensUsed.length; i++) {
         currentToken = currentTokensUsed[i];
         IERC20(currentToken).safeTransfer(
           msg.sender,
@@ -361,7 +361,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       // - get current protocol used
       TokenProtocol[] memory tokenProtocols = _getCurrentProtocols();
       // - redeem everything from each protocol
-      for (uint8 i = 0; i < tokenProtocols.length; i++) {
+      for (uint256 i = 0; i < tokenProtocols.length; i++) {
         _redeemProtocolTokens(
           tokenProtocols[i].protocolAddr,
           tokenProtocols[i].tokenAddr,
@@ -392,7 +392,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       // mint for each protocol and update currentTokensUsed
       uint256 currAmount;
       address currAddr;
-      for (uint8 i = 0; i < protocolAmounts.length; i++) {
+      for (uint256 i = 0; i < protocolAmounts.length; i++) {
         currAmount = protocolAmounts[i];
         if (currAmount == 0) {
           continue;
@@ -436,7 +436,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       address currAddr;
 
       // find best rate and secondBestRate
-      for (uint8 i = 0; i < aprs.length; i++) {
+      for (uint256 i = 0; i < aprs.length; i++) {
         currApr = aprs[i];
         currAddr = addresses[i];
         if (currApr > maxRate) {
@@ -475,7 +475,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
       uint256[] memory paramsRebalance = new uint256[](_clientProtocolAmounts.length + 1);
       paramsRebalance[0] = _amount;
 
-      for (uint8 i = 1; i < _clientProtocolAmounts.length; i++) {
+      for (uint256 i = 1; i < _clientProtocolAmounts.length; i++) {
         paramsRebalance[i] = _clientProtocolAmounts[i-1];
       }
 
@@ -491,7 +491,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
     internal view
     returns (TokenProtocol[] memory currentProtocolsUsed) {
       currentProtocolsUsed = new TokenProtocol[](currentTokensUsed.length);
-      for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+      for (uint256 i = 0; i < currentTokensUsed.length; i++) {
         currentProtocolsUsed[i] = TokenProtocol(
           currentTokensUsed[i],
           protocolWrappers[currentTokensUsed[i]]
@@ -516,7 +516,7 @@ contract IdleTokenWithPublicRebalanceCheck is ERC20, ERC20Detailed, ReentrancyGu
        address currentToken;
        uint256 currTokenPrice;
 
-       for (uint8 i = 0; i < currentTokensUsed.length; i++) {
+       for (uint256 i = 0; i < currentTokensUsed.length; i++) {
          currentToken = currentTokensUsed[i];
          tokenAddresses[i] = currentToken;
          currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
