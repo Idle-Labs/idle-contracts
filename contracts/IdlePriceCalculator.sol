@@ -2,7 +2,7 @@
  * @title: Idle Price Calculator contract
  * @summary: Used for calculating the current IdleToken price in underlying (eg. DAI)
  *          price is: Net Asset Value / totalSupply
- * @author: William Bergamo, idle.finance
+ * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
 

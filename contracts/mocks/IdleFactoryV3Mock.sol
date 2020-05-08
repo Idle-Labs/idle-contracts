@@ -1,7 +1,7 @@
 /**
  * @title: Idle Factory contract
  * @summary: Used for deploying and keeping track of IdleTokens instances
- * @author: William Bergamo, idle.finance
+ * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
 

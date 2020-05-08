@@ -1,6 +1,6 @@
 /**
  * @title: Idle Token interface
- * @author: William Bergamo, idle.finance
+ * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
 

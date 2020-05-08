@@ -25,7 +25,7 @@
     "web3js",
     "ethereum"
   ],
-  "author": "William Bergamo <william@idle.finance>",
+  "author": "Idle Labs Inc. <info@idle.finance>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bugduino/idle-contracts/issues"

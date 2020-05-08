@@ -3,7 +3,7 @@
  * @summary: ERC20 that holds pooled user funds together
  *           Each token rapresent a share of the underlying pools
  *           and with each token user have the right to redeem a portion of these pools
- * @author: William Bergamo, idle.finance
+ * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
 

@@ -3,7 +3,7 @@
  * @summary: Used for calculating amounts to lend on each implemented protocol.
  *           This implementation works with Compound and Fulcrum only,
  *           when a new protocol will be added this should be replaced
- * @author: William Bergamo, idle.finance
+ * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
 
