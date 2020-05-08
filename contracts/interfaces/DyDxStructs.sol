@@ -1,7 +1,17 @@
 pragma solidity 0.5.16;
 
 contract DyDxStructs {
-  enum ActionType { Deposit, Withdraw }
+  enum ActionType {
+    Deposit,   // supply tokens
+    Withdraw,  // borrow tokens
+    Transfer,  // transfer balance between accounts
+    Buy,       // buy an amount of some token (externally)
+    Sell,      // sell an amount of some token (externally)
+    Trade,     // trade tokens against another account
+    Liquidate, // liquidate an undercollateralized or expiring account
+    Vaporize,  // use excess tokens to zero-out a completely negative account
+    Call       // send arbitrary data to an address
+  }
   enum AssetDenomination { Wei }
   enum AssetReference { Delta } // the amount is given as a delta from the current value
 
