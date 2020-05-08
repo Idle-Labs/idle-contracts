@@ -1,7 +1,7 @@
 {
   "name": "idle-contracts",
-  "version": "1.0.0",
-  "description": "Idle V2 contracts repo",
+  "version": "3.0.0",
+  "description": "Idle V3 contracts repo",
   "main": "index.js",
   "scripts": {
     "test": "truffle test",
@@ -14,6 +14,7 @@
   "keywords": [
     "idle",
     "idle.finance",
+    "yield",
     "openzeppelin",
     "truffle",
     "react",
