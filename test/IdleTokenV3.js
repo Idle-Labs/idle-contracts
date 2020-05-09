@@ -1504,6 +1504,7 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
     // Give protocol Tokens to IdleToken contract
     await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
 
+    await this.token.setAllocations([BNify('25000'), BNify('25000'), BNify('25000'), BNify('25000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['33333', '33333', '16667', '16667']);
 
@@ -1524,8 +1525,8 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
     BNify(await this.aDAIMock.balanceOf(this.token.address, {from: creator})).should.be.bignumber.equal(BNify('9000000000000000000'));
     BNify(await this.yxDAIMock.balanceOf(this.token.address, {from: creator})).should.be.bignumber.equal(BNify('3000000000000000000'));
 
-    // Allocations are correct
-    await this.testIdleAllocations(['33333', '33333', '16667', '16667']);
+    // Allocations are correct (ie not updated)
+    await this.testIdleAllocations(['25000', '25000', '25000', '25000']);
   });
   it('rebalance when underlying tokens are in contract (ie after mint) and rebalance and idle allocations are equal', async function () {
     // set available liquidity for providers
@@ -1585,6 +1586,59 @@ contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, 
 
     await this.testIdleBalance(['250', '4', '10', '5']);
     await this.testIdleAllocations(['30000', '30000', '20000', '20000']);
+  });
+  it('rebalance when prev rebalance was not able to redeem all liquidity because a protocol has low liquidity', async function () {
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '2', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    await this.sendProtocolTokensToIdle(['0', '0', '10', '0']); // [cToken, iToken, aToken, yxToken]
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['0', '0', '2', '0']);
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+    // All is in aave
+
+    // Set rebalancer allocations to have everything on DyDx
+    await this.setRebAllocations(['0', '0', '0', '100000']);
+
+    const res = await this.token.rebalance.call();
+    await this.token.rebalance();
+    res.should.equal(true);
+
+    // Check that no DAI are in the contract at the end
+    const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
+    BNify(DAIbalance).should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    // We redeemd everything that was available
+    await this.testIdleBalance(['0', '0', '8', '1']);
+    // Idle allocations still points to the old allocations (ie all on aave)
+    await this.testIdleAllocations(['0', '0', '100000', '0']);
+
+    await this.daiMultiTransfer(tokens, ['0', '0', '2', '0']);
+    // If we do another rebalance then we will move all the available liquidity (still 2 not updated)
+    await this.token.rebalance.call();
+    await this.token.rebalance();
+
+    // We redeemd everything that was available
+    await this.testIdleBalance(['0', '0', '6', '2']);
+    // Idle allocations still points to the old allocations (ie all on aave)
+    await this.testIdleAllocations(['0', '0', '100000', '0']);
+
+    // Liquidity is now available
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    await this.daiMultiTransfer(tokens, ['0', '0', '6', '0']);
+
+    await this.token.rebalance.call();
+    await this.token.rebalance();
+
+    // We redeemd everything that was available
+    await this.testIdleBalance(['0', '0', '0', '5']);
+    // Idle allocations now have been updated (ie all on dydx)
+    await this.testIdleAllocations(['0', '0', '0', '100000']);
   });
   it('openRebalance with allocations gives a better apr', async function () {
     // set available liquidity for providers

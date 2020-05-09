@@ -562,16 +562,22 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
       if (_skipWholeRebalance || areAllocationsEqual) {
         return false;
       }
-      // Update lastAllocations with rebalancerLastAllocations
-      delete lastAllocations;
-      lastAllocations = rebalancerLastAllocations;
+
       // Instead of redeeming everything during rebalance we redeem and mint only what needs
       // to be reallocated
       // get current allocations in underlying
       (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
       // calculate new allocations given the total
       uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
-      (uint256[] memory toMintAllocations, uint256 totalToMint) = _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+      (uint256[] memory toMintAllocations, uint256 totalToMint, bool lowLiquidity) = _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+
+      // if some protocol has liquidity that we should redeem, we do not update
+      // lastAllocations to force another rebalance next time
+      if (!lowLiquidity) {
+        // Update lastAllocations with rebalancerLastAllocations
+        delete lastAllocations;
+        lastAllocations = rebalancerLastAllocations;
+      }
       uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
       if (totalRedeemd > 1 && totalToMint > 1) {
         // Do not mint directly using toMintAllocations check with totalRedeemd
@@ -695,7 +701,8 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
     uint256[] memory newAmounts
     ) internal returns (
       uint256[] memory toMintAllocations,
-      uint256 totalToMint
+      uint256 totalToMint,
+      bool lowLiquidity
     ) {
     require(amounts.length == newAmounts.length, 'Lengths not equal');
     toMintAllocations = new uint256[](amounts.length);
@@ -714,6 +721,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
         uint256 toRedeem = currAmount.sub(newAmount);
         uint256 availableLiquidity = protocol.availableLiquidity();
         if (availableLiquidity < toRedeem) {
+          lowLiquidity = true;
           toRedeem = availableLiquidity;
         }
         // redeem the difference

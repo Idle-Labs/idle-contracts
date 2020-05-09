@@ -44,7 +44,8 @@ contract IdleTokenV3Mock is IdleTokenV3NoGSTConst {
     uint256[] calldata newAmounts
     ) external returns (
       uint256[] memory toMintAllocations,
-      uint256 totalToMint
+      uint256 totalToMint,
+      bool lowLiquidity
     ) {
       return _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
   }
