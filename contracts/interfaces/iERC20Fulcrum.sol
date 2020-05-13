@@ -75,6 +75,10 @@ interface iERC20Fulcrum {
     external
     view
     returns (uint256);
+  function totalSupplyInterestRate(uint256)
+    external
+    view
+    returns (uint256);
 
   function claimLoanToken()
     external
