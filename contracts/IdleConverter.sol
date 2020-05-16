@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "./interfaces/IIdleToken.sol";
+import "./others/EIP712MetaTransaction.sol";
+import "./GST2Consumer.sol";
 
 interface CERC20 {
   function redeem(uint256 redeemTokens) external returns (uint256);
@@ -29,7 +31,7 @@ interface yToken {
 // This contract should never have tokens at the end of a transaction.
 // if for some reason tokens are stuck inside there is an emergency withdraw method
 // This contract is not audited
-contract IdleConverter is Ownable {
+contract IdleConverter is Ownable, GST2Consumer, EIP712MetaTransaction("IdleConverter","1") {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -40,8 +42,8 @@ contract IdleConverter is Ownable {
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromToIdle(uint256 _amount, address _from, address _to, address _underlying) external returns (uint256) {
-    IERC20(_from).safeTransferFrom(msg.sender, address(this), _amount);
+  function migrateFromToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+    IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     IIdleToken(_from).redeemIdleToken(_amount, true, new uint256[](0));
 
     return _migrateToIdle(_to, _underlying);
@@ -52,8 +54,8 @@ contract IdleConverter is Ownable {
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromCompoundToIdle(uint256 _amount, address _from, address _to, address _underlying) external returns (uint256) {
-    IERC20(_from).safeTransferFrom(msg.sender, address(this), _amount);
+  function migrateFromCompoundToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+    IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     CERC20(_from).redeem(_amount);
 
     return _migrateToIdle(_to, _underlying);
@@ -64,8 +66,8 @@ contract IdleConverter is Ownable {
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromFulcrumToIdle(uint256 _amount, address _from, address _to, address _underlying) external returns (uint256) {
-    IERC20(_from).safeTransferFrom(msg.sender, address(this), _amount);
+  function migrateFromFulcrumToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+    IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     iERC20Fulcrum(_from).burn(address(this), _amount);
 
     return _migrateToIdle(_to, _underlying);
@@ -76,8 +78,8 @@ contract IdleConverter is Ownable {
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromAaveToIdle(uint256 _amount, address _from, address _to, address _underlying) external returns (uint256) {
-    IERC20(_from).safeTransferFrom(msg.sender, address(this), _amount);
+  function migrateFromAaveToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+    IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     AToken(_from).redeem(_amount);
 
     return _migrateToIdle(_to, _underlying);
@@ -88,8 +90,8 @@ contract IdleConverter is Ownable {
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromIearnToIdle(uint256 _amount, address _from, address _to, address _underlying) external returns (uint256) {
-    IERC20(_from).safeTransferFrom(msg.sender, address(this), _amount);
+  function migrateFromIearnToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+    IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     yToken(_from).withdraw(_amount);
 
     return _migrateToIdle(_to, _underlying);
@@ -104,7 +106,7 @@ contract IdleConverter is Ownable {
     IIdleToken(_to).mintIdleToken(underlyingBalance, new uint256[](0));
 
     newIdleTokens = IERC20(_to).balanceOf(address(this));
-    IERC20(_to).safeTransfer(msg.sender, newIdleTokens);
+    IERC20(_to).safeTransfer(msgSender(), newIdleTokens);
   }
 
   // onlyOwner
