@@ -60,6 +60,7 @@ contract IdleTokenV3 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable
   bool public isNewProtocolDelayed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
+  // last fully applied allocations (ie when all liquidity has been correctly placed)
   // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
   uint256[] public lastAllocations;
   // Map that saves avg idleToken price paid for each user
