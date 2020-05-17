@@ -12,7 +12,7 @@ import "./interfaces/IIdleRebalancerV3.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract IdleRebalancerV3 is IIdleRebalancerV3, Ownable {
+contract IdleRebalancerV3USDT is IIdleRebalancerV3, Ownable {
   using SafeMath for uint256;
   uint256[] public lastAmounts;
   address[] public lastAmountsAddresses;
