@@ -123,7 +123,12 @@ contract iDAIMock is ERC20Detailed, ERC20, iERC20Fulcrum {
     returns (uint256) {
       return supplyRate;
   }
-
+  function totalSupplyInterestRate(uint256)
+    external
+    view
+    returns (uint256) {
+      return supplyRate;
+  }
   function nextBorrowInterestRate(uint256)
     external
     view
