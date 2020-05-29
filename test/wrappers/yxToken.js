@@ -57,9 +57,11 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
 
   it('mint mints yxTokens and deposit them into dydx', async function () {
     const initialDAIBalance = await this.DAIMock.balanceOf.call(creator, { from: creator });
+    const initialyxDAIBalance = await this.yxDAI.balanceOf.call(creator, { from: creator });
     // set price to 10**18
     const big2 = BNify('2').mul(this.one);
     await this.yxDAI.setPriceForTest(this.one);
+    await this.DyDxMock.setAccountPar(BNify('0'));
     // approve yxDAI to spend creator's DAI
     await this.DAIMock.approve(this.yxDAI.address, BNify('-1'), {from: creator});
     // check tokens Minted
@@ -67,6 +69,8 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
     res.should.be.bignumber.equal(big2);
     // do the actual tx
     await this.yxDAI.mint(big2, { from: creator });
+    const endyxDAIBalance = await this.yxDAI.balanceOf.call(creator, { from: creator });
+    (endyxDAIBalance.sub(initialyxDAIBalance)).should.be.bignumber.equal(big2);
     const endDAIBalance = await this.DAIMock.balanceOf.call(creator, { from: creator });
     (initialDAIBalance.sub(endDAIBalance)).should.be.bignumber.equal(big2);
   });
@@ -75,10 +79,10 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
     const big2 = BNify('2').mul(this.one);
     // Fund yxToken with 2 DAI
     await this.DAIMock.transfer(this.yxDAI.address, big2, {from: creator});
-
     const initialDAIBalance = await this.DAIMock.balanceOf.call(creator, { from: creator });
-    // set price to 10**18
+    const initialyxDAIBalance = await this.yxDAI.balanceOf.call(creator, { from: creator });
     await this.yxDAI.setPriceForTest(this.one);
+    await this.DyDxMock.setAccountPar(BNify('0'));
 
     // mint 2 yxDAI
     await this.DAIMock.approve(this.yxDAI.address, BNify('-1'), {from: creator});
@@ -87,7 +91,7 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
 
     // price doubled
     await this.yxDAI.setPriceForTest(big2);
-
+    await this.DyDxMock.setAccountPar(BNify('4').mul(this.one));
     // redeems 2 yxDAI for 4 DAI
     await this.yxDAI.redeem(big2, creator, { from: creator });
     // creator should have 4 DAI, and dydx 0 DAI
@@ -96,12 +100,15 @@ contract('yxToken', function ([_, creator, nonOwner, someone, foo]) {
     (endDAIBalance.sub(initialDAIBalance)).should.be.bignumber.equal(big2);
     const endDyDxDAIBalance = await this.DAIMock.balanceOf.call(this.DyDxMock.address, { from: creator });
     (endDyDxDAIBalance).should.be.bignumber.equal(BNify('0'));
+    const endyxDAIBalance = await this.yxDAI.balanceOf.call(creator, { from: creator });
+    (initialyxDAIBalance.sub(endyxDAIBalance)).should.be.bignumber.equal(BNify('0'));
   });
 
   it('_mintDyDx', async function () {
     const big2 = BNify('2').mul(this.one);
     await this.DAIMock.transfer(this.yxDAI.address, big2, {from: creator});
     // set price to 10**18
+    await this.yxDAI.setPriceForTest(this.one);
     await this.DyDxMock.setMarketCurrentIndex(big2, this.one);
     // approve yxDAI to spend creator's DAI
     await this.DAIMock.approve(this.yxDAI.address, BNify('-1'), {from: creator});

@@ -25,9 +25,8 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
   uint256 public secondsInAYear;
   // underlying token (token eg DAI) address
   address public underlying;
-  address public dydxAddressesProvider = address(0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e);
+  address public dydxAddressesProvider = 0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e;
   DyDx dydx = DyDx(dydxAddressesProvider);
-
   /**
    * @param _underlying : underlying token (eg DAI) address
    * @param _marketId : dydx market id
@@ -40,7 +39,7 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
     require(_underlying != address(0), 'Underlying is 0');
 
     underlying = _underlying;
-    marketId = _marketId; // 0, ETH, (1 SAI not available), 2 USDC, 3 DAI
+    marketId = _marketId; // 0 ETH, (1 SAI not available), 2 USDC, 3 DAI
     IERC20(_underlying).approve(dydxAddressesProvider, uint256(-1));
   }
 
@@ -48,7 +47,7 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
    * @return current price of yxToken always 18 decimals
    */
   function price() public view returns (uint256) {
-    (, uint256 supplyIndex) = DyDx(dydxAddressesProvider).getMarketCurrentIndex(marketId);
+    (, uint256 supplyIndex) = dydx.getMarketCurrentIndex(marketId);
     return supplyIndex;
   }
 
@@ -61,7 +60,7 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
   }
 
   /**
-   * Gets all underlying tokens in this contract and mints yxTokens
+   * Lend _amount in DyDx and mints yxTokens
    * tokens are then transferred to msg.sender
    * NOTE: one must approve this contract before calling this method
    *
@@ -70,14 +69,15 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
   function mint(uint256 _amount)
     external
     returns (uint256 newTokens) {
-      // mint IERC20 for dydx tokenized position
-      newTokens = _amount.mul(10**18).div(price());
-      _mint(msg.sender, newTokens);
-
+      // Get current account par in dydx
+      uint256 accountParInitial = getPar();
+      // Transfer underlying in this contract
       IERC20(underlying).safeTransferFrom(msg.sender, address(this), _amount);
-
       // Use underlying and supply it to dydx
       _mintDyDx(_amount);
+      newTokens = getPar().sub(accountParInitial);
+      // mint IERC20 for dydx tokenized position
+      _mint(msg.sender, newTokens);
   }
 
   function _mintDyDx(uint256 _amount)
@@ -95,22 +95,21 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
       ActionArgs[] memory args = new ActionArgs[](1);
       args[0] = act;
 
-      DyDx(dydxAddressesProvider).operate(infos, args);
+      dydx.operate(infos, args);
   }
 
   /**
-   * Gets all yxTokens in this contract and redeems underlying tokens.
+   * Redeems _amount of yxTokens
    * underlying tokens are then transferred to `_account`
-   * NOTE: yxTokens needs to be sended here before calling this
    *
    * @return underlying tokens redeemd
    */
   function redeem(uint256 _amount, address _account)
     external
     returns (uint256 tokens) {
-      _redeemDyDx(_amount.mul(price()).div(10**18));
+      _redeemDyDx(_amount);
 
-      // transfer redeemed tokens to _account
+      // transfer redeemd tokens to _account
       IERC20 _underlying = IERC20(underlying);
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);
@@ -123,7 +122,7 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
       Info[] memory infos = new Info[](1);
       infos[0] = Info(address(this), 0);
 
-      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, _amount);
+      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Par, AssetReference.Delta, _amount);
       ActionArgs memory act;
       act.actionType = ActionType.Withdraw;
       act.accountId = 0;
@@ -134,6 +133,11 @@ contract yxTokenNoConst is DyDxStructs, ERC20, ERC20Detailed {
       ActionArgs[] memory args = new ActionArgs[](1);
       args[0] = act;
 
-      DyDx(dydxAddressesProvider).operate(infos, args);
+      dydx.operate(infos, args);
+  }
+
+  function getPar() internal view returns (uint256) {
+    (, uint128 value) = dydx.getAccountPar(Info(address(this), 0), marketId);
+    return uint256(value);
   }
 }

@@ -69,14 +69,15 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   function mint(uint256 _amount)
     external
     returns (uint256 newTokens) {
-      // mint IERC20 for dydx tokenized position
-      newTokens = _amount.mul(10**18).div(price());
-      _mint(msg.sender, newTokens);
-
+      // Get current account par in dydx
+      uint256 accountParInitial = getPar();
+      // Transfer underlying in this contract
       IERC20(underlying).safeTransferFrom(msg.sender, address(this), _amount);
-
       // Use underlying and supply it to dydx
       _mintDyDx(_amount);
+      // mint IERC20 for dydx tokenized position
+      newTokens = getPar().sub(accountParInitial);
+      _mint(msg.sender, newTokens);
   }
 
   function _mintDyDx(uint256 _amount)
@@ -106,7 +107,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
   function redeem(uint256 _amount, address _account)
     external
     returns (uint256 tokens) {
-      _redeemDyDx(_amount.mul(price()).div(10**18));
+      _redeemDyDx(_amount);
 
       // transfer redeemd tokens to _account
       IERC20 _underlying = IERC20(underlying);
@@ -121,7 +122,7 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       Info[] memory infos = new Info[](1);
       infos[0] = Info(address(this), 0);
 
-      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Wei, AssetReference.Delta, _amount);
+      AssetAmount memory amt = AssetAmount(false, AssetDenomination.Par, AssetReference.Delta, _amount);
       ActionArgs memory act;
       act.actionType = ActionType.Withdraw;
       act.accountId = 0;
@@ -133,5 +134,10 @@ contract yxToken is DyDxStructs, ERC20, ERC20Detailed {
       args[0] = act;
 
       dydx.operate(infos, args);
+  }
+
+  function getPar() internal view returns (uint256) {
+    (, uint128 value) = dydx.getAccountPar(Info(address(this), 0), marketId);
+    return uint256(value);
   }
 }

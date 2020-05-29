@@ -11,6 +11,7 @@ contract DyDxMock is DyDx {
   using SafeMath for uint256;
 
   Wei balance;
+  uint256 private accountPar;
   uint256 private earningsRate;
   uint256 private interestRate;
   uint256 private borrowIndex;
@@ -51,7 +52,9 @@ contract DyDxMock is DyDx {
   function getAccountWei(Info calldata, uint256) external view returns (Wei memory) {
     return balance;
   }
-
+  function getAccountPar(Info calldata, uint256) external view returns (bool, uint128) {
+    return (true, uint128(accountPar));
+  }
   function setEarningsRate(uint256 value) external {
     earningsRate = value;
   }
@@ -72,15 +75,20 @@ contract DyDxMock is DyDx {
   function setAccountWei(uint256 _balance) external {
     balance = Wei(true, _balance);
   }
+  function setAccountPar(uint256 _balance) external {
+    accountPar = _balance;
+  }
 
   function operate(Info[] calldata infos, ActionArgs[] calldata args) external {
     uint256 _amount = args[0].amount.value;
     uint256 marketId = args[0].primaryMarketId;
     if (args[0].actionType == ActionType.Deposit) {
       IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+      accountPar = accountPar + _amount;
       transfers[msg.sender] = Transfer(infos[0].owner, _amount, true, marketId);
     } else {
       IERC20(token).safeTransfer(msg.sender, _amount);
+      accountPar = accountPar - _amount;
       transfers[msg.sender] = Transfer(infos[0].owner, _amount, false, marketId);
     }
   }

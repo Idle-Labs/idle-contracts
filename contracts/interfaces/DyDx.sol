@@ -10,5 +10,6 @@ contract DyDx is DyDxStructs {
   function getMarketCurrentIndex(uint256 marketId) external view returns (uint256 borrow, uint256 supply);
   function getMarketTotalPar(uint256 marketId) external view returns (uint256 borrow, uint256 supply);
   function getAccountWei(Info calldata account, uint256 marketId) external view returns (Wei memory);
+  function getAccountPar(Info calldata account, uint256 marketId) external view returns (bool sign, uint128 value);
   function operate(Info[] calldata, ActionArgs[] calldata) external;
 }

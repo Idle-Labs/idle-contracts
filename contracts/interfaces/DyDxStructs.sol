@@ -12,7 +12,7 @@ contract DyDxStructs {
     Vaporize,  // use excess tokens to zero-out a completely negative account
     Call       // send arbitrary data to an address
   }
-  enum AssetDenomination { Wei }
+  enum AssetDenomination { Wei, Par }
   enum AssetReference { Delta } // the amount is given as a delta from the current value
 
   struct AssetAmount {
@@ -41,5 +41,10 @@ contract DyDxStructs {
   struct Wei {
     bool sign; // true if positive
     uint256 value;
+  }
+
+  struct Par {
+    bool sign; // true if positive
+    uint128 value;
   }
 }
