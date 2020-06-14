@@ -70,3 +70,7 @@ build
 
 .openzeppelin
 .openzeppelin/.session
+
+migrations_foo
+flatten
+buidler.config.js

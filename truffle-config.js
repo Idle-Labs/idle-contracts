@@ -14,16 +14,19 @@ const ledgerOptions = {
 };
 
 module.exports = {
-  plugins: ["truffle-security", "solidity-coverage"],
+  plugins: ["truffle-security", "solidity-coverage", "truffle-plugin-verify"],
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!
+  api_keys: {
+    etherscan: process.env.ETHERSCAN_KEY
+  },
   compilers: {
     solc: {
       version: "0.5.16",
       settings: {
         optimizer: {
           enabled: true,
-          runs: 1 // 1 for tests, 1000 for deploy
+          runs: 45000 // 1 for tests, 45000 for deploy
         }
       }
     }
@@ -41,6 +44,7 @@ module.exports = {
       network_id: '42',
       gas: 6465030,
       gasPrice: 5000000000, // 5 gwei
+      skipDryRun: true
     },
     rinkeby: {
       provider: () => new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/v3/" + process.env.INFURA_KEY),
@@ -53,15 +57,16 @@ module.exports = {
       // provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
-      gas: 5500000,
-      gasPrice: 2000000000 // 2 gwei
+      gas: 2500000,
+      gasPrice: 16000000000, // 16 gwei
+      // skipDryRun: true
     },
     local: {
       host: '127.0.0.1',
       port: 8545,
       network_id: '*',
       skipDryRun: true,
-      gasPrice: 5000000000
+      gasPrice: 1000000000
     },
     coverage: {
       host: "localhost",
