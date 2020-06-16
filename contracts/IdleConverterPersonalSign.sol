@@ -103,7 +103,7 @@ contract IdleConverterPersonalSign is Ownable, GST2Consumer, BasicMetaTransactio
   // _underlying : underlying addr intially redeemd (eg. DAI)
   function _migrateToIdle(address _to, address _underlying) internal returns (uint256 newIdleTokens) {
     uint256 underlyingBalance = IERC20(_underlying).balanceOf(address(this));
-    IERC20(_underlying).approve(_to, underlyingBalance);
+    IERC20(_underlying).safeApprove(_to, underlyingBalance);
     IIdleToken(_to).mintIdleToken(underlyingBalance, new uint256[](0));
 
     newIdleTokens = IERC20(_to).balanceOf(address(this));
