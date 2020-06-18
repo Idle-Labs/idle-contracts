@@ -12,6 +12,10 @@ interface IIdleTokenV3 {
    * @return : price in underlying token
    */
   function tokenPrice() external view returns (uint256 price);
+  /**
+   * @return : underlying token address
+   */
+  function token() external view returns (address);
 
   /**
    * underlying token decimals
