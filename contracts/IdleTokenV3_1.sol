@@ -369,18 +369,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
       }
   }
 
-  /**
-   * Get current actual avg APR of this IdleToken
-   *
-   * @return : current actual (with fee included) avg apr
-   */
-  function getActualAvgAPR()
-    external view
-    returns (uint256) {
-    uint256 apr = getAvgAPR();
-    return apr.sub(apr.mul(fee).div(100000));
-  }
-
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
     _transfer(sender, recipient, amount);
@@ -415,21 +403,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   }
 
   /**
-   * Used to buy IdleTokens given an underlying amount (eg. DAI)
-   * withouth minting interest bearing tokens directly (They will be minted at next rebalance)
-   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
-   * NOTE 2: this method can be paused
-   *
-   * @param _amount : amount of underlying token to be lended
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function buyIdleToken(uint256 _amount)
-    external nonReentrant
-    returns (uint256) {
-    return _buyIdleToken(_amount);
-  }
-
-  /**
    * DEPRECATED: Used to mint IdleTokens, given an underlying amount (eg. DAI).
    * Keep for backward compatibility with IdleV2
    *
@@ -456,50 +429,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
   function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
-    external nonReentrant
-    returns (uint256 redeemedTokens) {
-      uint256 balance;
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        balance = IERC20(allAvailableTokens[i]).balanceOf(address(this));
-        if (balance == 0) {
-          continue;
-        }
-        redeemedTokens = redeemedTokens.add(
-          _redeemProtocolTokens(
-            protocolWrappers[allAvailableTokens[i]],
-            allAvailableTokens[i],
-            // _amount * protocolPoolBalance / idleSupply
-            _amount.mul(balance).div(totalSupply()), // amount to redeem
-            address(this)
-          )
-        );
-      }
-      // Get a portion of the eventual unlent balance
-      redeemedTokens = redeemedTokens.add(_amount.mul(IERC20(token).balanceOf(address(this))).div(totalSupply()));
-
-      _burn(msg.sender, _amount);
-      if (fee > 0 && feeAddress != address(0)) {
-        redeemedTokens = _getFee(_amount, redeemedTokens);
-      }
-      // send underlying minus fee to msg.sender
-      IERC20(token).safeTransfer(msg.sender, redeemedTokens);
-
-      if (this.paused() || _skipRebalance) {
-        return redeemedTokens;
-      }
-
-      _rebalance(0, false);
-  }
-
-  /**
-   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
-   *         Ideally one should wait until the black swan event is terminated
-   *
-   * @param _amount : amount of IdleTokens to be burned
-   * @return redeemedTokens : amount of underlying tokens redeemed
-   */
-  function sellIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
       uint256 valueToRedeem = _amount.mul(tokenPrice()).div(10**18);
@@ -666,31 +595,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
    * @return mintedTokens : amount of IdleTokens minted
    */
   function _mintIdleToken(uint256 _amount, uint256[] memory, bool _skipWholeRebalance)
-    internal whenNotPaused whenITokenPriceHasNotDecreased
-    returns (uint256 mintedTokens) {
-      // Get current IdleToken price
-      uint256 idlePrice = tokenPrice();
-      // transfer tokens to this contract
-      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
-
-      // Rebalance the current pool if needed and mint new supplied amount
-      _rebalance(0, _skipWholeRebalance);
-
-      mintedTokens = _amount.mul(10**18).div(idlePrice);
-      _mint(msg.sender, mintedTokens);
-
-      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
-  }
-
-  /**
-   * Used to buy IdleTokens, given an underlying amount (eg. DAI).
-   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
-   * NOTE 2: this method can be paused
-   *
-   * @param _amount : amount of underlying token to be lended
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function _buyIdleToken(uint256 _amount)
     internal whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
       // Get current IdleToken price
