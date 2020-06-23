@@ -20,12 +20,13 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleTokenV3.sol";
+import "./others/BasicMetaTransaction.sol";
 
 import "./IdleRebalancerV3.sol";
 import "./IdlePriceCalculator.sol";
 import "./GST2Consumer.sol";
 
-contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3, GST2Consumer {
+contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3, GST2Consumer, BasicMetaTransaction {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -42,7 +43,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // Last iToken price, used to pause contract in case of a black swan event
   uint256 public lastITokenPrice;
   // eg. 18 for DAI
-  uint256 public tokenDecimals;
+  uint256 private tokenDecimals;
   // Max possible fee on interest gained
   uint256 constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
   // Min delay for adding a new protocol
@@ -93,7 +94,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     address _iToken,
     address[] memory protocolTokens,
     address[] memory wrappers,
-    address _rebalancer,
+    address _rebalancer
   )
     public
     ERC20Detailed(_name, _symbol, _decimals) {
@@ -101,8 +102,11 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
       tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken;
       rebalancer = _rebalancer;
-      protocolWrappers = wrappers;
       allAvailableTokens = protocolTokens;
+
+      for (uint256 i = 0; i < protocolTokens.length; i++) {
+        protocolWrappers[protocolTokens[i]] = wrappers[i];
+      }
   }
 
   // During a black swan event is possible that iToken price decreases instead of increasing,
@@ -131,14 +135,30 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // onlyOwner
   /**
    * It allows owner to modify allAvailableTokens array in case of emergency
-   * ie if a bug on a interest bearing token is discovered
+   * ie if a bug on a interest bearing token is discovered and reset protocolWrappers
+   * associated with those tokens.
+   * This method can be delayed
    *
-   * @param _iToken : new _iToken address
+   * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
+   * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
    */
-  function setAllAvailableTokens(address[] memory _tokens)
-    external onlyOwner {
-      require(_tokens.length != 0, '_tokens length is 0');
-      allAvailableTokens = _tokens;
+  function setAllAvailableTokensAndWrappers(
+    address[] calldata protocolTokens,
+    address[] calldata wrappers
+  ) external onlyOwner {
+      require(protocolTokens.length != 0, 'protocolTokens length is 0');
+      require(protocolTokens.length != wrappers.length, 'protocolTokens length is != wrappers');
+
+      if (!isNewProtocolDelayed || (releaseTimes[address(0)] != 0 && now - releaseTimes[address(0)] > NEW_PROTOCOL_DELAY)) {
+        allAvailableTokens = protocolTokens;
+        for (uint256 i = 0; i < protocolTokens.length; i++) {
+          protocolWrappers[protocolTokens[i]] = wrappers[i];
+        }
+        releaseTimes[address(0)] = 0;
+        return;
+      }
+
+      releaseTimes[address(0)] = now;
   }
 
   /**
@@ -166,6 +186,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
 
   /**
    * It allows owner to set a protocol wrapper address
+   * this method can be delayed
    *
    * @param _token : underlying token address (eg. DAI)
    * @param _wrapper : Idle protocol wrapper address
@@ -289,7 +310,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     returns (uint256 price) {
       uint256 totSupply = totalSupply();
       if (totSupply == 0) {
-        return 10**(tokenDecimals());
+        return 10**(tokenDecimals);
       }
 
       uint256 currPrice;
@@ -301,7 +322,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
         currToken = allAvailableTokens[i];
         currPrice = ILendingProtocol(protocolWrappers[currToken]).getPriceInToken();
         // NAV = price * poolSupply
-        currNav = currPrice.mul(IERC20(currToken).balanceOf(idleToken));
+        currNav = currPrice.mul(IERC20(currToken).balanceOf(address(this)));
         totNav = totNav.add(currNav);
       }
 
@@ -357,7 +378,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     external view
     returns (uint256) {
     uint256 apr = getAvgAPR();
-    return apr.minus(apr.times(fee).div(100000));
+    return apr.sub(apr.mul(fee).div(100000));
   }
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient
@@ -454,7 +475,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
         );
       }
       // Get a portion of the eventual unlent balance
-      redeemedTokens = redeemedToken.add(_amount.mul(balanceUnderlying).div(totalSupply()));
+      redeemedTokens = redeemedTokens.add(_amount.mul(IERC20(token).balanceOf(address(this))).div(totalSupply()));
 
       _burn(msg.sender, _amount);
       if (fee > 0 && feeAddress != address(0)) {
@@ -481,7 +502,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   function sellIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-      uint256 valueToRedeem = _amount.times(tokenPrice()).div(one);
+      uint256 valueToRedeem = _amount.mul(tokenPrice()).div(10**18);
       uint256 balanceUnderlying = IERC20(token).balanceOf(address(this));
 
       if (valueToRedeem < balanceUnderlying) {
@@ -504,7 +525,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
           );
         }
         // Get a portion of the eventual unlent balance
-        redeemedTokens = redeemedToken.add(_amount.mul(balanceUnderlying).div(totalSupply()));
+        redeemedTokens = redeemedTokens.add(_amount.mul(balanceUnderlying).div(totalSupply()));
       }
 
 
@@ -706,15 +727,14 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
         }
       }
 
+      uint256 balance = IERC20(token).balanceOf(address(this));
       if (areAllocationsEqual && balance == 0) {
         return false;
       }
 
-      uint256 balance = IERC20(token).balanceOf(address(this));
-      uint256 totValue = _getCurrentPoolValue();
-      uint256 maxUnlentBalance = totValue.times(maxUnlentPerc).div(100000);
-
       if (balance > 0) {
+        uint256 maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(100000);
+
         if (lastAllocations.length == 0 && _skipWholeRebalance) {
           // set in storage
           lastAllocations = rebalancerLastAllocations;
@@ -722,7 +742,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
 
         if (balance > maxUnlentBalance) {
           // mint the difference
-          _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance.minus(maxUnlentBalance)));
+          _mintWithAmounts(allAvailableTokens, _amountsFromAllocations(rebalancerLastAllocations, balance.sub(maxUnlentBalance)));
         }
       }
 
@@ -735,7 +755,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
       // get current allocations in underlying
       (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
       // add unlent balance
-      totalInUnderlying = totalInUnderlying.plus(IERC20(token).balanceOf(address(this)));
+      totalInUnderlying = totalInUnderlying.add(IERC20(token).balanceOf(address(this)));
 
       // calculate new allocations given the total
       uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
@@ -751,7 +771,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
 
       balance = IERC20(token).balanceOf(address(this));
       // Do not count `maxUnlentPerc` from balance
-      uint256 totalRedeemd = balance.minus(balance.times(maxUnlentPerc).div(100000));
+      uint256 totalRedeemd = balance.sub(balance.mul(maxUnlentPerc).div(100000));
 
       if (totalRedeemd > 1 && totalToMint > 1) {
         // Do not mint directly using toMintAllocations check with totalRedeemd
