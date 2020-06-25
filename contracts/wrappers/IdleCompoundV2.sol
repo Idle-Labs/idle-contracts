@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/CERC20.sol";
+import "../interfaces/Comptroller.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
@@ -181,5 +182,12 @@ contract IdleCompoundV2 is ILendingProtocol, Ownable {
 
   function availableLiquidity() external view returns (uint256) {
     return CERC20(token).getCash();
+  }
+
+  /**
+   * Get governance tokens for Idle contract
+   */
+  function redeemGovTokens() external onlyIdle {
+    Comptroller(CERC20(token).comptroller()).claimComp(msg.sender);
   }
 }
