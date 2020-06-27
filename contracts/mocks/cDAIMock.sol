@@ -18,6 +18,7 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
   uint256 public _totalReserves;
   uint256 public _reserveFactorMantissa;
   uint256 public _getCash;
+  address public _comptroller;
 
   constructor(address _dai, address tokenOwner, address interestRateModel)
     ERC20()
@@ -56,6 +57,9 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
   function _setExchangeRateStored(uint256 _rate) external returns (uint256) {
     _exchangeRate = _rate;
   }
+  function _setComptroller(address _comp) external {
+    _comptroller = _comp;
+  }
   function supplyRatePerBlock() external view returns (uint256) {
     return _supplyRate;
   }
@@ -73,5 +77,8 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
   }
   function interestRateModel() external view returns (address) {
     return _interestRateModel;
+  }
+  function comptroller() external view returns (address) {
+    return _comptroller;
   }
 }
