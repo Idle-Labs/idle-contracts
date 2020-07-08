@@ -35,10 +35,10 @@ interface IIdleTokenV3_1 {
    * NOTE 2: this method can be paused
    *
    * @param _amount : amount of underlying token to be lended
+   * @param _referral : referral address
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount) external returns (uint256 mintedTokens);
-  function mintIdleToken(uint256 _amount, uint256[] calldata) external returns (uint256 mintedTokens);
+  function mintIdleToken(uint256 _amount, address _referral) external returns (uint256 mintedTokens);
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
@@ -51,8 +51,6 @@ interface IIdleTokenV3_1 {
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
   function redeemIdleToken(uint256 _amount) external returns (uint256 redeemedTokens);
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
-    external returns (uint256 redeemedTokens);
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
    * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.

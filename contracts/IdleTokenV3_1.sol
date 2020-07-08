@@ -20,7 +20,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
-import "./others/BasicMetaTransaction.sol";
 
 import "./IdleRebalancerV3.sol";
 import "./GST2Consumer.sol";
@@ -33,7 +32,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // eg. DAI address
   address public token;
   // eg. iDAI address
-  address private iToken; // used for claimITokens and userClaimITokens
+  address private iToken;
   // Idle rebalancer current implementation address
   address public rebalancer;
   // Address collecting underlying fees
@@ -45,16 +44,11 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // Max possible fee on interest gained
   uint256 private constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
   // Min delay for adding a new protocol
-  uint256 private constant NEW_PROTOCOL_DELAY = 60 * 60 * 24 * 3; // 3 days in seconds
+  uint256 private constant NEW_PROTOCOL_DELAY = 259200; // 3 days in seconds
   // Max unlent assets percentage for gas friendly swaps
   uint256 public maxUnlentPerc = 1000; // 100000 == 100% -> 1000 == 1%
   // Current fee on interest gained
   uint256 public fee;
-  // Manual trigger for unpausing contract in case of a black swan event that caused the iToken price to not
-  // return to the normal level
-  bool public manualPlay;
-  // Flag for enabling/disabling distribution of gov tokens in case of any issues
-  bool public areGovTokensDisabled;
   // Flag for disabling openRebalance for the risk adjusted variant
   bool public isRiskAdjusted;
   // Flag for disabling instant new protocols additions
@@ -66,23 +60,23 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // last fully applied allocations (ie when all liquidity has been correctly placed)
   // eg. [5000, 0, 5000, 0] for 50% in compound, 0% fulcrum, 50% aave, 0 dydx. same order of allAvailableTokens
   uint256[] public lastAllocations;
+  // Map that saves avg idleToken price paid for each user, used to calculate earnings
+  mapping(address => uint256) public userAvgPrices;
   // eg. cTokenAddress => IdleCompoundAddress
   mapping(address => address) public protocolWrappers;
   // eg. [IdleCompound, ...]
   mapping (address => address) public govTokensWrappers;
-  // global indices for each gov tokens used as a reference to calculate a fair shar for each user
-  mapping (address => uint256) private govTokensIndexes;
   // array with last balance recorded for each gov tokens
-  mapping (address => uint256) private govTokensLastBalances;
+  mapping (address => uint256) public govTokensLastBalances;
   // govToken -> user_address -> user_index eg. usersGovTokensIndexes[govTokens[0]][msg.sender] = 1111123;
-  mapping (address => mapping (address => uint256)) private usersGovTokensIndexes;
-  // Map that saves avg idleToken price paid for each user, used to calculate earnings
-  mapping(address => uint256) public userAvgPrices;
+  mapping (address => mapping (address => uint256)) public usersGovTokensIndexes;
+  // global indices for each gov tokens used as a reference to calculate a fair shar for each user
+  mapping (address => uint256) public govTokensIndexes;
   // Map that saves amount with no fee for each user
   mapping(address => uint256) private userNoFeeQty;
   // timestamp when new protocol wrapper has been queued for change
   // protocol_wrapper_address -> timestamp
-  mapping(address => uint256) public releaseTimes;
+  mapping(address => uint256) private releaseTimes;
 
   // Events
   event Rebalance(address _rebalancer, uint256 _amount);
@@ -119,12 +113,11 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
       iToken = _iToken;
       rebalancer = _rebalancer;
       allAvailableTokens = protocolTokens;
+      govTokens = _govTokens;
 
       for (uint256 i = 0; i < protocolTokens.length; i++) {
         protocolWrappers[protocolTokens[i]] = wrappers[i];
       }
-
-      govTokens = _govTokens;
       for (uint256 i = 0; i < _govTokens.length; i++) {
         govTokensWrappers[_govTokens[i]] = _govTokensWrappers[i];
       }
@@ -139,8 +132,8 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     if (iToken != address(0)) {
       uint256 iTokenPrice = iERC20Fulcrum(iToken).tokenPrice();
       require(
-        iTokenPrice >= lastITokenPrice || manualPlay,
-        "IDLE:Paused:ITOKEN_PRICE"
+        iTokenPrice >= lastITokenPrice,
+        "IDLE:ITOKEN_PRICE"
       );
 
       _;
@@ -210,6 +203,8 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   ) external onlyOwner delayable(address(1)) {
     govTokens = _newGovTokens;
     for (uint256 i = 0; i < _newGovTokens.length; i++) {
+      require(_newGovTokensWrappers[i] != address(0), "IDLE:IS_0");
+      require(_newGovTokens[i] != address(0), "IDLE:IS_0");
       govTokensWrappers[_newGovTokens[i]] = _newGovTokensWrappers[i];
     }
   }
@@ -224,43 +219,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     external onlyOwner {
       require(_rebalancer != address(0), "IDLE:IS_0");
       rebalancer = _rebalancer;
-  }
-
-  /**
-   * It allows owner to set a protocol wrapper address
-   * this method can be delayed
-   *
-   * @param _token : underlying token address (eg. DAI)
-   * @param _wrapper : Idle protocol wrapper address
-   */
-  function setProtocolWrapper(address _token, address _wrapper)
-    external onlyOwner delayable(_wrapper) {
-      require(_token != address(0) && _wrapper != address(0), "IDLE:IS_0");
-      // update allAvailableTokens if needed
-      if (protocolWrappers[_token] == address(0)) {
-        allAvailableTokens.push(_token);
-      }
-      protocolWrappers[_token] = _wrapper;
-  }
-
-  /**
-   * It allows owner to unpause the contract when iToken price decreased and didn't return to the expected level
-   *
-   * @param _manualPlay : flag
-   */
-  function setManualPlay(bool _manualPlay)
-    external onlyOwner {
-      manualPlay = _manualPlay;
-  }
-
-  /**
-   * It allows owner to enable/disable distributions of gov tokens in case of issues
-   *
-   * @param _areGovTokensDisabled : flag
-   */
-  function setAreGovTokensDisabled(bool _areGovTokensDisabled)
-    external onlyOwner {
-      areGovTokensDisabled = _areGovTokensDisabled;
   }
 
   /**
@@ -316,35 +274,11 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   /**
    * It allows owner to set gas parameters
    *
-   * @param _amounts : fee amount where 100000 is 100%, max settable is MAX_FEE constant
+   * @param _amounts : array of gasAmounts
    */
   function setGasParams(uint256[] calldata _amounts)
     external onlyOwner {
       gasAmounts = _amounts;
-  }
-
-  /**
-   * It allows owner to get tokens (not related to this contract) out (eg withdraw new governance tokens airdropped)
-   *
-   * @param _token : token address to withdraw
-   * @param _amount : amount in wei of token to withdraw
-   */
-  function withdrawNotUsedTokens(address _token, uint256 _amount)
-    external onlyOwner {
-      require(_token != token, "IDLE:NOT_ALLOWED(token)");
-
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        require(_token != allAvailableTokens[i], "IDLE:NOT_ALLOWED(allAvailableTokens)");
-      }
-      for (uint256 i = 0; i < govTokens.length; i++) {
-        require(_token != govTokens[i], "IDLE:NOT_ALLOWED(govTokens)");
-      }
-
-      if (_amount == 0) {
-        _amount = IERC20(_token).balanceOf(address(this));
-      }
-
-      IERC20(_token).safeTransfer(msg.sender, _amount);
   }
 
   // view
@@ -357,28 +291,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     external view
     returns (uint256) {
     return _tokenPrice();
-  }
-
-  function _tokenPrice() internal view returns (uint256 price) {
-    uint256 totSupply = totalSupply();
-    if (totSupply == 0) {
-      return 10**(tokenDecimals);
-    }
-
-    uint256 currPrice;
-    uint256 currNav;
-    address currToken;
-    uint256 totNav = IERC20(token).balanceOf(address(this)); // eventual underlying unlent balance
-
-    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-      currToken = allAvailableTokens[i];
-      currPrice = ILendingProtocol(protocolWrappers[currToken]).getPriceInToken();
-      // NAV = price * poolSupply
-      currNav = currPrice.mul(IERC20(currToken).balanceOf(address(this)));
-      totNav = totNav.add(currNav);
-    }
-
-    price = totNav.div(totSupply); // idleToken price in token wei
   }
 
   /**
@@ -450,46 +362,26 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
    * This method use GasTokens of this contract (if present) to get a gas discount
    *
    * @param _amount : amount of underlying token to be lended
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function mintIdleToken(uint256 _amount)
-    external nonReentrant gasDiscountFrom(address(this))
-    returns (uint256 mintedTokens) {
-    return _mintIdleToken(_amount);
-  }
-
-  /**
-   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * This method triggers a rebalance of the pools if needed
-   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
-   * NOTE 2: this method can be paused
-   * This method use GasTokens of this contract (if present) to get a gas discount
-   *
-   * @param _amount : amount of underlying token to be lended
    * @param _referral : referral address
    * @return mintedTokens : amount of IdleTokens minted
    */
   function mintIdleToken(uint256 _amount, address _referral)
-    external nonReentrant gasDiscountFrom(address(this))
+    external nonReentrant gasDiscountFrom(address(this)) whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
+    _redeemGovTokens(msg.sender);
+    // Get current IdleToken price
+    uint256 idlePrice = _tokenPrice();
+    // transfer tokens to this contract
+    IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+
+    mintedTokens = _amount.mul(10**18).div(idlePrice);
+    _mint(msg.sender, mintedTokens);
+
+    _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
     }
-    return _mintIdleToken(_amount);
-  }
-
-  /**
-   * DEPRECATED: Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * Keep for backward compatibility with IdleV2
-   *
-   * @param _amount : amount of underlying token to be lended
-   * @param : not used, pass empty array
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function mintIdleToken(uint256 _amount, uint256[] calldata)
-    external nonReentrant gasDiscountFrom(address(this))
-    returns (uint256 mintedTokens) {
-    return _mintIdleToken(_amount);
   }
 
   /**
@@ -505,46 +397,30 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-    return redeemIdleToken(_amount, false, new uint256[](0));
-  }
-
-  function migrateIdleToken(uint256 _amount, address _newIdleToken)
-    external nonReentrant
-    returns (uint256 newIdleTokens) {
-    require(IIdleTokenV3_1(_newIdleToken).token() == token, 'IDLE:NEQ');
-
-    uint256 redeemedTokens = redeemIdleToken(_amount, false, new uint256[](0));
-    IERC20(token).safeApprove(_newIdleToken, redeemedTokens);
-    IIdleTokenV3_1(_newIdleToken).mintIdleToken(redeemedTokens);
-
-    newIdleTokens = IERC20(_newIdleToken).balanceOf(address(this));
-    IERC20(_newIdleToken).safeTransfer(msg.sender, newIdleTokens);
-  }
-
-  /**
-   * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * This method triggers a rebalance of the pools if needed
-   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
-   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
-   *         Ideally one should wait until the black swan event is terminated
-   *
-   * @param _amount : amount of IdleTokens to be burned
-   * @param : not used
-   * @param : not used
-   * @return redeemedTokens : amount of underlying tokens redeemed
-   */
-  function redeemIdleToken(uint256 _amount, bool, uint256[] memory)
-    public nonReentrant
-    returns (uint256 redeemedTokens) {
       _redeemGovTokens(msg.sender);
 
       uint256 valueToRedeem = _amount.mul(_tokenPrice()).div(10**18);
       uint256 balanceUnderlying = IERC20(token).balanceOf(address(this));
+      uint256 idleSupply = totalSupply();
 
       if (valueToRedeem < balanceUnderlying) {
         redeemedTokens = valueToRedeem;
       } else {
-        redeemedTokens = _redeemInternal(_amount, balanceUnderlying);
+        address currToken;
+        for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+          currToken = allAvailableTokens[i];
+          redeemedTokens = redeemedTokens.add(
+            _redeemProtocolTokens(
+              protocolWrappers[currToken],
+              currToken,
+              // _amount * protocolPoolBalance / idleSupply
+              _amount.mul(IERC20(currToken).balanceOf(address(this))).div(idleSupply), // amount to redeem
+              address(this)
+            )
+          );
+        }
+        // Get a portion of the eventual unlent balance
+        redeemedTokens = redeemedTokens.add(_amount.mul(balanceUnderlying).div(idleSupply));
       }
 
       _burn(msg.sender, _amount);
@@ -553,28 +429,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
       }
       // send underlying minus fee to msg.sender
       IERC20(token).safeTransfer(msg.sender, redeemedTokens);
-  }
-
-  function _redeemInternal(uint256 _amount, uint256 balanceUnderlying)
-    internal returns (uint256 redeemedTokens) {
-      uint256 balance;
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        balance = IERC20(allAvailableTokens[i]).balanceOf(address(this));
-        if (balance == 0) {
-          continue;
-        }
-        redeemedTokens = redeemedTokens.add(
-          _redeemProtocolTokens(
-            protocolWrappers[allAvailableTokens[i]],
-            allAvailableTokens[i],
-            // _amount * protocolPoolBalance / idleSupply
-            _amount.mul(balance).div(totalSupply()), // amount to redeem
-            address(this)
-          )
-        );
-      }
-      // Get a portion of the eventual unlent balance
-      redeemedTokens = redeemedTokens.add(_amount.mul(balanceUnderlying).div(totalSupply()));
   }
 
   /**
@@ -590,17 +444,12 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
 
       uint256 idleSupply = totalSupply();
       address currentToken;
-      uint256 balance;
 
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currentToken = allAvailableTokens[i];
-        balance = IERC20(currentToken).balanceOf(address(this));
-        if (balance == 0) {
-          continue;
-        }
         IERC20(currentToken).safeTransfer(
           msg.sender,
-          _amount.mul(balance).div(idleSupply) // amount to redeem
+          _amount.mul(IERC20(currentToken).balanceOf(address(this))).div(idleSupply) // amount to redeem
         );
       }
       // Get a portion of the eventual unlent balance
@@ -680,29 +529,26 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   }
 
   // internal
-  /**
-   * Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * This method triggers a rebalance of the pools if needed
-   * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
-   * NOTE 2: this method can be paused
-   * This method use GasTokens of this contract (if present) to get a gas discount
-   *
-   * @param _amount : amount of underlying token to be lended
-   * @return mintedTokens : amount of IdleTokens minted
-   */
-  function _mintIdleToken(uint256 _amount)
-    internal whenNotPaused whenITokenPriceHasNotDecreased
-    returns (uint256 mintedTokens) {
-      _redeemGovTokens(msg.sender);
-      // Get current IdleToken price
-      uint256 idlePrice = _tokenPrice();
-      // transfer tokens to this contract
-      IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+  function _tokenPrice() internal view returns (uint256 price) {
+    uint256 totSupply = totalSupply();
+    if (totSupply == 0) {
+      return 10**(tokenDecimals);
+    }
 
-      mintedTokens = _amount.mul(10**18).div(idlePrice);
-      _mint(msg.sender, mintedTokens);
+    uint256 currPrice;
+    address currToken;
+    uint256 totNav = IERC20(token).balanceOf(address(this)); // eventual underlying unlent balance
 
-      _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+      currToken = allAvailableTokens[i];
+      currPrice = ILendingProtocol(protocolWrappers[currToken]).getPriceInToken();
+      totNav = totNav.add(
+        // NAV = price * poolSupply
+        currPrice.mul(IERC20(currToken).balanceOf(address(this)))
+      );
+    }
+
+    price = totNav.div(totSupply); // idleToken price in token wei
   }
 
   /**
@@ -802,9 +648,8 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
 
-      // delegatecall the redeem of gov tokens to the corresponding lending protocol wrapper
-      // do not throw in case of failure
-      govTokensWrappers[govToken].delegatecall(abi.encodeWithSignature("redeemGovTokens()"));
+      // redeem gov tokens for this contract with the corresponding lending protocol wrapper
+      ILendingProtocol(govTokensWrappers[govToken]).redeemGovTokens();
 
       // get current gov token balance
       uint256 govBal = IERC20(govToken).balanceOf(address(this));
@@ -823,7 +668,7 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   }
 
   function _redeemGovTokens(address _to) internal {
-    if (areGovTokensDisabled) {
+    if (govTokens.length == 0) {
       return;
     }
     _updateGovIdxAndBalance();
@@ -915,13 +760,17 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     require(tokenAddresses.length == protocolAmounts.length, "IDLE:LEN_DIFF");
 
     uint256 currAmount;
+    address protWrapper;
 
     for (uint256 i = 0; i < protocolAmounts.length; i++) {
       currAmount = protocolAmounts[i];
       if (currAmount == 0) {
         continue;
       }
-      _mintProtocolTokens(protocolWrappers[tokenAddresses[i]], currAmount);
+      protWrapper = protocolWrappers[tokenAddresses[i]];
+      // Transfer _amount underlying token (eg. DAI) to protWrapper
+      IERC20(token).safeTransfer(protWrapper, currAmount);
+      ILendingProtocol(protWrapper).mint();
     }
   }
 
@@ -1059,24 +908,6 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   }
 
   // ILendingProtocols calls
-  /**
-   * Mint protocol tokens through protocol wrapper
-   *
-   * @param _wrapperAddr : address of protocol wrapper
-   * @param _amount : amount of underlying to be lended
-   * @return tokens : new tokens minted
-   */
-  function _mintProtocolTokens(address _wrapperAddr, uint256 _amount)
-    internal
-    returns (uint256 tokens) {
-      if (_amount == 0) {
-        return tokens;
-      }
-      // Transfer _amount underlying token (eg. DAI) to _wrapperAddr
-      IERC20(token).safeTransfer(_wrapperAddr, _amount);
-      tokens = ILendingProtocol(_wrapperAddr).mint();
-  }
-
   /**
    * Redeem underlying tokens through protocol wrapper
    *

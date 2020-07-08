@@ -227,6 +227,8 @@ contract IdleCompound is ILendingProtocol, Ownable {
     holders[0] = msg.sender;
     cTokens[0] = token;
     // claimComp from supplier side only and only for the current cToken
-    Comptroller(CERC20(token).comptroller()).claimComp(holders, cTokens, false, true);
+    // do not throw in case of failure
+    /* Comptroller(CERC20(token).comptroller()).claimComp(holders, cTokens, false, true); */
+    CERC20(token).comptroller().delegatecall(abi.encodeWithSignature("claimComp(address[],address[],bool,bool)", holders, cTokens, false, true));
   }
 }
