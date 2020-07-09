@@ -8,14 +8,16 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "@openzeppelin/contracts/lifecycle/Pausable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol";
+
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Pausable.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
@@ -24,7 +26,7 @@ import "./interfaces/IIdleTokenV3_1.sol";
 import "./IdleRebalancerV3.sol";
 import "./GST2Consumer.sol";
 
-contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2Consumer {
+contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2Consumer, Initializable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -42,11 +44,11 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
   // eg. 18 for DAI
   uint256 private tokenDecimals;
   // Max possible fee on interest gained
-  uint256 private constant MAX_FEE = 10000; // 100000 == 100% -> 10000 == 10%
+  uint256 private MAX_FEE; // 100000 == 100% -> 10000 == 10%
   // Min delay for adding a new protocol
-  uint256 private constant NEW_PROTOCOL_DELAY = 259200; // 3 days in seconds
+  uint256 private NEW_PROTOCOL_DELAY; // 3 days in seconds
   // Max unlent assets percentage for gas friendly swaps
-  uint256 public maxUnlentPerc = 1000; // 100000 == 100% -> 1000 == 1%
+  uint256 public maxUnlentPerc; // 100000 == 100% -> 1000 == 1%
   // Current fee on interest gained
   uint256 public fee;
   // Flag for disabling openRebalance for the risk adjusted variant
@@ -94,10 +96,9 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
    * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
    * @param _rebalancer : Idle Rebalancer address
    */
-  constructor(
+  function initialize(
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
-    uint8 _decimals, // eg. 18
     address _token,
     address _iToken,
     address[] memory protocolTokens,
@@ -107,9 +108,15 @@ contract IdleTokenV3_1 is ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausab
     address[] memory _govTokensWrappers
   )
     public
-    ERC20Detailed(_name, _symbol, _decimals) {
+    ERC20(_name, _symbol) {
+      MAX_FEE = 10000;
+      NEW_PROTOCOL_DELAY = 259200;
+      maxUnlentPerc = 1000;
+      gst2 = GasToken(0x0000000000b3F879cb30FE243b4Dfee438691c04);
+      gasAmounts = [14154, 41130, 27710, 7020];
+
       token = _token;
-      tokenDecimals = ERC20Detailed(_token).decimals();
+      tokenDecimals = ERC20(_token).decimals();
       iToken = _iToken;
       rebalancer = _rebalancer;
       allAvailableTokens = protocolTokens;
