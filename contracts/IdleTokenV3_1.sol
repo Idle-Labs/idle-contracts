@@ -6,27 +6,26 @@
  * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
 
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/utils/Pausable.sol";
-
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/lifecycle/Pausable.sol";
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
+import "./interfaces/IIdleRebalancerV3.sol";
 
-import "./IdleRebalancerV3.sol";
 import "./GST2Consumer.sol";
 
-contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2Consumer, Initializable {
+contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2Consumer {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -89,7 +88,6 @@ contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV
    *
    * @param _name : IdleToken name
    * @param _symbol : IdleToken symbol
-   * @param _decimals : IdleToken decimals
    * @param _token : underlying token address
    * @param _iToken : iToken address
    * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
@@ -107,16 +105,21 @@ contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV
     address[] memory _govTokens,
     address[] memory _govTokensWrappers
   )
-    public
-    ERC20(_name, _symbol) {
+    public initializer
+     {
+      // Initialize inherited contracts
+      ERC20Detailed.initialize(_name, _symbol, 18);
+      Ownable.initialize(msg.sender);
+      Pausable.initialize(msg.sender);
+      ReentrancyGuard.initialize();
+      GST2Consumer.initialize();
+      // Initialize storage variables
       MAX_FEE = 10000;
       NEW_PROTOCOL_DELAY = 259200;
       maxUnlentPerc = 1000;
-      gst2 = GasToken(0x0000000000b3F879cb30FE243b4Dfee438691c04);
-      gasAmounts = [14154, 41130, 27710, 7020];
 
       token = _token;
-      tokenDecimals = ERC20(_token).decimals();
+      tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken;
       rebalancer = _rebalancer;
       allAvailableTokens = protocolTokens;
@@ -218,9 +221,9 @@ contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV
 
 
   /**
-   * It allows owner to set the IdleRebalancerV3 address
+   * It allows owner to set the IdleRebalancerV3_1 address
    *
-   * @param _rebalancer : new IdleRebalancerV3 address
+   * @param _rebalancer : new IdleRebalancerV3_1 address
    */
   function setRebalancer(address _rebalancer)
     external onlyOwner {
@@ -487,7 +490,7 @@ contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV
       require(!isRiskAdjusted, "IDLE:NOT_ALLOWED");
       uint256 initialAPR = getAvgAPR();
       // Validate and update rebalancer allocations
-      IdleRebalancerV3(rebalancer).setAllocations(_newAllocations, allAvailableTokens);
+      IIdleRebalancerV3(rebalancer).setAllocations(_newAllocations, allAvailableTokens);
       bool hasRebalanced = _rebalance();
       uint256 newAprAfterRebalance = getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "IDLE:NOT_IMPROV");
@@ -569,7 +572,7 @@ contract IdleTokenV3_1 is ERC20, ReentrancyGuard, Ownable, Pausable, IIdleTokenV
     internal whenNotPaused whenITokenPriceHasNotDecreased
     returns (bool) {
       // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations = IdleRebalancerV3(rebalancer).getAllocations();
+      uint256[] memory rebalancerLastAllocations = IIdleRebalancerV3(rebalancer).getAllocations();
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       if (areAllocationsEqual) {
         for (uint256 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {

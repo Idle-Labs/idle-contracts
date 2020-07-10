@@ -7,14 +7,13 @@
  */
 pragma solidity 0.5.16;
 
-import "./IdleTokenV3_1NoGSTConst.sol";
+import "../IdleTokenV3_1.sol";
 import "./GasTokenMock.sol";
 
-contract IdleTokenV3_1Mock is IdleTokenV3_1NoGSTConst {
+contract IdleTokenV3_1Mock is IdleTokenV3_1 {
   constructor(
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
-    uint8 _decimals, // eg. 18
     address _token,
     address _iToken,
     address[] memory protocolTokens,
@@ -22,11 +21,10 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoGSTConst {
     address _rebalancer,
     address[] memory _govTokens,
     address[] memory _govTokensWrappers)
-    public
-      IdleTokenV3_1NoGSTConst(
+    public {
+      IdleTokenV3_1.initialize(
       _name, // eg. IdleDAI
       _symbol, // eg. IDLEDAI
-      _decimals, // eg. 18
       _token,
       _iToken,
       protocolTokens,
@@ -34,8 +32,7 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoGSTConst {
       _rebalancer,
       _govTokens,
       _govTokensWrappers
-    )
-  {
+    );
   }
 
   function amountsFromAllocations(uint256[] calldata allocations, uint256 total)
