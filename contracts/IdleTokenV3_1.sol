@@ -23,9 +23,9 @@ import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
 import "./interfaces/IIdleRebalancerV3.sol";
 
-import "./GST2Consumer.sol";
+import "./GST2ConsumerV2.sol";
 
-contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2Consumer {
+contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -42,10 +42,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   uint256 public lastITokenPrice;
   // eg. 18 for DAI
   uint256 private tokenDecimals;
-  // Max possible fee on interest gained
-  uint256 private MAX_FEE; // 100000 == 100% -> 10000 == 10%
-  // Min delay for adding a new protocol
-  uint256 private NEW_PROTOCOL_DELAY; // 3 days in seconds
   // Max unlent assets percentage for gas friendly swaps
   uint256 public maxUnlentPerc; // 100000 == 100% -> 1000 == 1%
   // Current fee on interest gained
@@ -77,7 +73,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   mapping(address => uint256) private userNoFeeQty;
   // timestamp when new protocol wrapper has been queued for change
   // protocol_wrapper_address -> timestamp
-  mapping(address => uint256) private releaseTimes;
+  mapping(address => uint256) public releaseTimes;
 
   // Events
   event Rebalance(address _rebalancer, uint256 _amount);
@@ -90,8 +86,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @param _symbol : IdleToken symbol
    * @param _token : underlying token address
    * @param _iToken : iToken address
-   * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
-   * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
    * @param _rebalancer : Idle Rebalancer address
    */
   function initialize(
@@ -99,11 +93,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _iToken,
-    address[] memory protocolTokens,
-    address[] memory wrappers,
-    address _rebalancer,
-    address[] memory _govTokens,
-    address[] memory _govTokensWrappers
+    address _rebalancer
   )
     public initializer
      {
@@ -112,25 +102,14 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       Ownable.initialize(msg.sender);
       Pausable.initialize(msg.sender);
       ReentrancyGuard.initialize();
-      GST2Consumer.initialize();
+      GST2ConsumerV2.initialize();
       // Initialize storage variables
-      MAX_FEE = 10000;
-      NEW_PROTOCOL_DELAY = 259200;
       maxUnlentPerc = 1000;
 
       token = _token;
       tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken;
       rebalancer = _rebalancer;
-      allAvailableTokens = protocolTokens;
-      govTokens = _govTokens;
-
-      for (uint256 i = 0; i < protocolTokens.length; i++) {
-        protocolWrappers[protocolTokens[i]] = wrappers[i];
-      }
-      for (uint256 i = 0; i < _govTokens.length; i++) {
-        govTokensWrappers[_govTokens[i]] = _govTokensWrappers[i];
-      }
   }
 
   // During a black swan event is possible that iToken price decreases instead of increasing,
@@ -158,7 +137,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   // This modifier allows to delay method calls
   modifier delayable(address _releaseAddr) {
-    if (!isNewProtocolDelayed || (releaseTimes[_releaseAddr] != 0 && now - releaseTimes[_releaseAddr] > NEW_PROTOCOL_DELAY)) {
+    if (!isNewProtocolDelayed || (releaseTimes[_releaseAddr] != 0 && now - releaseTimes[_releaseAddr] > 259200)) { // 3 days in seconds
       _;
       releaseTimes[_releaseAddr] = 0;
       return;
@@ -181,10 +160,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     address[] calldata protocolTokens,
     address[] calldata wrappers
   ) external onlyOwner delayable(address(0)) {
-    require(protocolTokens.length != 0, "IDLE:LEN_0");
-    require(protocolTokens.length != wrappers.length, "IDLE:LEN_DIFF");
     for (uint256 i = 0; i < protocolTokens.length; i++) {
-      require(protocolTokens[i] != address(0), "IDLE:IS_0");
+      require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
       protocolWrappers[protocolTokens[i]] = wrappers[i];
     }
     allAvailableTokens = protocolTokens;
@@ -213,12 +190,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   ) external onlyOwner delayable(address(1)) {
     govTokens = _newGovTokens;
     for (uint256 i = 0; i < _newGovTokens.length; i++) {
-      require(_newGovTokensWrappers[i] != address(0), "IDLE:IS_0");
-      require(_newGovTokens[i] != address(0), "IDLE:IS_0");
+      require(_newGovTokensWrappers[i] != address(0) && _newGovTokens[i] != address(0), "IDLE:IS_0");
       govTokensWrappers[_newGovTokens[i]] = _newGovTokensWrappers[i];
     }
   }
-
 
   /**
    * It allows owner to set the IdleRebalancerV3_1 address
@@ -256,7 +231,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    */
   function setFee(uint256 _fee)
     external onlyOwner {
-      require(_fee <= MAX_FEE, "IDLE:TOO_HIGH");
+      // 100000 == 100% -> 10000 == 10%
+      require(_fee <= 10000, "IDLE:TOO_HIGH");
       fee = _fee;
   }
   /**
@@ -279,16 +255,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     external onlyOwner {
       require(_feeAddress != address(0), "IDLE:IS_0");
       feeAddress = _feeAddress;
-  }
-
-  /**
-   * It allows owner to set gas parameters
-   *
-   * @param _amounts : array of gasAmounts
-   */
-  function setGasParams(uint256[] calldata _amounts)
-    external onlyOwner {
-      gasAmounts = _amounts;
   }
 
   // view

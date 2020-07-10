@@ -16,22 +16,14 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1 {
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _iToken,
-    address[] memory protocolTokens,
-    address[] memory wrappers,
-    address _rebalancer,
-    address[] memory _govTokens,
-    address[] memory _govTokensWrappers)
-    public {
+    address _rebalancer
+    ) public {
       IdleTokenV3_1.initialize(
       _name, // eg. IdleDAI
       _symbol, // eg. IDLEDAI
       _token,
       _iToken,
-      protocolTokens,
-      wrappers,
-      _rebalancer,
-      _govTokens,
-      _govTokensWrappers
+      _rebalancer
     );
   }
 
