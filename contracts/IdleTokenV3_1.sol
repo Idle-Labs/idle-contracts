@@ -48,8 +48,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   uint256 public fee;
   // Flag for disabling openRebalance for the risk adjusted variant
   bool public isRiskAdjusted;
-  // Flag for disabling instant new protocols additions
-  bool public isNewProtocolDelayed;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
   // eg. [COMPAddress, CRVAddress, ...]
@@ -71,9 +69,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   mapping (address => uint256) public govTokensIndexes;
   // Map that saves amount with no fee for each user
   mapping(address => uint256) private userNoFeeQty;
-  // timestamp when new protocol wrapper has been queued for change
-  // protocol_wrapper_address -> timestamp
-  mapping(address => uint256) public releaseTimes;
 
   // Events
   event Rebalance(address _rebalancer, uint256 _amount);
@@ -135,17 +130,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
   }
 
-  // This modifier allows to delay method calls
-  modifier delayable(address _releaseAddr) {
-    if (!isNewProtocolDelayed || (releaseTimes[_releaseAddr] != 0 && now - releaseTimes[_releaseAddr] > 259200)) { // 3 days in seconds
-      _;
-      releaseTimes[_releaseAddr] = 0;
-      return;
-    }
-
-    releaseTimes[_releaseAddr] = now;
-  }
-
   // onlyOwner
   /**
    * It allows owner to modify allAvailableTokens array in case of emergency
@@ -159,7 +143,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function setAllAvailableTokensAndWrappers(
     address[] calldata protocolTokens,
     address[] calldata wrappers
-  ) external onlyOwner delayable(address(0)) {
+  ) external onlyOwner {
     for (uint256 i = 0; i < protocolTokens.length; i++) {
       require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
       protocolWrappers[protocolTokens[i]] = wrappers[i];
@@ -187,7 +171,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function setGovTokens(
     address[] calldata _newGovTokens,
     address[] calldata _newGovTokensWrappers
-  ) external onlyOwner delayable(address(1)) {
+  ) external onlyOwner {
     govTokens = _newGovTokens;
     for (uint256 i = 0; i < _newGovTokens.length; i++) {
       require(_newGovTokensWrappers[i] != address(0) && _newGovTokens[i] != address(0), "IDLE:IS_0");
@@ -214,14 +198,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function setIsRiskAdjusted(bool _isRiskAdjusted)
     external onlyOwner {
       isRiskAdjusted = _isRiskAdjusted;
-  }
-
-  /**
-   * It permanently disable instant new protocols additions
-   */
-  function delayNewProtocols()
-    external onlyOwner {
-      isNewProtocolDelayed = true;
   }
 
   /**
@@ -314,8 +290,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
     _redeemGovTokens(sender);
     _redeemGovTokens(recipient);
-    _transfer(sender, recipient, amount);
-    _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
+    transfer(recipient, amount);
     _updateAvgPrice(recipient, amount, userAvgPrices[sender]);
     return true;
   }
@@ -323,7 +298,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function transfer(address recipient, uint256 amount) public returns (bool) {
     _redeemGovTokens(msg.sender);
     _redeemGovTokens(recipient);
-    _transfer(msg.sender, recipient, amount);
+    transferFrom(msg.sender, recipient, amount);
     _updateAvgPrice(recipient, amount, userAvgPrices[msg.sender]);
     return true;
   }
@@ -488,20 +463,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    */
   function rebalance() external returns (bool) {
     return _rebalance();
-  }
-
-  /**
-   * Get the contract balance of every protocol currently used
-   *
-   * @return tokenAddresses : array with all token addresses used,
-   *                          eg [cTokenAddress, iTokenAddress]
-   * @return amounts : array with all amounts for each protocol in order,
-   *                   eg [amountCompoundInUnderlying, amountFulcrumInUnderlying]
-   * @return total : total AUM in underlying
-   */
-  function getCurrentAllocations() external view
-    returns (address[] memory tokenAddresses, uint256[] memory amounts, uint256 total) {
-    return _getCurrentAllocations();
   }
 
   // internal
@@ -733,8 +694,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    */
   function _mintWithAmounts(address[] memory tokenAddresses, uint256[] memory protocolAmounts) internal {
     // mint for each protocol and update currentTokensUsed
-    require(tokenAddresses.length == protocolAmounts.length, "IDLE:LEN_DIFF");
-
     uint256 currAmount;
     address protWrapper;
 
@@ -758,10 +717,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @return : array with amounts
    */
   function _amountsFromAllocations(uint256[] memory allocations, uint256 total)
-    internal pure returns (uint256[] memory) {
-    uint256[] memory newAmounts = new uint256[](allocations.length);
-    uint256 currBalance = 0;
-    uint256 allocatedBalance = 0;
+    internal pure returns (uint256[] memory newAmounts) {
+    newAmounts = new uint256[](allocations.length);
+    uint256 currBalance;
+    uint256 allocatedBalance;
 
     for (uint256 i = 0; i < allocations.length; i++) {
       if (i == allocations.length - 1) {
@@ -793,7 +752,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       uint256 totalToMint,
       bool lowLiquidity
     ) {
-    require(amounts.length == newAmounts.length, "IDLE:LEN_DIFF");
     toMintAllocations = new uint256[](amounts.length);
     ILendingProtocol protocol;
     uint256 currAmount;
@@ -806,7 +764,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       currAmount = amounts[i];
       protocol = ILendingProtocol(protocolWrappers[currToken]);
       if (currAmount > newAmount) {
-        toMintAllocations[i] = 0;
         uint256 toRedeem = currAmount.sub(newAmount);
         uint256 availableLiquidity = protocol.availableLiquidity();
         if (availableLiquidity < toRedeem) {
