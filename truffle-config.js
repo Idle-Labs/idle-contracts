@@ -26,7 +26,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 1 // 1 for tests, 45000 for deploy
+          runs: 200 // 1 for tests, 45000 for deploy
         }
       }
     }
@@ -67,6 +67,13 @@ module.exports = {
       network_id: '*',
       skipDryRun: true,
       gasPrice: 1000000000
+    },
+    test: {
+      host: '127.0.0.1',
+      port: 8545,
+      network_id: '*',
+      gasPrice: 1000000000,
+      gasPrice: 0x01      // <-- Use this low gas price
     },
     coverage: {
       host: "localhost",

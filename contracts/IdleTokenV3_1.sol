@@ -20,6 +20,7 @@ import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
+import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
 import "./interfaces/IIdleRebalancerV3.sol";
 
@@ -586,7 +587,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       govToken = govTokens[i];
 
       // redeem gov tokens for this contract with the corresponding lending protocol wrapper
-      ILendingProtocol(govTokensWrappers[govToken]).redeemGovTokens();
+      IGovToken(govTokensWrappers[govToken]).redeemGovTokens();
 
       // get current gov token balance
       uint256 govBal = IERC20(govToken).balanceOf(address(this));

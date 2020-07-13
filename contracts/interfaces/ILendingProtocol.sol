@@ -10,5 +10,4 @@ interface ILendingProtocol {
   function token() external view returns (address);
   function underlying() external view returns (address);
   function availableLiquidity() external view returns (uint256);
-  function redeemGovTokens() external;
 }
