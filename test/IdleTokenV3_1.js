@@ -26,7 +26,7 @@ const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
 
 const BNify = n => new BN(String(n));
 
-contract('IdleTokenV3', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver]) {
+contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.oneCToken = new BN('100000000'); // 8 decimals
