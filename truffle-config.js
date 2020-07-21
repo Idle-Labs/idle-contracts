@@ -26,7 +26,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 200 // 1 for tests, 45000 for deploy
+          runs: 100
         }
       }
     }

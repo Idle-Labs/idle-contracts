@@ -313,7 +313,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @return mintedTokens : amount of IdleTokens minted
    */
   function mintIdleToken(uint256 _amount, address _referral)
-    external nonReentrant gasDiscountFrom(address(this)) whenNotPaused whenITokenPriceHasNotDecreased
+    external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
     _redeemGovTokens(msg.sender);
     // Get current IdleToken price

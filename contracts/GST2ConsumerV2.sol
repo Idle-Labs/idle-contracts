@@ -34,11 +34,7 @@ contract GST2ConsumerV2 is Initializable {
     }
 
     if (tokens > 0) {
-      if (from == address(this)) {
-        gst2.freeUpTo(tokens);
-      } else {
-        gst2.freeFromUpTo(from, tokens);
-      }
+      gst2.freeFromUpTo(from, tokens);
     }
   }
 }
