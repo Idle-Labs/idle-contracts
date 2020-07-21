@@ -8,7 +8,7 @@ import "../interfaces/Comptroller.sol";
 contract ComptrollerMock is Comptroller {
   address public compAddr;
   address public cTokenAddr;
-  uint256 private amount = 10**18;
+  uint256 private amount;
   constructor(address _comp, address _cToken) public {
     compAddr = _comp;
     cTokenAddr = _cToken;
@@ -18,9 +18,12 @@ contract ComptrollerMock is Comptroller {
   }
 
   // This contract should have COMP inside
-  function claimComp(address[] calldata holders, address[] calldata cTokens, bool borrowers, bool suppliers) external {
+  function claimComp(address[] calldata, address[] calldata cTokens, bool borrowers, bool suppliers) external {
     require(cTokenAddr == cTokens[0], 'Wrong cToken');
     require(!borrowers && suppliers, 'Only suppliers should be true');
-    IERC20(compAddr).transfer(holders[0], amount);
+    IERC20(compAddr).transfer(msg.sender, amount);
+  }
+  function claimComp(address _sender) external {
+    IERC20(compAddr).transfer(_sender, amount > IERC20(compAddr).balanceOf(address(this)) ? 0 : amount);
   }
 }

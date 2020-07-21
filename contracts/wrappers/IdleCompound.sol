@@ -218,18 +218,4 @@ contract IdleCompound is ILendingProtocol, IGovToken, Ownable {
   function availableLiquidity() external view returns (uint256) {
     return CERC20(token).getCash();
   }
-
-  /**
-   * Get governance tokens for Idle contract
-   */
-  function redeemGovTokens() external onlyIdle {
-    address[] memory holders = new address[](1);
-    address[] memory cTokens = new address[](1);
-    holders[0] = msg.sender;
-    cTokens[0] = token;
-    // claimComp from supplier side only and only for the current cToken
-    // do not throw in case of failure
-    /* Comptroller(CERC20(token).comptroller()).claimComp(holders, cTokens, false, true); */
-    CERC20(token).comptroller().delegatecall(abi.encodeWithSignature("claimComp(address[],address[],bool,bool)", holders, cTokens, false, true));
-  }
 }

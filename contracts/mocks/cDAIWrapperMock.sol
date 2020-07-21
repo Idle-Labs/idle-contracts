@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "../interfaces/CERC20.sol";
-import "../interfaces/IGovToken.sol";
+import "../interfaces/Comptroller.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
-contract cDAIWrapperMock is IGovToken, ILendingProtocol, Ownable {
+contract cDAIWrapperMock is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -87,8 +87,5 @@ contract cDAIWrapperMock is IGovToken, ILendingProtocol, Ownable {
   }
   function availableLiquidity() external view returns (uint256) {
     return liquidity;
-  }
-  function redeemGovTokens() external {
-
   }
 }

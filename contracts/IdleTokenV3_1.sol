@@ -24,6 +24,9 @@ import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
 import "./interfaces/IIdleRebalancerV3.sol";
 
+import "./interfaces/Comptroller.sol";
+import "./interfaces/CERC20.sol";
+
 import "./GST2ConsumerV2.sol";
 
 contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
@@ -60,8 +63,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   mapping(address => uint256) public userAvgPrices;
   // eg. cTokenAddress => IdleCompoundAddress
   mapping(address => address) public protocolWrappers;
-  // eg. [IdleCompound, ...]
-  mapping (address => address) public govTokensWrappers;
   // array with last balance recorded for each gov tokens
   mapping (address => uint256) public govTokensLastBalances;
   // govToken -> user_address -> user_index eg. usersGovTokensIndexes[govTokens[0]][msg.sender] = 1111123;
@@ -166,17 +167,11 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * It allows owner to set gov tokens array
    *
    * @param _newGovTokens : array of governance token addresses
-   * @param _newGovTokensWrappers : array of lending wrappers associated with governance tokens
    */
   function setGovTokens(
-    address[] calldata _newGovTokens,
-    address[] calldata _newGovTokensWrappers
+    address[] calldata _newGovTokens
   ) external onlyOwner {
     govTokens = _newGovTokens;
-    for (uint256 i = 0; i < _newGovTokens.length; i++) {
-      require(_newGovTokensWrappers[i] != address(0) && _newGovTokens[i] != address(0), "IDLE:IS_0");
-      govTokensWrappers[_newGovTokens[i]] = _newGovTokensWrappers[i];
-    }
   }
 
   /**
@@ -588,44 +583,43 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     _redeemGovTokens(msg.sender);
   }
 
-  function _updateGovIdxAndBalance() internal {
-    uint256 supply = totalSupply();
-    if (supply == 0) { return; }
-
-    address govToken;
-    for (uint256 i = 0; i < govTokens.length; i++) {
-      govToken = govTokens[i];
-
-      // redeem gov tokens for this contract with the corresponding lending protocol wrapper
-      IGovToken(govTokensWrappers[govToken]).redeemGovTokens();
-
-      // get current gov token balance
-      uint256 govBal = IERC20(govToken).balanceOf(address(this));
-      if (govBal == 0) { continue; }
-      // check how much we gained since last update
-      uint256 balDiff = govBal.sub(govTokensLastBalances[govToken]);
-      if (balDiff == 0) { continue; }
-      // check how much gov tokens for each idleToken we gained since last update
-      uint256 ratio = balDiff.mul(10**(ERC20Detailed(govToken).decimals())).div(supply);
-
-      if (ratio == 0) { continue; }
-      // update global index with ratio of govTokens per idleToken
-      govTokensIndexes[govToken] = govTokensIndexes[govToken].add(ratio);
-      // update global var with current govToken balance
-      govTokensLastBalances[govToken] = govBal;
-    }
-  }
-
   function _redeemGovTokens(address _to) internal {
     if (govTokens.length == 0) {
       return;
     }
-    _updateGovIdxAndBalance();
-
+    uint256 supply = totalSupply();
     uint256 usrBal = balanceOf(_to);
+    uint256 govDecimals;
     address govToken;
+
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
+      govDecimals = ERC20Detailed(govToken).decimals();
+
+      if (supply > 0) {
+        // redeem gov tokens for this contract with the corresponding lending protocol wrapper
+        if (i == 0) {
+          Comptroller(CERC20(allAvailableTokens[0]).comptroller()).claimComp(address(this));
+        }
+        // In case new Gov tokens will be supported this should be updated
+
+        // get current gov token balance
+        uint256 govBal = IERC20(govToken).balanceOf(address(this));
+        if (govBal > 0) {
+          // check how much we gained since last update
+          uint256 balDiff = govBal.sub(govTokensLastBalances[govToken]);
+          if (balDiff > 0) {
+            // check how much gov tokens for each idleToken we gained since last update
+            uint256 ratio = balDiff.mul(10**(govDecimals)).div(supply);
+            if (ratio > 0) {
+              // update global index with ratio of govTokens per idleToken
+              govTokensIndexes[govToken] = govTokensIndexes[govToken].add(ratio);
+              // update global var with current govToken balance
+              govTokensLastBalances[govToken] = govBal;
+            }
+          }
+        }
+      }
 
       if (usrBal > 0) {
         uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
@@ -634,7 +628,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         // check if user has accrued something
         uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
         if (delta == 0) { continue; }
-        uint256 share = usrBal.mul(delta).div(10**(ERC20Detailed(govToken).decimals()));
+        uint256 share = usrBal.mul(delta).div(10**(govDecimals));
         uint256 feeDue;
         if (feeAddress != address(0) && fee > 0) {
           feeDue = share.mul(fee).div(100000);
