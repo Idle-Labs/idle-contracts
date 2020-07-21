@@ -31,11 +31,8 @@ contract IdleRebalancerV3_1 is IIdleRebalancerV3, Ownable {
 
     for(uint256 i = 0; i < _protocolTokens.length; i++) {
       require(_protocolTokens[i] != address(0), 'some addr is 0');
-      if (i == 0) {
-        // Initially 100% on first lending protocol
-        lastAmounts[i] = 100000;
-      }
-      lastAmounts[i] = 0;
+      // Initially 100% on first lending protocol
+      lastAmounts[i] = i == 0 ? 100000 : 0;
       lastAmountsAddresses[i] = _protocolTokens[i];
     }
   }
