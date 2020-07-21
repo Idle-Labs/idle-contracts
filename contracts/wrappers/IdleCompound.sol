@@ -13,12 +13,10 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/CERC20.sol";
-import "../interfaces/Comptroller.sol";
-import "../interfaces/IGovToken.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
-contract IdleCompound is ILendingProtocol, IGovToken, Ownable {
+contract IdleCompound is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
