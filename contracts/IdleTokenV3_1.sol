@@ -372,7 +372,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
       if (fee > 0 && feeAddress != address(0)) {
         redeemedTokens = _getFee(_amount, redeemedTokens);
+      } else {
+        userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(_amount);
       }
+
       _burn(msg.sender, _amount);
       // send underlying minus fee to msg.sender
       IERC20(token).safeTransfer(msg.sender, redeemedTokens);
