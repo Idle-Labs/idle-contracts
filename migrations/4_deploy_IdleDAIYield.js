@@ -12,7 +12,7 @@ var IERC20 = artifacts.require("./IERC20.sol");
 const {creator, rebalancerManager, feeAddress, gstAddress} = require('./addresses.js');
 const BigNumber = require('bignumber.js');
 const BNify = s => new BigNumber(String(s));
-const { ZWeb3, Contracts, SimpleProject } = require('@openzeppelin/upgrades');
+const { ZWeb3, Contracts, ProxyAdminProject } = require('@openzeppelin/upgrades');
 
 const cDAI = {
   'live': '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
@@ -98,6 +98,7 @@ module.exports = async function(deployer, network, accounts) {
   const marketId = 3;
   const decimals = 18;
 
+  await web3.eth.sendTransaction({from: accounts[0], to: creator, value: BNify(1e18).times(BNify('20'))});
   // #######################
   // Deploy yxDAI
   let yxDAIInstance = {address: '0xb299BCDF056d17Bd1A46185eCA8bCE458B00DC4a'};
@@ -142,19 +143,19 @@ module.exports = async function(deployer, network, accounts) {
   const IdleTokenV3_1New = Contracts.getFromLocal('IdleTokenV3_1');
   console.log('IdleTokenV3_1New');
   // Instantiate a project
-  const myProject = new SimpleProject('IdleTokenV4', {from: creator});
+  const myProject = new ProxyAdminProject('IdleTokenV4', null, null, {from: creator});
   console.log('myProject');
   console.log(myProject);
   // Create a proxy for the contract
-  const proxy = await myProject.createProxy(IdleTokenV3_1New);
-  console.log('proxy created at', proxy.address);
+  const proxy = await myProject.createProxy(IdleTokenV3_1New, {from: creator, gasPrice: 120000000000 });
+  console.log('proxy created at', proxy.options.address);
 
   // Make a change on the contract, and compile it
   // const MyContractUpgraded = Contracts.getFromLocal('IdleTokenV3_1Upgraded');
   // myProject.upgradeProxy(proxy, IdleTokenV3_1Upgraded);
 
   // let IdleDAIInstance = proxy;
-  let IdleDAIInstance = await IdleTokenV3_1.at(proxy.address);
+  let IdleDAIInstance = await IdleTokenV3_1.at(proxy.options.address);
   // let IdleDAIInstance = await IdleTokenV3_1.at('0xB0BBC245C04aDCD9C6c516F67BF95A7fbb5762Eb');
   const IdleDAIAddress = IdleDAIInstance.address;
   console.log('Restart migration with 0.5M as gas limit');
