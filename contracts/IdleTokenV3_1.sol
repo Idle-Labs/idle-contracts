@@ -50,8 +50,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   uint256 public maxUnlentPerc; // 100000 == 100% -> 1000 == 1%
   // Current fee on interest gained
   uint256 public fee;
-  // Flag for disabling openRebalance for the risk adjusted variant
-  bool public isRiskAdjusted;
   // eg. [cTokenAddress, iTokenAddress, ...]
   address[] public allAvailableTokens;
   // eg. [COMPAddress, CRVAddress, ...]
@@ -186,16 +184,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   /**
-   * It allows owner to disable openRebalance
-   *
-   * @param _isRiskAdjusted : flag
-   */
-  function setIsRiskAdjusted(bool _isRiskAdjusted)
-    external onlyOwner {
-      isRiskAdjusted = _isRiskAdjusted;
-  }
-
-  /**
    * It allows owner to set the fee (1000 == 10% of gained interest)
    *
    * @param _fee : fee amount where 100000 is 100%, max settable is MAX_FEE constant
@@ -268,34 +256,37 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     public view
     returns (uint256 avgApr) {
       (, uint256[] memory amounts, uint256 total) = _getCurrentAllocations();
-      uint256 currApr;
-      uint256 weight;
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         if (amounts[i] == 0) {
           continue;
         }
-        currApr = ILendingProtocol(protocolWrappers[allAvailableTokens[i]]).getAPR();
-        weight = amounts[i].mul(10**18).div(total);
-        avgApr = avgApr.add(currApr.mul(weight).div(10**18));
+        // avgApr = avgApr.add(currApr.mul(weight).div(10**18))
+        avgApr = avgApr.add(
+          ILendingProtocol(protocolWrappers[allAvailableTokens[i]]).getAPR().mul(
+            amounts[i].mul(10**18).div(total)
+          ).div(10**18)
+        );
       }
   }
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and
   // redeems gov tokens for users
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-    _redeemGovTokens(sender);
-    _redeemGovTokens(recipient);
+    _redeemGovTokens(sender, false);
+    _redeemGovTokens(recipient, true);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
     _updateAvgPrice(recipient, amount, userAvgPrices[sender]);
+    _updateUserGovIdx(recipient);
     return true;
   }
 
   function transfer(address recipient, uint256 amount) public returns (bool) {
-    _redeemGovTokens(msg.sender);
-    _redeemGovTokens(recipient);
+    _redeemGovTokens(msg.sender, false);
+    _redeemGovTokens(recipient, true);
     _transfer(msg.sender, recipient, amount);
     _updateAvgPrice(recipient, amount, userAvgPrices[msg.sender]);
+    _updateUserGovIdx(recipient);
     return true;
   }
   // #####
@@ -312,14 +303,18 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @param _referral : referral address
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, address _referral)
+  function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral)
     external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
-    _redeemGovTokens(msg.sender);
+    _redeemGovTokens(msg.sender, true);
     // Get current IdleToken price
     uint256 idlePrice = _tokenPrice();
     // transfer tokens to this contract
     IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+
+    if (!_skipRebalance) {
+      _rebalance();
+    }
 
     mintedTokens = _amount.mul(10**18).div(idlePrice);
     _mint(msg.sender, mintedTokens);
@@ -328,6 +323,22 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
+    }
+
+    _updateUserGovIdx(msg.sender);
+  }
+
+  function _updateUserGovIdx(address _to) internal {
+    address govToken;
+    for (uint256 i = 0; i < govTokens.length; i++) {
+      govToken = govTokens[i];
+      // update user idx for gov token i to be equal to:
+      // global gov idx minus unclaimed gov balance / current user balance
+      usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken].sub(
+        govTokensIndexes[govToken].sub(usersGovTokensIndexes[govToken][_to]).mul(
+          10**(uint256(ERC20Detailed(govToken).decimals()))
+        ).div(balanceOf(_to))
+      );
     }
   }
 
@@ -344,7 +355,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-      _redeemGovTokens(msg.sender);
+      _redeemGovTokens(msg.sender, false);
 
       uint256 valueToRedeem = _amount.mul(_tokenPrice()).div(10**18);
       uint256 balanceUnderlying = IERC20(token).balanceOf(address(this));
@@ -390,7 +401,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    */
   function redeemInterestBearingTokens(uint256 _amount)
     external nonReentrant {
-      _redeemGovTokens(msg.sender);
+      _redeemGovTokens(msg.sender, false);
 
       uint256 idleSupply = totalSupply();
       address currentToken;
@@ -409,32 +420,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       );
 
       _burn(msg.sender, _amount);
-  }
-
-  /**
-   * Allow any users to set new allocations as long as the new allocations
-   * give a better avg APR than before
-   * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
-   * as lastAllocations variable and the sum of all value should be == 100000
-   *
-   * This method is not callble if this instance of IdleToken is a risk adjusted instance
-   * NOTE: this method can be paused
-   *
-   * @param _newAllocations : array with new allocations in percentage
-   * @return : whether has rebalanced or not
-   * @return avgApr : the new avg apr after rebalance
-   */
-  function openRebalance(uint256[] calldata _newAllocations)
-    external whenNotPaused whenITokenPriceHasNotDecreased
-    returns (bool, uint256 avgApr) {
-      require(!isRiskAdjusted, "IDLE:NOT_ALLOWED");
-      uint256 initialAPR = getAvgAPR();
-      // Validate and update rebalancer allocations
-      IIdleRebalancerV3(rebalancer).setAllocations(_newAllocations, allAvailableTokens);
-      bool hasRebalanced = _rebalance();
-      uint256 newAprAfterRebalance = getAvgAPR();
-      require(newAprAfterRebalance > initialAPR, "IDLE:NOT_IMPROV");
-      return (hasRebalanced, newAprAfterRebalance);
   }
 
   /**
@@ -471,16 +456,16 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       return 10**(tokenDecimals);
     }
 
-    uint256 currPrice;
     address currToken;
     uint256 totNav = IERC20(token).balanceOf(address(this)).mul(10**(tokenDecimals)); // eventual underlying unlent balance
 
     for (uint256 i = 0; i < allAvailableTokens.length; i++) {
       currToken = allAvailableTokens[i];
-      currPrice = ILendingProtocol(protocolWrappers[currToken]).getPriceInToken();
       totNav = totNav.add(
         // NAV = price * poolSupply
-        currPrice.mul(IERC20(currToken).balanceOf(address(this)))
+        ILendingProtocol(protocolWrappers[currToken]).getPriceInToken().mul(
+          IERC20(currToken).balanceOf(address(this))
+        )
       );
     }
 
@@ -583,10 +568,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   function redeemGovTokens() external nonReentrant {
-    _redeemGovTokens(msg.sender);
+    _redeemGovTokens(msg.sender, false);
   }
 
-  function _redeemGovTokens(address _to) internal {
+  function _redeemGovTokens(address _to, bool _skipRedeem) internal {
     if (govTokens.length == 0) {
       return;
     }
@@ -609,39 +594,36 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         // get current gov token balance
         uint256 govBal = IERC20(govToken).balanceOf(address(this));
         if (govBal > 0) {
-          // check how much we gained since last update
-          uint256 balDiff = govBal.sub(govTokensLastBalances[govToken]);
-          if (balDiff > 0) {
+          // update global index with ratio of govTokens per idleToken
+          govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
             // check how much gov tokens for each idleToken we gained since last update
-            uint256 ratio = balDiff.mul(10**(govDecimals)).div(supply);
-            if (ratio > 0) {
-              // update global index with ratio of govTokens per idleToken
-              govTokensIndexes[govToken] = govTokensIndexes[govToken].add(ratio);
-              // update global var with current govToken balance
-              govTokensLastBalances[govToken] = govBal;
-            }
-          }
+            govBal.sub(govTokensLastBalances[govToken]).mul(10**(govDecimals)).div(supply)
+          );
+          // update global var with current govToken balance
+          govTokensLastBalances[govToken] = govBal;
         }
       }
 
       if (usrBal > 0) {
-        uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
-        // update current user index for this gov token
-        usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
-        // check if user has accrued something
-        uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
-        if (delta == 0) { continue; }
-        uint256 share = usrBal.mul(delta).div(10**(govDecimals));
-        uint256 feeDue;
-        if (feeAddress != address(0) && fee > 0) {
-          feeDue = share.mul(fee).div(100000);
-          // Transfer gov token fee to feeAddress
-          IERC20(govToken).safeTransfer(feeAddress, feeDue);
+        if (!_skipRedeem) {
+          uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
+          // update current user index for this gov token
+          usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
+          // check if user has accrued something
+          uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
+          if (delta == 0) { continue; }
+          uint256 share = usrBal.mul(delta).div(10**(govDecimals));
+          uint256 feeDue;
+          if (feeAddress != address(0) && fee > 0) {
+            feeDue = share.mul(fee).div(100000);
+            // Transfer gov token fee to feeAddress
+            IERC20(govToken).safeTransfer(feeAddress, feeDue);
+          }
+          // Transfer gov token to user
+          IERC20(govToken).safeTransfer(_to, share.sub(feeDue));
+          // Update last balance
+          govTokensLastBalances[govToken] = IERC20(govToken).balanceOf(address(this));
         }
-        // Transfer gov token to user
-        IERC20(govToken).safeTransfer(_to, share.sub(feeDue));
-        // Update last balance
-        govTokensLastBalances[govToken] = IERC20(govToken).balanceOf(address(this));
       } else {
         // save current index for this gov token
         usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
@@ -687,8 +669,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     if (currVal < totalValPaid) {
       return redeemed;
     }
-    uint256 gain = currVal.sub(totalValPaid);
-    uint256 feeDue = gain.mul(fee).div(100000);
+    uint256 feeDue = currVal.sub(totalValPaid).mul(fee).div(100000);
     IERC20(token).safeTransfer(feeAddress, feeDue);
     userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
     return currVal.sub(feeDue);
@@ -835,12 +816,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     returns (uint256 total) {
       // Get balance of every protocol implemented
       address currentToken;
-      uint256 currTokenPrice;
 
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currentToken = allAvailableTokens[i];
-        currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
-        total = total.add(currTokenPrice.mul(
+        total = total.add(ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken().mul(
           IERC20(currentToken).balanceOf(address(this))
         ).div(10**18));
       }

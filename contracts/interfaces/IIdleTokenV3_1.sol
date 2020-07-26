@@ -35,10 +35,11 @@ interface IIdleTokenV3_1 {
    * NOTE 2: this method can be paused
    *
    * @param _amount : amount of underlying token to be lended
+   * @param _skipRebalance : flag for skipping rebalance for lower gas price
    * @param _referral : referral address
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, address _referral) external returns (uint256 mintedTokens);
+  function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral) external returns (uint256 mintedTokens);
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
