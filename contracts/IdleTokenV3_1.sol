@@ -277,7 +277,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
     _updateAvgPrice(recipient, amount, userAvgPrices[sender]);
-    _updateUserGovIdx(recipient);
+    _updateUserGovIdx(recipient, amount);
     return true;
   }
 
@@ -286,7 +286,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     _redeemGovTokens(recipient, true);
     _transfer(msg.sender, recipient, amount);
     _updateAvgPrice(recipient, amount, userAvgPrices[msg.sender]);
-    _updateUserGovIdx(recipient);
+    _updateUserGovIdx(recipient, amount);
     return true;
   }
   // #####
@@ -325,20 +325,24 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       emit Referral(_amount, _referral);
     }
 
-    _updateUserGovIdx(msg.sender);
+    _updateUserGovIdx(msg.sender, mintedTokens);
   }
 
-  function _updateUserGovIdx(address _to) internal {
+  function _updateUserGovIdx(address _to, uint256 _mintedTokens) internal {
     address govToken;
+    uint256 usrBal = balanceOf(_to);
+    uint256 _govIdx;
+    uint256 _usrIdx;
+
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
-      // update user idx for gov token i to be equal to:
-      // global gov idx minus unclaimed gov balance / current user balance
-      usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken].sub(
-        govTokensIndexes[govToken].sub(usersGovTokensIndexes[govToken][_to]).mul(
-          10**(uint256(ERC20Detailed(govToken).decimals()))
-        ).div(balanceOf(_to))
-      );
+      _govIdx = govTokensIndexes[govToken];
+      _usrIdx = usersGovTokensIndexes[govToken][_to];
+
+      // calculate user idx
+      usersGovTokensIndexes[govToken][_to] = usrBal.mul(_usrIdx).add(
+        _mintedTokens.mul(_govIdx.sub(_usrIdx))
+      ).div(usrBal);
     }
   }
 
@@ -577,17 +581,17 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
     uint256 supply = totalSupply();
     uint256 usrBal = balanceOf(_to);
-    uint256 govDecimals;
     address govToken;
 
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
-      govDecimals = ERC20Detailed(govToken).decimals();
 
       if (supply > 0) {
-        // redeem gov tokens for this contract with the corresponding lending protocol wrapper
-        if (i == 0) {
-          Comptroller(CERC20(allAvailableTokens[0]).comptroller()).claimComp(address(this));
+        if (!_skipRedeem) {
+          // redeem gov tokens for this contract with the corresponding lending protocol wrapper
+          if (i == 0) {
+            Comptroller(CERC20(allAvailableTokens[0]).comptroller()).claimComp(address(this));
+          }
         }
         // In case new Gov tokens will be supported this should be updated
 
@@ -597,7 +601,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
           // update global index with ratio of govTokens per idleToken
           govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
             // check how much gov tokens for each idleToken we gained since last update
-            govBal.sub(govTokensLastBalances[govToken]).mul(10**(govDecimals)).div(supply)
+            govBal.sub(govTokensLastBalances[govToken]).mul(10**18).div(supply)
           );
           // update global var with current govToken balance
           govTokensLastBalances[govToken] = govBal;
@@ -612,7 +616,13 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
           // check if user has accrued something
           uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
           if (delta == 0) { continue; }
-          uint256 share = usrBal.mul(delta).div(10**(govDecimals));
+          uint256 share = usrBal.mul(delta).div(10**18);
+          uint256 bal = IERC20(govToken).balanceOf(address(this));
+          // To avoid rounding issue
+          if (share > bal) {
+            share = bal;
+          }
+
           uint256 feeDue;
           if (feeAddress != address(0) && fee > 0) {
             feeDue = share.mul(fee).div(100000);

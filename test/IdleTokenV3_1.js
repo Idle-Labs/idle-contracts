@@ -1749,6 +1749,43 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('59').mul(this.one));
     BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(this.one);
   });
+  it('redeemGovTokens complex test', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    await this.token.setFee(BNify('0'), {from: creator});
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give comptrollerMock some COMP tokens
+    await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // end setup
+
+    await this.mintIdle(BNify('1').mul(this.one), someone);
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('1').mul(this.one), foo); // someone 2 COMP
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('7').mul(this.one), someone); // +1 COMP -> someone + 0.5
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('11').mul(this.one), foo); // +1 COMP -> someone + 0.8888
+    await this.COMPMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+    // +0.8 someone, +1.2 foo
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('100').mul(this.one), foo); // +1 COMP -> someone + 0.4, foo + 0.6
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    // foo tot -> 0.5 + 0.11111 + 1.2 + 0.6 = 2.411111
+    // someone -> 2 + 0.5 + 0.88888 + 0.8 + 0.4 = 4.58888
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('7')));
+    await this.token.redeemGovTokens({from: someone});
+    await this.token.redeemIdleToken(this.one, {from: foo});
+
+
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('2411111111111111112'));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('4588888888888888888'));
+  });
   it('redeemGovTokens', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
@@ -1771,52 +1808,91 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
 
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), foo);
-    // at this point someone should be entitled to 1 COMP and foo to 0
-    (await this.ComptrollerMock.compAddr.call()).should.be.equal(this.COMPMock.address);
-    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
 
-    BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
 
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('1')));
 
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('8').mul(this.one), someone);
-    // 1 new COMP redeemed so tot 2, 1.5 for someone and 0.5 for foo
-    // BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
 
-    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    // 1 new COMP redeemed so tot 2, 1.5 for someone and 0.5 for foo
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
 
     await this.token.redeemIdleToken(this.one, {from: foo});
-    // someone has 9 idleTOken and foo only one so 0.9 to someone and 0.1 to foo
-    // user someone when minting will also redeemGovTokens prev accrued
+    // 1 redeemd, someone has 9 idleTOken and foo only one so 0.9 to someone and 0.1 to foo
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('600000000000000000'));
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
     await this.token.redeemGovTokens({from: someone});
 
-    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('2399999999999999994'));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('2400000000000000000'));
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
     // someone has 9 idleToken
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), foo);
+
 
     // someone is entitled to 1
     await this.COMPMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
-
-    BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
-    BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1000000000000000006'));
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('1600000000000000000'));
+    //
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1000000000000000006'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('1600000000000000000'));
 
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
     await this.token.redeemGovTokens({from: someone});
     await this.token.redeemGovTokens({from: foo});
     // someone is entitled to 1 + 10 * 0.9 = 10 (+ 2.4 of before)
-    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('12399999999999999993'));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('12399999999999999999'));
     // foo is entitled to 10 * 0.1 = 1 (+ 0.6 of before)
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1600000000000000000'));
+  });
+  it('redeemGovTokens test 2', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Give comptrollerMock some COMP tokens
+    await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+
+    // Simulate a prev mint
+    await this.mintIdle(BNify('100000000000000000'), someone); // 0.1
+    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    await this.token.rebalance();
+    await this.COMPMock.transfer(this.token.address, BNify('100000000000000000'), {from: creator});
+
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+
+    await this.mintIdle(BNify('100000000000000000'), someone);
+    // at this point someone should be entitled to 1 COMP
+
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('50000000000000000'));
+
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.div(BNify('10')));
+    await this.token.redeemGovTokens({from: someone});
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('100000000000000000'));
   });
   it('redeemGovTokens with fee', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -1840,21 +1916,23 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
 
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), foo);
     // at this point someone should be entitled to 1 COMP and foo to 0
     (await this.ComptrollerMock.compAddr.call()).should.be.equal(this.COMPMock.address);
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
 
-    BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
-    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
 
     // // new COMP to the idletoken contract
     // await this.COMPMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
 
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('1')));
 
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), someone);
     // 1 new COMP redeemed so tot 2, 1.5 for someone and 0.5 for foo (- 10% fee)
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
@@ -1890,11 +1968,11 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
 
-    await this.mintIdle(BNify('1').mul(this.one), foo);
-    // 1 new COMP redeemed for someone
+    await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.mintIdle(this.one, foo); // +1 COMP for someone
+    // await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
     await this.token.transfer(nonOwner, this.one, {from: someone});
     // 1 on transfer, so tot 2, 1.5 for someone and 0.5 for foo
-    // and another 1 COMP (always on the same transfer on this test) for foo
     // user someone when minting will also redeemGovTokens prev accrued
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1500000000000000000'));
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('500000000000000000'));
