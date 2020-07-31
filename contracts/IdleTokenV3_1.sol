@@ -92,6 +92,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   )
     public initializer
      {
+      require(_rebalancer != address(0), "IDLE:IS_0");
       // Initialize inherited contracts
       ERC20Detailed.initialize(_name, _symbol, 18);
       Ownable.initialize(msg.sender);
@@ -163,6 +164,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   /**
    * It allows owner to set gov tokens array
+   * In case of any errors gov distribution can be paused by passing an empty array
    *
    * @param _newGovTokens : array of governance token addresses
    */
