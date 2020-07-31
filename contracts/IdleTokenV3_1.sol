@@ -253,7 +253,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @return avgApr: current weighted avg apr
    */
   function getAvgAPR()
-    public view
+    external view
     returns (uint256 avgApr) {
       (, uint256[] memory amounts, uint256 total) = _getCurrentAllocations();
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
@@ -263,10 +263,12 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         // avgApr = avgApr.add(currApr.mul(weight).div(10**18))
         avgApr = avgApr.add(
           ILendingProtocol(protocolWrappers[allAvailableTokens[i]]).getAPR().mul(
-            amounts[i].mul(10**18).div(total)
-          ).div(10**18)
+            amounts[i]
+          )
         );
       }
+
+      avgApr = avgApr.div(total);
   }
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and

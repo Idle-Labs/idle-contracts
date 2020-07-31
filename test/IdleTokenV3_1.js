@@ -555,7 +555,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // 10/31 * 1 + 11/31 * 2 + 5/31 * 3 + 5/31 * 4 = 2.16129032 %
     const res = await this.token.getAvgAPR.call();
-    res.should.be.bignumber.equal(BNify('2161290322580645157'));
+    res.should.be.bignumber.equal(BNify('2161290322580645161'));
   });
   it('mints idle tokens', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
