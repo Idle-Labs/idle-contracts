@@ -18,6 +18,7 @@ contract IdleRebalancerV3_1 is IIdleRebalancerV3, Ownable {
   address[] public lastAmountsAddresses;
   address public rebalancerManager;
   address public idleToken;
+  uint256 private constant MAX_PERC = 100000;
 
   /**
    * @param _protocolTokens : array of interest bearing tokens
@@ -29,10 +30,11 @@ contract IdleRebalancerV3_1 is IIdleRebalancerV3, Ownable {
     lastAmounts = new uint256[](_protocolTokens.length);
     lastAmountsAddresses = new address[](_protocolTokens.length);
 
-    for(uint256 i = 0; i < _protocolTokens.length; i++) {
+    lastAmounts[0] = MAX_PERC;
+    lastAmountsAddresses[0] = _protocolTokens[0];
+    for(uint256 i = 1; i < _protocolTokens.length; i++) {
       require(_protocolTokens[i] != address(0), 'some addr is 0');
       // Initially 100% on first lending protocol
-      lastAmounts[i] = i == 0 ? 100000 : 0;
       lastAmountsAddresses[i] = _protocolTokens[i];
     }
   }
@@ -86,7 +88,7 @@ contract IdleRebalancerV3_1 is IIdleRebalancerV3, Ownable {
   /**
    * Used by Rebalance manager to set the new allocations
    *
-   * @param _allocations : array with allocations in percentages (100% => 100000)
+   * @param _allocations : array with allocations in percentages (100% => MAX_PERC)
    * @param _addresses : array with addresses of tokens used, should be equal to lastAmountsAddresses
    */
   function setAllocations(uint256[] calldata _allocations, address[] calldata _addresses)
@@ -101,7 +103,7 @@ contract IdleRebalancerV3_1 is IIdleRebalancerV3, Ownable {
       total = total.add(_allocations[i]);
       lastAmounts[i] = _allocations[i];
     }
-    require(total == 100000, "Not allocating 100%");
+    require(total == MAX_PERC, "Not allocating 100%");
   }
 
   function getAllocations()
