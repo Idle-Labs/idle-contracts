@@ -65,7 +65,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   mapping (address => uint256) public govTokensLastBalances;
   // govToken -> user_address -> user_index eg. usersGovTokensIndexes[govTokens[0]][msg.sender] = 1111123;
   mapping (address => mapping (address => uint256)) public usersGovTokensIndexes;
-  // global indices for each gov tokens used as a reference to calculate a fair shar for each user
+  // global indices for each gov tokens used as a reference to calculate a fair share for each user
   mapping (address => uint256) public govTokensIndexes;
   // Map that saves amount with no fee for each user
   mapping(address => uint256) private userNoFeeQty;
@@ -136,7 +136,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * It allows owner to modify allAvailableTokens array in case of emergency
    * ie if a bug on a interest bearing token is discovered and reset protocolWrappers
    * associated with those tokens.
-   * This method can be delayed (address(0) is just a key used to identify this method)
    *
    * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
    * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
@@ -190,7 +189,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   /**
    * It allows owner to set the fee (1000 == 10% of gained interest)
    *
-   * @param _fee : fee amount where 100000 is 100%, max settable is MAX_FEE constant
+   * @param _fee : fee amount where 100000 is 100%, max settable is 10%
    */
   function setFee(uint256 _fee)
     external onlyOwner {
@@ -201,7 +200,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   /**
    * It allows owner to set the max unlent asset percentage (1000 == 1% of unlent asset max)
    *
-   * @param _perc : fee amount where 100000 is 100%, max settable is MAX_FEE constant
+   * @param _perc : max unlent perc where 100000 is 100%
    */
   function setMaxUnlentPerc(uint256 _perc)
     external onlyOwner {
@@ -276,7 +275,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and
-  // redeems gov tokens for users
+  // redeems gov tokens for users (gov tokens are)
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
     _redeemGovTokens(sender, false);
     _redeemGovTokens(recipient, true);
@@ -300,7 +299,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // external
   /**
    * Used to mint IdleTokens, given an underlying amount (eg. DAI).
-   * This method triggers a rebalance of the pools if needed
+   * This method triggers a rebalance of the pools if _skipRebalance is set to false
    * NOTE: User should 'approve' _amount of tokens before calling mintIdleToken
    * NOTE 2: this method can be paused
    * This method use GasTokens of this contract (if present) to get a gas discount
@@ -354,7 +353,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * This method triggers a rebalance of the pools if needed
    * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
    * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
    *         Ideally one should wait until the black swan event is terminated
