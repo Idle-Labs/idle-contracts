@@ -282,7 +282,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     _redeemGovTokens(recipient, true);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
-    _updateAvgPrice(recipient, amount, userAvgPrices[sender]);
+    _updateUserFeeInfo(recipient, amount, userAvgPrices[sender]);
     _updateUserGovIdx(recipient, amount);
     return true;
   }
@@ -291,7 +291,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     _redeemGovTokens(msg.sender, false);
     _redeemGovTokens(recipient, true);
     _transfer(msg.sender, recipient, amount);
-    _updateAvgPrice(recipient, amount, userAvgPrices[msg.sender]);
+    _updateUserFeeInfo(recipient, amount, userAvgPrices[msg.sender]);
     _updateUserGovIdx(recipient, amount);
     return true;
   }
@@ -325,7 +325,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     mintedTokens = _amount.mul(10**18).div(idlePrice);
     _mint(msg.sender, mintedTokens);
 
-    _updateAvgPrice(msg.sender, mintedTokens, idlePrice);
+    _updateUserFeeInfo(msg.sender, mintedTokens, idlePrice);
 
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
@@ -654,7 +654,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @param qty : new amount deposited / transferred, in idleToken
    * @param price : curr idleToken price in underlying
    */
-  function _updateAvgPrice(address usr, uint256 qty, uint256 price) internal {
+  function _updateUserFeeInfo(address usr, uint256 qty, uint256 price) internal {
     if (fee == 0) {
       userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
       return;
