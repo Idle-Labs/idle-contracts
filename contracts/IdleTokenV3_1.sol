@@ -145,6 +145,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     address[] calldata protocolTokens,
     address[] calldata wrappers
   ) external onlyOwner {
+    require(protocolTokens.length == wrappers.length, "IDLE:LEN_DIFF");
+
     for (uint256 i = 0; i < protocolTokens.length; i++) {
       require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
       protocolWrappers[protocolTokens[i]] = wrappers[i];
