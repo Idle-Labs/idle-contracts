@@ -21,7 +21,7 @@ contract ComptrollerMock is Comptroller {
   function claimComp(address[] calldata, address[] calldata cTokens, bool borrowers, bool suppliers) external {
     require(cTokenAddr == cTokens[0], 'Wrong cToken');
     require(!borrowers && suppliers, 'Only suppliers should be true');
-    IERC20(compAddr).transfer(msg.sender, amount);
+    IERC20(compAddr).transfer(msg.sender, amount > IERC20(compAddr).balanceOf(address(this)) ? 0 : amount);
   }
   function claimComp(address _sender) external {
     IERC20(compAddr).transfer(_sender, amount > IERC20(compAddr).balanceOf(address(this)) ? 0 : amount);
