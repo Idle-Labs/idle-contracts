@@ -131,6 +131,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       'IDLEDAI',
       this.DAIMock.address,
       this.iDAIMock.address,
+      this.cDAIMock.address,
       this.IdleRebalancer.address,
       { from: creator }
     );

@@ -16,6 +16,7 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1 {
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _iToken,
+    address _cToken,
     address _rebalancer
     ) public {
       IdleTokenV3_1.initialize(
@@ -23,6 +24,7 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1 {
       _symbol, // eg. IDLEDAI
       _token,
       _iToken,
+      _cToken,
       _rebalancer
     );
   }

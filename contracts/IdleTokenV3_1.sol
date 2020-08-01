@@ -39,6 +39,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   address public token;
   // eg. iDAI address
   address private iToken;
+  address private cToken;
   // Idle rebalancer current implementation address
   address public rebalancer;
   // Address collecting underlying fees
@@ -89,6 +90,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _iToken,
+    address _cToken,
     address _rebalancer
   )
     public initializer
@@ -106,6 +108,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       token = _token;
       tokenDecimals = ERC20Detailed(_token).decimals();
       iToken = _iToken;
+      cToken = _cToken;
       rebalancer = _rebalancer;
   }
 
@@ -574,10 +577,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       return true; // hasRebalanced
   }
 
-  function redeemGovTokens() external nonReentrant {
-    _redeemGovTokens(msg.sender, false);
-  }
-
   function _redeemGovTokens(address _to, bool _skipRedeem) internal {
     if (govTokens.length == 0) {
       return;
@@ -593,7 +592,11 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         if (!_skipRedeem) {
           // redeem gov tokens for this contract with the corresponding lending protocol wrapper
           if (i == 0) {
-            Comptroller(CERC20(allAvailableTokens[0]).comptroller()).claimComp(address(this));
+            address[] memory holders = new address[](1);
+            address[] memory cTokens = new address[](1);
+            holders[0] = address(this);
+            cTokens[0] = cToken;
+            Comptroller(CERC20(allAvailableTokens[0]).comptroller()).claimComp(holders, cTokens, false, true);
           }
         }
         // In case new Gov tokens will be supported this should be updated
