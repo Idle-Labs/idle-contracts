@@ -895,7 +895,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.mintIdle(BNify('10').mul(this.one), nonOwner);
 
     const res = await this.token.rebalance.call({ from: creator });
-    res.should.be.equal(true);
+    res.should.be.equal(false);
     // it should mint (10 - 1%) / 0.02 = 495cDAI
     const receipt = await this.token.rebalance({ from: creator });
 
@@ -918,7 +918,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.mintIdle(BNify('10').mul(this.one), nonOwner);
 
     const res = await this.token.rebalance.call({ from: creator });
-    res.should.be.equal(true);
+    res.should.be.equal(false);
     // it should mint 10 / 0.02 = 500cDAI
     // plus 500 cDAI from before
     const receipt = await this.token.rebalance({ from: creator });
