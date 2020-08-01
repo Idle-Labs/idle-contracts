@@ -319,19 +319,21 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 
     if (!_skipRebalance) {
+      // lend assets and rebalance the pool if needed
       _rebalance();
     }
 
     mintedTokens = _amount.mul(ONE_18).div(idlePrice);
     _mint(msg.sender, mintedTokens);
 
+    // Update avg price and/or userNoFeeQty
     _updateUserFeeInfo(msg.sender, mintedTokens, idlePrice);
+    // Update user idx for each gov tokens
+    _updateUserGovIdx(msg.sender, mintedTokens);
 
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
     }
-
-    _updateUserGovIdx(msg.sender, mintedTokens);
   }
 
   function _updateUserGovIdx(address _to, uint256 _mintedTokens) internal {
@@ -393,7 +395,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       if (fee > 0 && feeAddress != address(0)) {
         redeemedTokens = _getFee(_amount, redeemedTokens);
       } else {
-        userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(_amount);
+        userNoFeeQty[msg.sender] = balanceOf(msg.sender).sub(_amount);
       }
 
       _burn(msg.sender, _amount);
