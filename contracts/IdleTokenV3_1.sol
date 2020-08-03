@@ -313,8 +313,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       sharePerTokenFrom = govTokenIdx.sub(usersGovTokensIndexes[govToken][_from]);
       // calc current gov shares (before transfer) for user `_to`
       shareTo = balanceTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to])).div(ONE_18);
-      // user `_from` should have -> shareTo + (sharePerTokenFrom * amount / 1e18) = (balTo + amount) * (govIdx - userIdx) / 1e18
-      // so uidx = govIdx - ((share * 1e18 + (sharePerTokenFrom * amount)) / (bal + amount))
+      // user `_to` should have -> shareTo + (sharePerTokenFrom * amount / 1e18) = (balanceTo + amount) * (govTokenIdx - userIdx) / 1e18
+      // so userIdx = govTokenIdx - ((shareTo * 1e18 + (sharePerTokenFrom * amount)) / (balanceTo + amount))
       usersGovTokensIndexes[govToken][_to] = govTokenIdx.sub(
         shareTo.mul(ONE_18).add(sharePerTokenFrom.mul(amount)).div(
           balanceTo.add(amount)
