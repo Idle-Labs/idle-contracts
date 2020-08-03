@@ -1947,7 +1947,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1950000000000000000'));
     BNify(await this.COMPMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('299999999999999999'));
   });
-  it('redeemGovTokens on transfer', async function () {
+  it('redeemGovTokens on transfer to new user', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
     await this.token.setFee(BNify('0'), {from: creator});
@@ -1982,6 +1982,54 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('750000000000000000'));
     await this.token.redeemIdleToken(this.one.div(BNify('2')), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('750000000000000000'));
+  });
+  it('redeemGovTokens on transfer to existing user', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), someone);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    await this.token.rebalance();
+
+    await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    // +1 someone
+    await this.mintIdle(this.one, nonOwner);
+
+    await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    // +0.5 COMP for someone, +0.5 nonOwner
+    await this.mintIdle(this.one.mul(BNify('2')), foo);
+
+    await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    // +0.25 COMP someone, +0.25 nonOwner, 0.5 foo
+
+    // TOT: 1.75 someone, 0.75 nonOwner, 0.5 foo
+    // IDLE -> someone: 1, nonOwner: 1, foo: 2
+    await this.token.transfer(nonOwner, this.one.div(BNify('2')), {from: someone});
+
+    // IDLE -> someone: 0.5, nonOwner: 1.5, foo: 2
+    await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    // +0.5 foo, +0.375 nonOwner, +0.125 someone
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('4000000000000000000'));
+    BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('0'));
+
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.token.redeemIdleToken(BNify('0'), {from: foo});
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1000000000000000000'));
+    await this.token.redeemIdleToken(BNify('0'), {from: nonOwner});
+    BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('1999999999999999999'));
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1000000000000000000'));
   });
   it('userNoFeeQty should behave correctly', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});

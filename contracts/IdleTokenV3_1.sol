@@ -281,25 +281,45 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and
   // redeems gov tokens for users (gov tokens are)
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
+    _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
     _updateUserFeeInfo(recipient, amount, userAvgPrices[sender]);
-    _updateUserGovIdxTransfer(sender, recipient);
     return true;
   }
 
   function transfer(address recipient, uint256 amount) public returns (bool) {
+    _updateUserGovIdxTransfer(msg.sender, recipient, amount);
     _transfer(msg.sender, recipient, amount);
     _updateUserFeeInfo(recipient, amount, userAvgPrices[msg.sender]);
-    _updateUserGovIdxTransfer(msg.sender, recipient);
     return true;
   }
 
-  function _updateUserGovIdxTransfer(address _from, address _to) internal {
+  function _updateUserGovIdxTransfer(address _from, address _to, uint256 amount) internal {
     address govToken;
+    uint256 govTokenIdx;
+    uint256 sharePerTokenFrom;
+    uint256 shareTo;
+    uint256 balanceTo = balanceOf(_to);
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
-      usersGovTokensIndexes[govToken][_to] = usersGovTokensIndexes[govToken][_from];
+      if (balanceTo == 0) {
+        usersGovTokensIndexes[govToken][_to] = usersGovTokensIndexes[govToken][_from];
+        continue;
+      }
+
+      govTokenIdx = govTokensIndexes[govToken];
+      // calc 1 idleToken value in gov shares for user `_from`
+      sharePerTokenFrom = govTokenIdx.sub(usersGovTokensIndexes[govToken][_from]);
+      // calc current gov shares (before transfer) for user `_to`
+      shareTo = balanceTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to])).div(ONE_18);
+      // user `_from` should have -> shareTo + (sharePerTokenFrom * amount / 1e18) = (balTo + amount) * (govIdx - userIdx) / 1e18
+      // so uidx = govIdx - ((share * 1e18 + (sharePerTokenFrom * amount)) / (bal + amount))
+      usersGovTokensIndexes[govToken][_to] = govTokenIdx.sub(
+        shareTo.mul(ONE_18).add(sharePerTokenFrom.mul(amount)).div(
+          balanceTo.add(amount)
+        )
+      );
     }
   }
   // #####
