@@ -1895,6 +1895,43 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.redeemIdleToken(BNify('0'), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('100000000000000000'));
   });
+  it('getGovTokensAmounts', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Give comptrollerMock some COMP tokens
+    await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+
+    // Simulate a prev mint
+    await this.mintIdle(BNify('100000000000000000'), someone); // 0.1
+    BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    await this.token.rebalance();
+    await this.COMPMock.transfer(this.token.address, BNify('100000000000000000'), {from: creator});
+
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+
+    await this.mintIdle(BNify('100000000000000000'), someone);
+    // at this point someone should be entitled to 1 COMP
+
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('50000000000000000'));
+
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.div(BNify('10')));
+    const govAmounts = await this.token.getGovTokensAmounts(someone, {from: someone});
+    BNify(govAmounts[0]).should.be.bignumber.equal(BNify('100000000000000000'));
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('100000000000000000'));
+  });
   it('redeemGovTokens with fee', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain

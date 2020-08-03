@@ -39,6 +39,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   address public token;
   // eg. iDAI address
   address private iToken;
+  // eg. cDAI address
   address private cToken;
   // Idle rebalancer current implementation address
   address public rebalancer;
@@ -71,6 +72,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   mapping (address => uint256) public govTokensIndexes;
   // Map that saves amount with no fee for each user
   mapping(address => uint256) private userNoFeeQty;
+  // variable used for avoid the call of mint and redeem in the same tx
+  bytes32 private _minterBlock;
 
   // Events
   event Rebalance(address _rebalancer, uint256 _amount);
@@ -278,8 +281,15 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       avgApr = avgApr.div(total);
   }
 
-  // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and
-  // update user gov idx for recipient
+  /**
+   * ERC20 modified transferFrom that also update the avgPrice paid for the recipient and
+   * updates user gov idx
+   *
+   * @param sender : sender account
+   * @param recipient : recipient account
+   * @param amount : value to transfer
+   * @return : flag whether transfer was successful or not
+   */
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
     _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
@@ -288,6 +298,14 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     return true;
   }
 
+  /**
+   * ERC20 modified transfer that also update the avgPrice paid for the recipient and
+   * updates user gov idx
+   *
+   * @param recipient : recipient account
+   * @param amount : value to transfer
+   * @return : flag whether transfer was successful or not
+   */
   function transfer(address recipient, uint256 amount) public returns (bool) {
     _updateUserGovIdxTransfer(msg.sender, recipient, amount);
     _transfer(msg.sender, recipient, amount);
@@ -295,6 +313,13 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     return true;
   }
 
+  /**
+   * Helper method for transfer and transferFrom, updates recipient gov indexes
+   *
+   * @param _from : sender account
+   * @param _to : recipient account
+   * @param amount : value to transfer
+   */
   function _updateUserGovIdxTransfer(address _from, address _to, uint256 amount) internal {
     address govToken;
     uint256 govTokenIdx;
@@ -322,7 +347,22 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       );
     }
   }
-  // #####
+
+  /**
+   * Get how many gov tokens a user is entitled to (this may not include eventual undistributed tokens)
+   *
+   * @param _usr : user address
+   * @return : array of amounts for each gov token
+   */
+  function getGovTokensAmounts(address _usr) external view returns (uint256[] memory _amounts) {
+    address govToken;
+    uint256 usrBal = balanceOf(_usr);
+    _amounts = new uint256[](govTokens.length);
+    for (uint256 i = 0; i < _amounts.length; i++) {
+      govToken = govTokens[i];
+      _amounts[i] = usrBal.mul(govTokensIndexes[govToken].sub(usersGovTokensIndexes[govToken][_usr])).div(ONE_18);
+    }
+  }
 
   // external
   /**
@@ -339,6 +379,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral)
     external nonReentrant whenNotPaused whenITokenPriceHasNotDecreased
     returns (uint256 mintedTokens) {
+    _minterBlock = keccak256(abi.encodePacked(tx.origin, block.number));
     _redeemGovTokens(msg.sender, true);
     // Get current IdleToken price
     uint256 idlePrice = _tokenPrice();
@@ -363,6 +404,12 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
   }
 
+  /**
+   * Helper method for mintIdleToken, updates minter gov indexes
+   *
+   * @param _to : minter account
+   * @param _mintedTokens : number of newly minted tokens
+   */
   function _updateUserGovIdx(address _to, uint256 _mintedTokens) internal {
     address govToken;
     uint256 usrBal = balanceOf(_to);
@@ -393,6 +440,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
+      // Check that no mint has been made in the same block from the same EOA
+      require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "IDLE:REENTR");
       _redeemGovTokens(msg.sender, false);
 
       uint256 valueToRedeem = _amount.mul(_tokenPrice()).div(ONE_18);
@@ -488,6 +537,11 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   // internal
+  /**
+   * Get current idleToken price based on net asset value and totalSupply
+   *
+   * @return price: value of 1 idleToken in underlying
+   */
   function _tokenPrice() internal view returns (uint256 price) {
     uint256 totSupply = totalSupply();
     if (totSupply == 0) {
@@ -601,6 +655,13 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       return true; // hasRebalanced
   }
 
+  /**
+   * Redeem unclaimed governance tokens and update governance global index and user index if needed
+   * if called during redeem it will send all gov tokens accrued by a user to the user
+   *
+   * @param _to : user address
+   * @param _skipRedeem : flag to choose whether to send gov tokens to user or not
+   */
   function _redeemGovTokens(address _to, bool _skipRedeem) internal {
     if (govTokens.length == 0) {
       return;
