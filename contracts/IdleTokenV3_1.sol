@@ -279,7 +279,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   // ##### ERC20 modified transfer and transferFrom that also update the avgPrice paid for the recipient and
-  // redeems gov tokens for users (gov tokens are)
+  // update user gov idx for recipient
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
     _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
