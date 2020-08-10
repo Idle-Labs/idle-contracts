@@ -258,7 +258,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   }
 
   /**
-   * Get current avg APR of this IdleToken
+   * Get current avg APR of this IdleToken (not counting gov tokens APR and unlent perc)
    *
    * @return avgApr: current weighted avg apr
    */
