@@ -26,4 +26,7 @@ contract ComptrollerMock is Comptroller {
   function claimComp(address _sender) external {
     IERC20(compAddr).transfer(_sender, amount > IERC20(compAddr).balanceOf(address(this)) ? 0 : amount);
   }
+  function compSpeeds(address _cToken) external view returns (uint256) {
+
+  }
 }

@@ -349,6 +349,34 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     const expectedRes = this.one;
     res.should.be.bignumber.equal(expectedRes);
   });
+  it('calculates current tokenPrice when funds are all in one', async function () {
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1100000000000000000', this.one, '2000000000000000000']);
+    // all funds will be sent to one protocol (Compound)
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // First mint with tokenPrice = 1
+    // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
+    // tokenPrice is 1 here
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // After some time price of cDAI has increased
+    await this.cDAIWrapper._setPriceInToken(BNify('250000000000000000000000000')); // 0.025 DAI
+    // Used for when wrapper calls mint on cDAIMock
+    // NOTE: for Fulcrum rate should be higher then _setPriceInToken due to fee
+    await this.cDAIMock._setExchangeRateStored(BNify('250000000000000000000000000')); // 0.025 DAI
+    // await this.DAIMock.transfer(this.cDAIMock.address, BNify('15').mul(this.one), { from: creator });
+
+    const res1 = await this.token.tokenPrice.call();
+    res1.should.be.bignumber.equal(this.one);
+
+    // 9.9 / 0.025 = 396 cTokens (1% is not minted and left as unlent pool)
+    await this.token.rebalance();
+    const resBalance2 = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
+    resBalance2.should.be.bignumber.equal(BNify('396').mul(this.oneCToken));
+    // price is still one because we just minted
+    const tokenPrice = await this.token.tokenPrice.call();
+    tokenPrice.should.be.bignumber.equal(this.one);
+  });
   it('calculates current tokenPrice when funds are all in one pool', async function () {
     await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
     // Set prices in DAI => [0.02, 1.25, 1, 2]

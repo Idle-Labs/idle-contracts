@@ -549,7 +549,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
 
     address currToken;
-    uint256 totNav = IERC20(token).balanceOf(address(this)).mul(10**(tokenDecimals)); // eventual underlying unlent balance
+    uint256 totNav = IERC20(token).balanceOf(address(this)).mul(10**(tokenDecimals)).mul(10**(18-tokenDecimals)); // eventual underlying unlent balance
 
     for (uint256 i = 0; i < allAvailableTokens.length; i++) {
       currToken = allAvailableTokens[i];
