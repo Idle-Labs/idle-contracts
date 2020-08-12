@@ -824,7 +824,7 @@
     web3-eth-abi "1.2.1"
     web3-utils "1.2.1"
 
-"@openzeppelin/cli@^2.8.0":
+"@openzeppelin/cli@^2.8.2":
   version "2.8.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/cli/-/cli-2.8.2.tgz#b569c55f8c291ac4c7a16ca1b584ee2b4063a7f2"
   integrity sha512-K0m1UAywnweAwzbwwmqI+JSezDRnqDRWkKQMI2VV6T03LOXcG/L9oqO9KRORI8md+KbxBW9v5rmNV63wGQIRlA==
@@ -896,7 +896,7 @@
     web3 "^1.2.1"
     web3-utils "^1.2.1"
 
-"@openzeppelin/upgrades@2.8.0", "@openzeppelin/upgrades@^2.8.0":
+"@openzeppelin/upgrades@2.8.0", "@openzeppelin/upgrades@^2.8.2":
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/upgrades/-/upgrades-2.8.0.tgz#8086ab9c99d9f8dac7205030b0f9e7e4a280c4a3"
   integrity sha512-LzjTQPeljPsgHDPdZyH9cMCbIHZILgd2cpNcYEkdsC2IylBYRHShlbEDXJV9snnqg9JWfzPiKIqyj3XVliwtqQ==

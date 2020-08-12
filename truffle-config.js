@@ -26,7 +26,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 1500 // 8k in prod
+          runs: 30000
         }
       }
     }
@@ -54,19 +54,22 @@ module.exports = {
     },
     // main ethereum network(mainnet)
     live: {
-      // provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
-      provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
+      provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
+      // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
-      gas: 2500000,
-      gasPrice: 16000000000, // 16 gwei
-      // skipDryRun: true
+      gas: 100000,
+      gasPrice: 200 * 1e9, // 90 gwei
+      skipDryRun: true
     },
     local: {
+      // provider: () => new HDWalletProvider(mnemonic, 'http://127.0.0.1:8545'),
+      // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'http://127.0.0.1:8545'),
       host: '127.0.0.1',
       port: 8545,
       network_id: '*',
       skipDryRun: true,
-      gasPrice: 1000000000
+      // gas: 300000,
+      gasPrice: 35000000000
     },
     test: {
       host: '127.0.0.1',
