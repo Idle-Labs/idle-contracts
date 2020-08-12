@@ -6,3 +6,15 @@ Idle is a decentralized protocol dedicated to bringing automatic asset allocatio
 
 ### Docs
 [developers.idle.finance](http://developers.idle.finance/)
+
+### Tests
+To run tests first spin up a ganache-cli instance with unlimited contract size flag
+```
+ganache-cli --allowUnlimitedContractSize
+```
+
+then
+
+```
+truffle test
+```

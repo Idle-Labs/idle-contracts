@@ -208,6 +208,11 @@ contract IdleCompound is ILendingProtocol, Ownable {
   }
 
 
+  /**
+   * Get available liquidity
+   *
+   * @return available liquidity
+   */
   function availableLiquidity() external view returns (uint256) {
     return CERC20(token).getCash();
   }

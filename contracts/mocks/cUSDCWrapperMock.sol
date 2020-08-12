@@ -9,13 +9,13 @@ import "../interfaces/Comptroller.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
-contract cDAIWrapperMock is ILendingProtocol, Ownable {
+contract cUSDCWrapperMock is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
   // protocol token (cToken) address
   address public token;
-  // underlying token (token eg DAI) address
+  // underlying token (token eg USDC) address
   address public underlying;
 
   uint256 public price;

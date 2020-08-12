@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/CERC20.sol";
 
-contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
+contract cUSDCMock is ERC20Detailed, ERC20, CERC20 {
   address public dai;
   uint256 public toTransfer;
   uint256 public toMint;
@@ -22,23 +22,23 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
 
   constructor(address _dai, address tokenOwner, address interestRateModel)
     ERC20()
-    ERC20Detailed('cDAI', 'cDAI', 8) public {
+    ERC20Detailed('cUSDC', 'cUSDC', 8) public {
     dai = _dai;
     _interestRateModel = interestRateModel;
-    _exchangeRate = 200000000000000000000000000;
+    _exchangeRate = 200000000000000;
     _supplyRate = 32847953230;
-    _mint(address(this), 10**14); // 1.000.000 cDAI
-    _mint(tokenOwner, 10**13); // 100.000 cDAI
+    _mint(address(this), 10**14); // 1.000.000 cUSDC
+    _mint(tokenOwner, 10**13); // 100.000 cUSDC
   }
 
   function mint(uint256 amount) external returns (uint256) {
-    require(IERC20(dai).transferFrom(msg.sender, address(this), amount), "Error during transferFrom"); // 1 DAI
+    require(IERC20(dai).transferFrom(msg.sender, address(this), amount), "Error during transferFrom"); // 1 USDC
     _mint(msg.sender, (amount * 10**18)/_exchangeRate);
     return 0;
   }
   function redeem(uint256 amount) external returns (uint256) {
     _burn(msg.sender, amount);
-    require(IERC20(dai).transfer(msg.sender, amount * _exchangeRate / 10**18), "Error during transfer"); // 1 DAI
+    require(IERC20(dai).transfer(msg.sender, amount * _exchangeRate / 10**18), "Error during transfer"); // 1 USDC
     return 0;
   }
 

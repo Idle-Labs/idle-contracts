@@ -4,7 +4,7 @@
  */
 pragma solidity 0.5.16;
 
-interface IIdleTokenV3 {
+interface IIdleTokenV3_1 {
   // view
   /**
    * IdleToken price calculation, in underlying
@@ -17,14 +17,6 @@ interface IIdleTokenV3 {
    * @return : underlying token address
    */
   function token() external view returns (address);
-
-  /**
-   * underlying token decimals
-   *
-   * @return : decimals of underlying token
-   */
-  function tokenDecimals() external view returns (uint256 decimals);
-
   /**
    * Get APR of every ILendingProtocol
    *
@@ -43,10 +35,11 @@ interface IIdleTokenV3 {
    * NOTE 2: this method can be paused
    *
    * @param _amount : amount of underlying token to be lended
-   * @param : pass []
+   * @param _skipRebalance : flag for skipping rebalance for lower gas price
+   * @param _referral : referral address
    * @return mintedTokens : amount of IdleTokens minted
    */
-  function mintIdleToken(uint256 _amount, uint256[] calldata) external returns (uint256 mintedTokens);
+  function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral) external returns (uint256 mintedTokens);
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
@@ -56,12 +49,9 @@ interface IIdleTokenV3 {
    *         Ideally one should wait until the black swan event is terminated
    *
    * @param _amount : amount of IdleTokens to be burned
-   * @param : pass []
    * @return redeemedTokens : amount of underlying tokens redeemed
    */
-  function redeemIdleToken(uint256 _amount, bool _skipRebalance, uint256[] calldata)
-    external returns (uint256 redeemedTokens);
-
+  function redeemIdleToken(uint256 _amount) external returns (uint256 redeemedTokens);
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
    * and send interest-bearing tokens (eg. cDAI/iDAI) directly to the user.
@@ -70,13 +60,6 @@ interface IIdleTokenV3 {
    * @param _amount : amount of IdleTokens to be burned
    */
   function redeemInterestBearingTokens(uint256 _amount) external;
-
-  /**
-   * @param _newAmount : amount of underlying tokens that needs to be minted with this rebalance
-   * @param : pass []
-   * @return : whether has rebalanced or not
-   */
-  function rebalance(uint256 _newAmount, uint256[] calldata) external returns (bool);
 
   /**
    * @return : whether has rebalanced or not
