@@ -44,11 +44,11 @@ contract IdleConverterPersonalSignV4 is Ownable, GST2Consumer, BasicMetaTransact
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+  function migrateFromToIdle(uint256 _amount, address _from, address _to, address _underlying, bool _skipRebalance) external gasDiscountFrom(address(this)) returns (uint256) {
     IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     IIdleToken(_from).redeemIdleToken(_amount, true, new uint256[](0));
 
-    return _migrateToIdle(_to, _underlying);
+    return _migrateToIdle(_to, _underlying, _skipRebalance);
   }
 
   // One should approve this contract first to spend cTokens
@@ -56,11 +56,11 @@ contract IdleConverterPersonalSignV4 is Ownable, GST2Consumer, BasicMetaTransact
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromCompoundToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+  function migrateFromCompoundToIdle(uint256 _amount, address _from, address _to, address _underlying, bool _skipRebalance) external gasDiscountFrom(address(this)) returns (uint256) {
     IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     CERC20(_from).redeem(_amount);
 
-    return _migrateToIdle(_to, _underlying);
+    return _migrateToIdle(_to, _underlying, _skipRebalance);
   }
 
   // One should approve this contract first to spend iTokens
@@ -68,11 +68,11 @@ contract IdleConverterPersonalSignV4 is Ownable, GST2Consumer, BasicMetaTransact
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromFulcrumToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+  function migrateFromFulcrumToIdle(uint256 _amount, address _from, address _to, address _underlying, bool _skipRebalance) external gasDiscountFrom(address(this)) returns (uint256) {
     IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     iERC20Fulcrum(_from).burn(address(this), _amount);
 
-    return _migrateToIdle(_to, _underlying);
+    return _migrateToIdle(_to, _underlying, _skipRebalance);
   }
 
   // One should approve this contract first to spend aTokens
@@ -80,11 +80,11 @@ contract IdleConverterPersonalSignV4 is Ownable, GST2Consumer, BasicMetaTransact
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromAaveToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+  function migrateFromAaveToIdle(uint256 _amount, address _from, address _to, address _underlying, bool _skipRebalance) external gasDiscountFrom(address(this)) returns (uint256) {
     IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     AToken(_from).redeem(_amount);
 
-    return _migrateToIdle(_to, _underlying);
+    return _migrateToIdle(_to, _underlying, _skipRebalance);
   }
 
   // One should approve this contract first to spend yTokens
@@ -92,20 +92,20 @@ contract IdleConverterPersonalSignV4 is Ownable, GST2Consumer, BasicMetaTransact
   // _from : old idle address
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function migrateFromIearnToIdle(uint256 _amount, address _from, address _to, address _underlying) external gasDiscountFrom(address(this)) returns (uint256) {
+  function migrateFromIearnToIdle(uint256 _amount, address _from, address _to, address _underlying, bool _skipRebalance) external gasDiscountFrom(address(this)) returns (uint256) {
     IERC20(_from).safeTransferFrom(msgSender(), address(this), _amount);
     yToken(_from).withdraw(_amount);
 
-    return _migrateToIdle(_to, _underlying);
+    return _migrateToIdle(_to, _underlying, _skipRebalance);
   }
 
   // internal
   // _to : new idle address
   // _underlying : underlying addr intially redeemd (eg. DAI)
-  function _migrateToIdle(address _to, address _underlying) internal returns (uint256 newIdleTokens) {
+  function _migrateToIdle(address _to, address _underlying, bool _skipRebalance) internal returns (uint256 newIdleTokens) {
     uint256 underlyingBalance = IERC20(_underlying).balanceOf(address(this));
     IERC20(_underlying).safeApprove(_to, underlyingBalance);
-    IIdleTokenV3_1(_to).mintIdleToken(underlyingBalance, true, address(0));
+    IIdleTokenV3_1(_to).mintIdleToken(underlyingBalance, _skipRebalance, address(0));
 
     newIdleTokens = IERC20(_to).balanceOf(address(this));
     IERC20(_to).safeTransfer(msgSender(), newIdleTokens);
