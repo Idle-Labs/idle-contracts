@@ -444,7 +444,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "IDLE:REENTR");
       _redeemGovTokens(msg.sender, false);
 
-      uint256 valueToRedeem = _amount.mul(_tokenPrice()).div(ONE_18);
+      uint256 price = _tokenPrice();
+      uint256 valueToRedeem = _amount.mul(price).div(ONE_18);
       uint256 balanceUnderlying = IERC20(token).balanceOf(address(this));
       uint256 idleSupply = totalSupply();
 
@@ -456,7 +457,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
           currToken = allAvailableTokens[i];
           redeemedTokens = redeemedTokens.add(
             _redeemProtocolTokens(
-              protocolWrappers[currToken],
               currToken,
               // _amount * protocolPoolBalance / idleSupply
               _amount.mul(IERC20(currToken).balanceOf(address(this))).div(idleSupply), // amount to redeem
@@ -467,13 +467,9 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         // Get a portion of the eventual unlent balance
         redeemedTokens = redeemedTokens.add(_amount.mul(balanceUnderlying).div(idleSupply));
       }
-
-      if (fee > 0 && feeAddress != address(0)) {
-        redeemedTokens = _getFee(_amount, redeemedTokens);
-      } else {
-        userNoFeeQty[msg.sender] = balanceOf(msg.sender).sub(_amount);
-      }
-
+      // get eventual performance fee
+      redeemedTokens = _getFee(_amount, redeemedTokens, price);
+      // burn idleTokens
       _burn(msg.sender, _amount);
       // send underlying minus fee to msg.sender
       IERC20(token).safeTransfer(msg.sender, redeemedTokens);
@@ -758,22 +754,25 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @param redeemed : in underlying
    * @return : net value in underlying
    */
-  function _getFee(uint256 amount, uint256 redeemed) internal returns (uint256) {
-    uint256 noFeeQty = userNoFeeQty[msg.sender];
-    uint256 currPrice = _tokenPrice();
-    if (noFeeQty > 0 && noFeeQty > amount) {
-      noFeeQty = amount;
+  function _getFee(uint256 amount, uint256 redeemed, uint256 currPrice) internal returns (uint256) {
+    if (fee > 0 && feeAddress != address(0)) {
+      uint256 noFeeQty = userNoFeeQty[msg.sender];
+      if (noFeeQty > 0 && noFeeQty > amount) {
+        noFeeQty = amount;
+      }
+
+      uint256 totalValPaid = noFeeQty.mul(currPrice).add(amount.sub(noFeeQty).mul(userAvgPrices[msg.sender])).div(ONE_18);
+      if (redeemed < totalValPaid) {
+        return redeemed;
+      }
+      uint256 feeDue = redeemed.sub(totalValPaid).mul(fee).div(100000);
+      IERC20(token).safeTransfer(feeAddress, feeDue);
+      userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
+      return redeemed.sub(feeDue);
     }
 
-    uint256 totalValPaid = noFeeQty.mul(currPrice).add(amount.sub(noFeeQty).mul(userAvgPrices[msg.sender])).div(ONE_18);
-    uint256 currVal = amount.mul(currPrice).div(ONE_18);
-    if (currVal < totalValPaid) {
-      return redeemed;
-    }
-    uint256 feeDue = currVal.sub(totalValPaid).mul(fee).div(100000);
-    IERC20(token).safeTransfer(feeAddress, feeDue);
-    userNoFeeQty[msg.sender] = userNoFeeQty[msg.sender].sub(noFeeQty);
-    return currVal.sub(feeDue);
+    userNoFeeQty[msg.sender] = balanceOf(msg.sender).sub(amount);
+    return redeemed;
   }
 
   /**
@@ -863,7 +862,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         }
         // redeem the difference
         _redeemProtocolTokens(
-          protocolWrappers[currToken],
           currToken,
           // convert amount from underlying to protocol token
           toRedeem.mul(ONE_18).div(protocol.getPriceInToken()),
@@ -933,20 +931,19 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   /**
    * Redeem underlying tokens through protocol wrapper
    *
-   * @param _wrapperAddr : address of protocol wrapper
    * @param _amount : amount of `_token` to redeem
    * @param _token : protocol token address
    * @param _account : should be msg.sender when rebalancing and final user when redeeming
    * @return tokens : new tokens minted
    */
-  function _redeemProtocolTokens(address _wrapperAddr, address _token, uint256 _amount, address _account)
+  function _redeemProtocolTokens(address _token, uint256 _amount, address _account)
     internal
     returns (uint256 tokens) {
       if (_amount == 0) {
         return tokens;
       }
       // Transfer _amount of _protocolToken (eg. cDAI) to _wrapperAddr
-      IERC20(_token).safeTransfer(_wrapperAddr, _amount);
-      tokens = ILendingProtocol(_wrapperAddr).redeem(_account);
+      IERC20(_token).safeTransfer(protocolWrappers[_token], _amount);
+      tokens = ILendingProtocol(protocolWrappers[_token]).redeem(_account);
   }
 }
