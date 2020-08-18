@@ -1,0 +1,24 @@
+{
+  "manifestVersion": "2.2",
+  "contracts": {
+    "IdleTokenV3_1": "IdleTokenV3_1"
+  },
+  "dependencies": {},
+  "name": "idle",
+  "version": "4.0.0",
+  "compiler": {
+    "compilerSettings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": "7500"
+      }
+    },
+    "typechain": {
+      "enabled": false
+    },
+    "manager": "truffle",
+    "artifactsDir": "build/contracts",
+    "contractsDir": "contracts"
+  },
+  "telemetryOptIn": false
+}

@@ -68,7 +68,6 @@ build
 
 .zos.session
 
-.openzeppelin
 .openzeppelin/.session
 
 migrations_foo
