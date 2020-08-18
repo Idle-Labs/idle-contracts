@@ -39,10 +39,10 @@ module.exports = {
       gasPrice: 5000000000, // 5 gwei
     },
     kovan: {
-      // provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
-      provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 42}, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
+      provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
+      // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 42}, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: '42',
-      gas: 6465030,
+      gas: 3500000,
       gasPrice: 5000000000, // 5 gwei
       skipDryRun: true
     },
@@ -57,8 +57,16 @@ module.exports = {
       provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
-      gas: 100000,
-      gasPrice: 200 * 1e9, // 90 gwei
+      gas: 250000,
+      gasPrice: 100 * 1e9, // 90 gwei
+      skipDryRun: true
+    },
+    proxy: {
+      provider: () => new HDWalletProvider(mnemonic, 'http://127.0.0.1:9545'),
+      host: "127.0.0.1",
+      port: 9545,
+      network_id: "*",
+      gasPrice: 0,
       skipDryRun: true
     },
     local: {
@@ -69,7 +77,7 @@ module.exports = {
       network_id: '*',
       skipDryRun: true,
       // gas: 300000,
-      gasPrice: 35000000000
+      gasPrice: 0x01
     },
     test: {
       host: '127.0.0.1',
