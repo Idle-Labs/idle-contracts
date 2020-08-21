@@ -91,6 +91,7 @@ const COMP = {
   'deploy': '0xc00e94cb662c3520282e6f5717214004a7f26888', // used for truffle Teams deploy, now kovan
 }
 
+// IdleProxy contract for this token whoudl already be deployed with oz cli as upgradable
 // IdleDAIProxy address
 const proxy = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 
@@ -98,11 +99,13 @@ module.exports = async function(deployer, network, accounts) {
   if (network === 'test') {
     return;
   }
+  // dydx market if supported
   const marketId = 3;
+  // underlying token decimals
   const decimals = 18;
   const one = BNify('1000000000000000000');
+  // yxToken instance if present (for Dydx)
   let yxDAIInstance = {address: '0xb299BCDF056d17Bd1A46185eCA8bCE458B00DC4a'};
-
 
   console.log('Network', network);
   console.log('cDAI address: ', cDAI[network]);
@@ -112,113 +115,69 @@ module.exports = async function(deployer, network, accounts) {
   console.log('DAI address: ', DAI[network]);
   console.log('##################');
 
+  // #######################
+  let fulcrumDAIInstance;
+  await deployer.deploy(IdleFulcrumV2, iDAI[network], DAI[network], {from: creator}).then(instance => fulcrumDAIInstance = instance)
+  let compoundDAIInstance;
+  await deployer.deploy(IdleCompoundV2, cDAI[network], DAI[network], {from: creator}).then(instance => compoundDAIInstance = instance)
+  let aaveDAIInstance;
+  await deployer.deploy(IdleAave, aDAI[network], DAI[network], {from: creator}).then(instance => aaveDAIInstance = instance)
+  let dydxDAIInstance;
+  await deployer.deploy(IdleDyDx, yxDAIInstance.address, DAI[network], marketId, {from: creator}).then(instance => dydxDAIInstance = instance)
+
+  let rebalancerDAIInstance;
+  await deployer.deploy(IdleRebalancerV3_1,
+    [cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address],
+    rebalancerManager,
+    {from: creator}
+  ).then(instance => rebalancerDAIInstance = instance)
 
   // #######################
-  let fulcrumDAIInstance = {address: '0x2fd3252999806BCE78035def25131517D2f5cC29'};
-  // let fulcrumDAIInstance;
-  // await deployer.deploy(IdleFulcrumV2, iDAI[network], DAI[network], {from: creator}).then(instance => fulcrumDAIInstance = instance)
-  // if is using new interestRateModel
-  let compoundDAIInstance = {address: '0x7466c91238d6e9c16801b4b885cfc3155af3fce3'};
-  // let compoundDAIInstance;
-  // await deployer.deploy(IdleCompoundV2, cDAI[network], DAI[network], {from: creator}).then(instance => compoundDAIInstance = instance)
-  let aaveDAIInstance = {address: '0x0bc3bba4ef3d1355a76e69900f98a59d30ef54f3'};
-  // let aaveDAIInstance;
-  // await deployer.deploy(IdleAave, aDAI[network], DAI[network], {from: creator}).then(instance => aaveDAIInstance = instance)
-  let dydxDAIInstance = {address: '0xe9B1391334B2727ff23206255873D8A7C4C403Cb'};
-  // let dydxDAIInstance;
-  // await deployer.deploy(IdleDyDx, yxDAIInstance.address, DAI[network], marketId, {from: creator}).then(instance => dydxDAIInstance = instance)
-  // let IdleDSRInstance;
-  // await deployer.deploy(IdleDSR, CHAI[network], DAI[network], {from: creator}).then(instance => IdleDSRInstance = instance)
-
-  let rebalancerDAIInstance = {address: '0x75c8b35e92abca44452d8c8f982a1b539dd19763'};
-  // let rebalancerDAIInstance;
-  // await deployer.deploy(IdleRebalancerV3_1,
-  //   [cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address],
-  //   rebalancerManager,
-  //   {from: creator}
-  // ).then(instance => rebalancerDAIInstance = instance)
-
-  // #######################
-
   // console.log('Restart migration with 0.5M as gas limit and remore return');
   // return;
 
-
-
-  let IdleDAIInstance = await IdleTokenV3_1.at(proxy);
-  const IdleDAIAddress = IdleDAIInstance.address;
   // see https://github.com/trufflesuite/truffle/issues/737
-  // await IdleDAIInstance.methods['initialize(string,string,address,address,address,address)'](
-  //   'IdleDAI v4 [Best yield]',
-  //   'idleDAIYield',
-  //   DAI[network],
-  //   iDAI[network],
-  //   cDAI[network],
-  //   rebalancerDAIInstance.address,
-  //   {from: creator}
-  // );
-  // console.log('Setting govTokens')
-  // await IdleDAIInstance.setGovTokens(
-  //   [COMP[network]],
-  //   {from: creator}
-  // );
-  //
-  // const res = await IdleDAIInstance.setAllAvailableTokensAndWrappers(
-  //   [cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address],
-  //   [compoundDAIInstance.address, fulcrumDAIInstance.address, aaveDAIInstance.address, dydxDAIInstance.address],
-  //   // {from: creator}
-  //   {from: rebalancerManager}
-  // ).catch(err => {
-  //   console.log('err', err);
-  // });
-  //
-  // console.log('[DAI] IdleCompoundV2 address:', compoundDAIInstance.address);
-  // console.log('[DAI] IdleFulcrumV2  address:', fulcrumDAIInstance.address);
-  // console.log('[DAI] IdleAave  address:', aaveDAIInstance.address);
-  // console.log('[DAI] IdleDyDx  address:', dydxDAIInstance.address);
-  // console.log('[DAI] IdleRebalancerV3_1  address:', rebalancerDAIInstance.address);
-  // console.log('#### IdleDAIYield Address: ', IdleDAIAddress);
-  //
-  // console.log('1');
-  // await (await IdleCompoundV2.at(compoundDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // console.log('2');
-  // await (await IdleFulcrumV2.at(fulcrumDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // console.log('3');
-  // await (await IdleAave.at(aaveDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // console.log('4');
-  // await (await IdleDyDx.at(dydxDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // console.log('5');
-  // // console.log('[DAI] IdleDSRInstance  address:', IdleDSRInstance.address);
-  // // await (await IdleDSR.at(IdleDSRInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // await (await IdleRebalancerV3_1.at(rebalancerDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
-  // console.log('6');
-  //
-  // await IdleDAIInstance.setFeeAddress(feeAddress, {from: creator});
-  // console.log('7');
-  // await IdleDAIInstance.setFee(BNify('10000'), {from: creator});
-  // // ##############################
+  await IdleDAIInstance.methods['initialize(string,string,address,address,address,address)'](
+    'IdleDAI v4 [Best yield]',
+    'idleDAIYield',
+    DAI[network],
+    iDAI[network],
+    cDAI[network],
+    rebalancerDAIInstance.address,
+    {from: creator}
+  );
+  await IdleDAIInstance.setGovTokens(
+    [COMP[network]],
+    {from: creator}
+  );
+  await IdleDAIInstance.setAllAvailableTokensAndWrappers(
+    [cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address],
+    [compoundDAIInstance.address, fulcrumDAIInstance.address, aaveDAIInstance.address, dydxDAIInstance.address],
+    {from: creator}
+  ).catch(err => {
+    console.log('err', err);
+  });
+
+  console.log('[DAI] IdleCompoundV2 address:', compoundDAIInstance.address);
+  console.log('[DAI] IdleFulcrumV2  address:', fulcrumDAIInstance.address);
+  console.log('[DAI] IdleAave  address:', aaveDAIInstance.address);
+  console.log('[DAI] IdleDyDx  address:', dydxDAIInstance.address);
+  console.log('[DAI] IdleRebalancerV3_1  address:', rebalancerDAIInstance.address);
+  console.log('#### IdleDAIYield Address: ', IdleDAIAddress);
+
+  await (await IdleCompoundV2.at(compoundDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
+  await (await IdleFulcrumV2.at(fulcrumDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
+  await (await IdleAave.at(aaveDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
+  await (await IdleDyDx.at(dydxDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
+  await (await IdleRebalancerV3_1.at(rebalancerDAIInstance.address)).setIdleToken(IdleDAIAddress, {from: creator});
+
+  await IdleDAIInstance.setFeeAddress(feeAddress, {from: creator});
+  await IdleDAIInstance.setFee(BNify('10000'), {from: creator});
   // console.log('Restart migration with 3M as gas limit and remove return');
-  // // return;
-  //
-  //
-  // // let rebalancerHelperInstance = {address: '0x57Aa7b444458A68A9C2852B9182337aD1dC1c0D7'};
-  // let rebalancerHelperInstance;
-  // await deployer.deploy(
-  //   IdleRebalancerHelperDAI,
-  //   DAI[network], cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address, CHAI[network], marketId, decimals,
-  //   {from: creator}
-  // ).then(instance => rebalancerHelperInstance = instance);
-  // console.log('[DAI] IdleRebalancerHelperDAI address:', rebalancerHelperInstance.address);
-  //
-  // console.log('Restart migration with 300k as gas limit and remove change provider to HDWalletProvider');
   // return;
-
-
-
-  // Todo do this below
   // ##############################
   //
-  // TODO call this with changed account
+  // call this with rebalancer account
   // const gstContract = await IERC20.at(gstAddress);
   // await gstContract.approve(IdleDAIAddress, BNify('-1'), { from: rebalancerManager });
   // const IdleRebalancerV3Instance = await IdleRebalancerV3_1.at(rebalancerDAIInstance.address);
@@ -232,15 +191,6 @@ module.exports = async function(deployer, network, accounts) {
   // const DAIContract = await IERC20.at(DAI[network]);
   // await DAIContract.approve(IdleDAIAddress, BNify('-1'), { from: rebalancerManager });
   // console.log('minting 1')
-  // await IdleDAIInstance.mintIdleToken(one, true, rebalancerManager, {from: rebalancerManager});
-  // console.log('Rebalance')
-  // console.log('Restart the server')
-  // const IdleRebalancerV3Instance = await IdleRebalancerV3_1.at(rebalancerDAIInstance.address);
-  // await IdleRebalancerV3Instance.setAllocations(
-  //   [100000, 0, 0, 0],
-  //   [cDAI[network], iDAI[network], aDAI[network], yxDAIInstance.address],
-  //   {from: rebalancerManager}
-  // );
   // await IdleDAIInstance.mintIdleToken(one, true, rebalancerManager, {from: rebalancerManager});
   // await IdleDAIInstance.redeemIdleToken(BNify('10'), {from: rebalancerManager});
 };
