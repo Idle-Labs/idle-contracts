@@ -18,10 +18,9 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     this.oldIdle = await idleBatchMock.new({from: creator});
     this.newIdle = await idleNewBatchMock.new({from: creator});
 
-    this.converter = await IdleBatchConverter.new(
-      this.oldIdle.address, this.newIdle.address,
-      { from: creator }
-    );
+    this.converter = await IdleBatchConverter.new({ from: creator });
+
+    await this.converter.initialize(this.oldIdle.address, this.newIdle.address, {from: creator});
   });
 
   it('constructor set rebalanceManager addr', async function () {
@@ -78,10 +77,12 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.oldIdle.transfer(manager, this.one.mul(BNify('100')), {from: creator});
     await this.oldIdle.transfer(someone, this.one.mul(BNify('200')), {from: creator});
     await this.oldIdle.transfer(foo, this.one.mul(BNify('200')), {from: creator});
+    await this.oldIdle.transfer(nonOwner, this.one.mul(BNify('400')), {from: creator});
 
     await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: manager});
     await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: someone});
     await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: foo});
+    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: nonOwner});
 
     await this.converter.deposit({from: manager});
     await this.converter.deposit({from: someone});
@@ -89,14 +90,19 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.converter.migrateFromToIdle(true, {from: creator});
     await this.converter.withdraw(BNify('0'), {from: manager});
     await this.converter.deposit({from: foo});
+    await this.converter.deposit({from: nonOwner});
     await this.newIdle.setAmountToMint(this.one.mul(BNify('300')));
     await this.converter.migrateFromToIdle(true, {from: creator});
     await this.converter.withdraw(BNify('0'), {from: foo});
-    // foo deposited on batch 1 so should redeem 0 here
+    await this.converter.withdraw(BNify('0'), {from: nonOwner});
+    // foo and nonOwner deposited on batch 1 so should redeem 0 here
     const balFoo = BNify(await this.newIdle.balanceOf(foo));
     balFoo.should.be.bignumber.equal(this.one.mul(BNify('0')));
+    const balNonOwner = BNify(await this.newIdle.balanceOf(nonOwner));
+    balNonOwner.should.be.bignumber.equal(this.one.mul(BNify('0')));
 
     await this.converter.withdraw(BNify('0'), {from: someone});
+    await this.converter.withdraw(BNify('1'), {from: nonOwner});
     await this.converter.withdraw(BNify('1'), {from: foo});
 
     const bal = BNify(await this.newIdle.balanceOf(manager));
@@ -104,6 +110,8 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     const bal2 = BNify(await this.newIdle.balanceOf(someone));
     bal2.should.be.bignumber.equal(this.one.mul(BNify('400')));
     const bal3 = BNify(await this.newIdle.balanceOf(foo));
-    bal3.should.be.bignumber.equal(this.one.mul(BNify('300')));
+    bal3.should.be.bignumber.equal(this.one.mul(BNify('100')));
+    const bal4 = BNify(await this.newIdle.balanceOf(nonOwner));
+    bal4.should.be.bignumber.equal(this.one.mul(BNify('200')));
   });
 });
