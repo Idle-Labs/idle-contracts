@@ -10,7 +10,7 @@ import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
 import "./interfaces/IIdleToken.sol";
 
-contract IdleBatchConverter is Initializable, Ownable {
+contract IdleBatchConverter is Initializable, Ownable, Pausable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
