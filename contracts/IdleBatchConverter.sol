@@ -16,8 +16,8 @@ contract IdleBatchConverter is Initializable, Ownable, Pausable {
 
   // batchDeposits[user][batchId] = amount
   mapping (address => mapping (uint256 => uint256)) public batchDeposits;
-  mapping (uint256 => uint256) batchTotals;
-  mapping (uint256 => uint256) batchRedeemedTotals;
+  mapping (uint256 => uint256) public batchTotals;
+  mapping (uint256 => uint256) public batchRedeemedTotals;
   uint256 public currBatch;
   address public idleToken;
   address public newIdleToken;
