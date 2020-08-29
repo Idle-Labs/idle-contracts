@@ -43,7 +43,10 @@ contract IdleBatchConverter is Initializable, Ownable, Pausable {
     uint256 deposited = batchDeposits[msg.sender][batchId];
     uint256 batchBal = batchRedeemedTotals[batchId];
     uint256 share = deposited.mul(batchBal).div(batchTotals[batchId]);
-    batchRedeemedTotals[batchId] = batchRedeemedTotals[batchId].sub(share);
+    if (share > batchBal) {
+      share = batchBal;
+    }
+    batchRedeemedTotals[batchId] = batchBal.sub(share);
     batchTotals[batchId] = batchTotals[batchId].sub(deposited);
     batchDeposits[msg.sender][batchId] = 0;
     IERC20(newIdleToken).safeTransfer(msg.sender, share);
