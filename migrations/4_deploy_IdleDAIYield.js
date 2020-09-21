@@ -96,7 +96,7 @@ const COMP = {
 const proxy = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test') {
+  if (network === 'test' || network == 'coverage') {
     return;
   }
   // dydx market if supported

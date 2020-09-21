@@ -7,28 +7,49 @@
  */
 pragma solidity 0.5.16;
 
-import "../IdleTokenV3_1.sol";
+import "./IdleTokenV3_1NoConst.sol";
 import "./GasTokenMock.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20.sol";
 
-contract IdleTokenV3_1Mock is IdleTokenV3_1 {
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
+
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/lifecycle/Pausable.sol";
+
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
+
+contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
   constructor(
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _iToken,
     address _cToken,
-    address _rebalancer
+    address _rebalancer,
+    address _idle,
+    address _comp
     ) public {
-      IdleTokenV3_1.initialize(
-      _name, // eg. IdleDAI
-      _symbol, // eg. IDLEDAI
-      _token,
-      _iToken,
-      _cToken,
-      _rebalancer
-    );
+      // Old initialize method
+      // Initialize inherited contracts
+      ERC20Detailed.initialize(_name, _symbol, 18);
+      Ownable.initialize(msg.sender);
+      Pausable.initialize(msg.sender);
+      ReentrancyGuard.initialize();
+      GST2ConsumerV2.initialize();
+      // Initialize storage variables
+      maxUnlentPerc = 1000;
+      token = _token;
+      tokenDecimals = ERC20Detailed(_token).decimals();
+      iToken = _iToken;
+      cToken = _cToken;
+      rebalancer = _rebalancer;
+      // end old initialize method
+      IDLE = _idle;
+      COMP = _comp;
   }
-
   function amountsFromAllocations(uint256[] calldata allocations, uint256 total)
     external pure returns (uint256[] memory foo) {
       return _amountsFromAllocations(allocations, total);

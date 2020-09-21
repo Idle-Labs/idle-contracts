@@ -9,6 +9,8 @@ const cDAIWrapperMock = artifacts.require('cDAIWrapperMock');
 const iDAIWrapperMock = artifacts.require('iDAIWrapperMock');
 const DAIMock = artifacts.require('DAIMock');
 const ComptrollerMock = artifacts.require('ComptrollerMock');
+const IdleControllerMock = artifacts.require('IdleControllerMock');
+const PriceOracleMock = artifacts.require('PriceOracleMock');
 const COMPMock = artifacts.require('COMPMock');
 const GasTokenMock = artifacts.require('GasTokenMock');
 
@@ -39,6 +41,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // 1000 DAI are given to creator in DAIMock constructor
     this.DAIMock = await DAIMock.new({from: creator});
     this.COMPMock = await COMPMock.new({from: creator});
+    this.IDLEMock = await COMPMock.new({from: creator});
     this.GSTMock = await GasTokenMock.new({from: creator});
     this.WhitePaperMock = await WhitePaperMock.new({from: creator});
     // 100.000 cDAI are given to creator in cDAIMock constructor
@@ -133,6 +136,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       this.iDAIMock.address,
       this.cDAIMock.address,
       this.IdleRebalancer.address,
+      this.IDLEMock.address,
+      this.COMPMock.address,
       { from: creator }
     );
     this.idleTokenAddr = this.token.address;
@@ -165,6 +170,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     );
     await this.token.setGovTokens(
       [this.COMPMock.address], // govTokens
+      [this.cDAIMock.address], // protocolTokens
       {from: creator}
     );
 
@@ -174,6 +180,19 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
     await this.aDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
     await this.yxDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
+
+    this.IdleControllerMock = await IdleControllerMock.new(this.IDLEMock.address, this.token.address, {from: creator});
+    this.PriceOracleMock = await PriceOracleMock.new({from: creator});
+    await this.token.manualInitialize(
+      [this.COMPMock.address, this.IDLEMock.address],
+      [this.cDAIMock.address],
+      // [this.cDAIMock.address, this.ETHAddr],
+      false, // isRiskAdjusted
+      {from: creator}
+    );
+    await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
+    await this.token.setOracleAddress(this.PriceOracleMock.address, {from: creator});
+    await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});
 
     // helper methods
     this.mintIdle = async (amount, who) => {
@@ -286,8 +305,18 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
   it('initialize set pauser', async function () {
     (await this.token.isPauser(creator)).should.equal(true);
   });
-  it('initialize set maxUnlentPerc', async function () {
-    (await this.token.maxUnlentPerc()).should.be.bignumber.equal(BNify('1000'));
+  // it('initialize set maxUnlentPerc', async function () {
+  //   (await this.token.maxUnlentPerc()).should.be.bignumber.equal(BNify('1000'));
+  // });
+
+  it('manualInitialize set stuff', async function () {
+    (await this.token.fee()).should.be.bignumber.equal(BNify('0'));
+    (await this.token.oracle()).should.be.equal(this.PriceOracleMock.address);
+    (await this.token.idleController()).should.be.equal(this.IdleControllerMock.address);
+    (await this.token.isRiskAdjusted()).should.be.equal(false);
+    // (await this.token.maxUnlentPerc()).should.be.bignumber.equal(BNify(''));
+    (await this.token.govTokens(0)).should.equal(this.COMPMock.address);
+    (await this.token.govTokens(1)).should.equal(this.IDLEMock.address);
   });
   // it('initialize can be called only once', async function () {
   //   await expectRevert.unspecified(this.token.initialize('a', 'b', this.someAddr, this.someAddr, this.someAddr, {from: creator}));
@@ -303,11 +332,11 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await expectRevert.unspecified(this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, {from: nonOwner}));
   });
   it('setGovTokens', async function () {
-    await this.token.setGovTokens([this.COMPMock.address], {from: creator});
+    await this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: creator});
 
     (await this.token.govTokens(0)).should.equal(this.COMPMock.address);
 
-    await expectRevert.unspecified(this.token.setGovTokens([this.COMPMock.address], {from: nonOwner}));
+    await expectRevert.unspecified(this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: nonOwner}));
   });
   it('allows onlyOwner to setIToken', async function () {
     const val = this.someAddr;
@@ -322,6 +351,20 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     (await this.token.rebalancer()).should.be.equal(val);
 
     await expectRevert.unspecified(this.token.setRebalancer(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setOracleAddress', async function () {
+    const val = this.someAddr;
+    await this.token.setOracleAddress(val, { from: creator });
+    (await this.token.oracle()).should.be.equal(val);
+
+    await expectRevert.unspecified(this.token.setOracleAddress(val, { from: nonOwner }));
+  });
+  it('allows onlyOwner to setIdleControllerAddress', async function () {
+    const val = this.someAddr;
+    await this.token.setIdleControllerAddress(val, { from: creator });
+    (await this.token.idleController()).should.be.equal(val);
+
+    await expectRevert.unspecified(this.token.setIdleControllerAddress(val, { from: nonOwner }));
   });
   it('allows onlyOwner to setFeeAddress', async function () {
     const val = this.someAddr;
@@ -560,7 +603,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     res.aprs[0].should.be.bignumber.equal(BNify('2200000000000000000'));
     res.aprs[1].should.be.bignumber.equal(BNify('1100000000000000000'));
   });
-  it('get current avg apr of idle', async function () {
+  it('get current avg apr of idle (with no COMP apr)', async function () {
     await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
     await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
     await this.aDAIWrapper._setAPR(BNify('3000000000000000000')); // 3%
@@ -585,6 +628,34 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // 10/31 * 1 + 11/31 * 2 + 5/31 * 3 + 5/31 * 4 = 2.16129032 %
     const res = await this.token.getAvgAPR.call();
     res.should.be.bignumber.equal(BNify('2161290322580645161'));
+  });
+  it('get current avg apr of idle with COMP', async function () {
+    await this.cDAIWrapper._setAPR(BNify('1000000000000000000')); // 1%
+    await this.iDAIWrapper._setAPR(BNify('2000000000000000000')); // 2%
+    await this.aDAIWrapper._setAPR(BNify('3000000000000000000')); // 3%
+    await this.yxDAIWrapper._setAPR(BNify('4000000000000000000')); // 4%
+    await this.PriceOracleMock._setAPR(BNify('4000000000000000000')); // 4%
+
+    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
+    await this.aDAIWrapper._setPriceInToken(BNify('1000000000000000000')); // 1DAI
+    await this.yxDAIWrapper._setPriceInToken(BNify('1000000000000000000')); // 1DAI
+
+    // 500 * 0.02 = 10
+    await this.cDAIMock.transfer(this.token.address, BNify('500').mul(this.oneCToken), {from: creator});
+    // 10 * 1.1 = 11
+    await this.iDAIMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
+    // 5 *  1 = 5
+    await this.aDAIMock.transfer(this.token.address, BNify('5').mul(this.one), {from: creator});
+    // 5 *  1 = 5
+    await this.yxDAIMock.transfer(this.token.address, BNify('5').mul(this.one), {from: creator});
+
+    // tot AUM = 31
+
+    // 10/31 * (1 + 4) + 11/31 * 2 + 5/31 * 3 + 5/31 * 4 = 3.45161290323%
+    await this.token.getAvgAPR();
+    const res = await this.token.getAvgAPR.call();
+    res.should.be.bignumber.equal(BNify('3451612903225806451'));
   });
   it('mints idle tokens', async function () {
     await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
@@ -1336,135 +1407,135 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Idle allocations now have been updated (ie all on dydx)
     await this.testIdleAllocations(['0', '0', '0', '100000']);
   });
-  // it('openRebalance with allocations gives a better apr', async function () {
-  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-  //
-  //   // set available liquidity for providers
-  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
-  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-  //   // Give protocol Tokens to IdleToken contract
-  //   // in dai [5, 5, 10, 10]
-  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-  //   await this.setAPRs(['10', '5', '11', '5']);
-  //   // Give underlying Tokens to protocols wrappers for redeem
-  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-  //   // Set equal allocations
-  //   // Set idle allocations
-  //   await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-  //   // Set rebalancer allocations
-  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-  //
-  //   const res = await this.token.openRebalance.call([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
-  //   await this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
-  //   res[0].should.equal(true);
-  //   res[1].should.be.bignumber.equal(BNify('11').mul(this.one));
-  //
-  //   // Check that no DAI are in the contract at the end
-  //   const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
-  //   BNify(DAIbalance).should.be.bignumber.equal(BNify('0').mul(this.one));
-  //
-  //   await this.testIdleBalance(['0', '0', '30', '0']);
-  //   await this.testIdleAllocations(['0', '0', '100000', '0']);
-  // });
-  // it('openRebalance reverts with allocations that give a worse apr', async function () {
-  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-  //   // set available liquidity for providers
-  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
-  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-  //   // Give protocol Tokens to IdleToken contract
-  //   // in dai [5, 5, 10, 10]
-  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-  //   await this.setAPRs(['10', '5', '4', '5']);
-  //   // Give underlying Tokens to protocols wrappers for redeem
-  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-  //   // Set equal allocations
-  //   // Set idle allocations
-  //   await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-  //   // Set rebalancer allocations
-  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-  //
-  //   await expectRevert(
-  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]),
-  //     'IDLE:NOT_IMPROV'
-  //   );
-  // });
-  // it('openRebalance reverts with newAllocations length != lastAllocations.length', async function () {
-  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-  //   // set available liquidity for providers
-  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
-  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-  //   // Give protocol Tokens to IdleToken contract
-  //   // in dai [5, 5, 10, 10]
-  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-  //   await this.setAPRs(['10', '5', '4', '5']);
-  //   // Give underlying Tokens to protocols wrappers for redeem
-  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-  //   // Set equal allocations
-  //   // Set idle allocations
-  //   await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-  //   // Set rebalancer allocations
-  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-  //
-  //   await expectRevert(
-  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
-  //     'Alloc lengths are different'
-  //   );
-  // });
-  // it('openRebalance reverts if it\'s risk adjusted instance', async function () {
-  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-  //   // set available liquidity for providers
-  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
-  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-  //   // Give protocol Tokens to IdleToken contract
-  //   // in dai [5, 5, 10, 10]
-  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-  //   await this.setAPRs(['10', '5', '4', '5']);
-  //   // Give underlying Tokens to protocols wrappers for redeem
-  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-  //   await this.token.setIsRiskAdjusted(true, {from: creator});
-  //   // Set equal allocations
-  //   // Set idle allocations
-  //   await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-  //   // Set rebalancer allocations
-  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-  //
-  //   await expectRevert(
-  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
-  //     'IDLE:NOT_ALLOWED'
-  //   );
-  // });
-  // it('openRebalance reverts when not allocating 100%', async function () {
-  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-  //   // set available liquidity for providers
-  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
-  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-  //   // Give protocol Tokens to IdleToken contract
-  //   // in dai [5, 5, 10, 10]
-  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-  //   await this.setAPRs(['10', '5', '4', '5']);
-  //   // Give underlying Tokens to protocols wrappers for redeem
-  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-  //   // Set equal allocations
-  //   // Set idle allocations
-  //   await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-  //   // Set rebalancer allocations
-  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-  //
-  //   await expectRevert(
-  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
-  //     'Not allocating 100%'
-  //   );
-  // });
+  it('openRebalance with allocations gives a better apr', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    // in dai [5, 5, 10, 10]
+    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+    await this.setAPRs(['10', '5', '11', '5']);
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+
+    const res = await this.token.openRebalance.call([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+    await this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+    res[0].should.equal(true);
+    res[1].should.be.bignumber.equal(BNify('11').mul(this.one));
+
+    // Check that no DAI are in the contract at the end
+    const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
+    BNify(DAIbalance).should.be.bignumber.equal(BNify('0').mul(this.one));
+
+    await this.testIdleBalance(['0', '0', '30', '0']);
+    await this.testIdleAllocations(['0', '0', '100000', '0']);
+  });
+  it('openRebalance reverts with allocations that give a worse apr', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    // in dai [5, 5, 10, 10]
+    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+    await this.setAPRs(['10', '5', '4', '5']);
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+
+    await expectRevert(
+      this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]),
+      'IDLE:NOT_IMPROV'
+    );
+  });
+  it('openRebalance reverts with newAllocations length != lastAllocations.length', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    // in dai [5, 5, 10, 10]
+    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+    await this.setAPRs(['10', '5', '4', '5']);
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+
+    await expectRevert(
+      this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
+      'Alloc lengths are different'
+    );
+  });
+  it('openRebalance reverts if it\'s risk adjusted instance', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    // in dai [5, 5, 10, 10]
+    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+    await this.setAPRs(['10', '5', '4', '5']);
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+    await this.token.setIsRiskAdjusted(true, {from: creator});
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+
+    await expectRevert(
+      this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
+      'IDLE:NOT_ALLOWED'
+    );
+  });
+  it('openRebalance reverts when not allocating 100%', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Give protocol Tokens to IdleToken contract
+    // in dai [5, 5, 10, 10]
+    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+    await this.setAPRs(['10', '5', '4', '5']);
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+    // Set equal allocations
+    // Set idle allocations
+    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+
+    await expectRevert(
+      this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
+      'Not allocating 100%'
+    );
+  });
   it('calculates fee correctly when minting / redeeming and no unlent', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
@@ -1591,6 +1662,81 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // price is still one
     BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('1500000000000000000'));
   });
+  it('calculates fee correctly when minting multiple times and redeeming with different fees', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('10000'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    await this.token.rebalance();
+
+    // 5 DAI in compound (250 cDAI), 5 DAI in fulcrum (4 iDAI)
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(this.one);
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one);
+
+    // Set prices in DAI => [0.04, 2.50, 1, 2]
+    await this.setPrices(['400000000000000000000000000', '2500000000000000000', this.one, '2000000000000000000']);
+    // 10 DAI in compound, 10 DAI in fulcrum -> 10 idleDAI tot
+
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Second mint at price == 2 with 0 fees
+    await this.mintIdle(BNify('20').mul(this.one), nonOwner);
+    await this.token.rebalance();
+    // 20 DAI in compound, 20 DAI in fulcrum -> 20 idleDAI tot
+
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('1000000000000000000'));
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('2')));
+
+    // Set prices in DAI => [0.08, 5, 1, 2]
+    await this.setPrices(['800000000000000000000000000', '5000000000000000000', this.one, '2000000000000000000']);
+    // 40 DAI in compound, 40 DAI in fulcrum -> 20 idleDAI tot
+
+    // price is now 4
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('4')));
+
+    await this.token.setFee(BNify('10000'), {from: creator});
+    // Third mint at price == 4 with 10% fees so 5 new idleDAI
+    // -> tot 25 IdleDAI with 50 invested
+    // -> avg price = 2
+    // noFeeQty = 10 idleDAI
+    await this.mintIdle(BNify('20').mul(this.one), nonOwner);
+    await this.token.rebalance();
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
+
+    // Set prices in DAI => [0.16, 10, 1, 2]
+    await this.setPrices(['1600000000000000000000000000', '10000000000000000000', this.one, '2000000000000000000']);
+    // price is now 8
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('8')));
+    // 100 DAI in compound, 100 DAI in fulcrum -> 25 idleDAI tot
+
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['100', '100', '0', '0']);
+
+    // equal to noFeeQty so no fee
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: nonOwner});
+
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('80000000000000000000'));
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
+
+    await this.token.redeemIdleToken(BNify('15').mul(this.one), {from: nonOwner});
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
+
+    // paid 15 * 2 = 30, curr val 15 * 8 = 120 -> gain 90 -> 81 user 9 fee -> 81 + 30 + 80 = 191 user
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('9000000000000000000'));
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('191000000000000000000'));
+  });
   it('calculates fee correctly when redeeming a transferred idleToken amount', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
@@ -1630,6 +1776,62 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // price is still one
     BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(this.one);
   });
+  it('calculates fee correctly when redeeming a transferred idleToken amount with different fees', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 0% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    // Approve and Mint 10 DAI for nonOwner -> nofee = 10
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    await this.token.rebalance();
+    await this.token.setFee(BNify('10000'), {from: creator});
+
+    // noFee nonOwner should be 0
+    // noFee someone should be 10
+    await this.token.transfer(someone, BNify('10').mul(this.one), {from: nonOwner});
+
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one);
+
+    // Set prices in DAI => [0.04, 2.50, 1, 2]
+    await this.setPrices(['400000000000000000000000000', '2500000000000000000', this.one, '2000000000000000000']);
+    // price is now 2
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('2')));
+
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.daiMultiTransfer(tokens, ['10', '10', '0', '0']);
+
+    await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: someone});
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('2')));
+    BNify(await this.DAIMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('20').mul(this.one));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('0'));
+
+    // noFee nonOwner should be 0
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner); // 5 idleDAI minted
+    await this.token.rebalance();
+    // Set prices in DAI => [0.08, 5, 1, 2]
+    await this.setPrices(['800000000000000000000000000', '5000000000000000000', this.one, '2000000000000000000']);
+    // price is now 4
+    BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('4')));
+
+    await this.daiMultiTransfer(tokens, ['10', '10', '0', '0']);
+    await this.token.redeemIdleToken(BNify('5').mul(this.one), {from: nonOwner});
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('19').mul(this.one));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('1').mul(this.one));
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2').mul(this.one));
+  });
   it('calculates fee correctly when redeeming a transferred idleToken amount after having previosly deposited', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
@@ -1662,7 +1864,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.transfer(someone, BNify('10').mul(this.one), {from: nonOwner});
     // someone has 15 idleToken
 
-    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333332'));
+    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333333'));
     BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('2')));
 
     // Set prices in DAI => [0.08, 5, 1, 2]
@@ -1676,10 +1878,10 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await this.token.redeemIdleToken(BNify('10').mul(this.one), {from: someone});
     BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('4')));
-    BNify(await this.DAIMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('37333333333333333332'));
-    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('2666666666666666668'));
+    BNify(await this.DAIMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('37333333333333333333'));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('2666666666666666667'));
     // price is still one
-    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333332'));
+    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333333'));
   });
   it('calculates fee correctly when using transferFrom', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -1710,7 +1912,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.transferFrom(nonOwner, someone,  BNify('10').mul(this.one), {from: someone});
     BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(this.one.mul(BNify('1')));
     BNify(await this.token.tokenPrice.call()).should.be.bignumber.equal(this.one.mul(BNify('2')));
-    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333332'));
+    BNify(await this.token.userAvgPrices.call(someone)).should.be.bignumber.equal(BNify('1333333333333333333'));
     BNify(await this.token.balanceOf.call(someone)).should.be.bignumber.equal(this.one.mul(BNify('15')));
     BNify(await this.token.balanceOf.call(nonOwner)).should.be.bignumber.equal(this.one.mul(BNify('0')));
     BNify(await this.token.allowance.call(nonOwner, someone)).should.be.bignumber.equal(this.one.mul(BNify('0')));
@@ -1746,6 +1948,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee address
     await this.token.setFeeAddress(feeReceiver, {from: creator});
+    await this.token.setFee(BNify('0'), {from: creator});
     // set available liquidity for providers
     await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
     // Set prices in DAI => [0.02, 1.25, 1, 2]
@@ -1762,21 +1965,78 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Set fee, 10% on gain
     await this.token.setFee(BNify('10000'), {from: creator});
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner); // usr avg price 2 (first mint does not count)
     await this.token.rebalance();
     // nonOwner has 15 idleDAI
-
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
     // Give underlying Tokens to protocols wrappers for redeem
     const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
     await this.daiMultiTransfer(tokens, ['30', '30', '0', '0']);
-    // total dai deposited 20, total IdleDAI 15, totValue now 30, totGain 10, fee should be 0
     await this.setPrices(['800000000000000000000000000', '5000000000000000000', this.one, '2000000000000000000']);
     // price is 4 now so totValue 60, initially nonOwner had 10 idle with no fee so 10 * 4 = 40 no fee
     // of the 20 DAI remained, we have 5 idleToken paid 10 so gain is 20-10 = 10 and fee is 1
     await this.token.redeemIdleToken(BNify('15').mul(this.one), {from: nonOwner});
+    // avg price do not count userNoFeeQty
     BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('2000000000000000000'));
     BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('59').mul(this.one));
     BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(this.one);
+  });
+  it('charges fee only to some part to whom previously deposited when there was fee and deposited also when there was no fee', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee
+    await this.token.setFee(BNify('10000'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for provider
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    // Approve and Mint 10 DAI for nonOwner
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+    // 10 DAI invested, 10 idleDAI got, price 1 | tot 10 DAI for 10 idleDAI, avgPrice 1, noFeeQty 0
+    // Set prices in DAI => [0.04, 2.50, 1, 2]
+    await this.token.rebalance();
+    await this.setPrices(['400000000000000000000000000', '2500000000000000000', this.one, '2000000000000000000']);
+    // token price is 2
+
+    // Set fee, 0% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner); // 5 minted, 5 no fee qty
+    // 10 DAI invested, 5 idleDAI got, price 2 | tot 20 DAI for 15 idleDAI invested, avgPrice 1 + noFeeQty 5
+    await this.token.rebalance();
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('1000000000000000000'));
+
+    // Give underlying Tokens to protocols wrappers for redeem
+    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+    await this.setPrices(['800000000000000000000000000', '5000000000000000000', this.one, '2000000000000000000']);
+    // price is 4 now
+
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('10000'), {from: creator});
+    await this.mintIdle(BNify('10').mul(this.one), nonOwner); // 2.5 minted, 5 no fee
+    // 10 DAI invested, 2.5 idleDAI got, price 4 | tot 30 DAI for 17.5 idleDAI invested, avgPrice 1.6 (20 invested (10 had no fee) / 12.5 idleDAI) noFeeQty 5
+    await this.token.rebalance();
+    // nonOwner has 17.5 idleDAI
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('1600000000000000000'));
+
+    // Give underlying Tokens to protocols wrappers for redeem
+    await this.daiMultiTransfer(tokens, ['100', '100', '0', '0']);
+    // total dai deposited 30
+    await this.setPrices(['1600000000000000000000000000', '10000000000000000000', this.one, '4000000000000000000']);
+    // price is 8 now
+
+    // tot 30 DAI for 17.5 idleDAI invested, avgPrice 1.6 (20 invested (10 had no fee) / 12.5 idleDAI) noFeeQty 5
+    // he is redeeming 8 * 15 = 120 -> 40 no fee + 80 (paid 10 * 1.6 = 16 so 64 left taxable -> 57.6 + 6.4 fee)
+    // 40 + 10 + 63 = 113.6
+    // 6.4 fee
+    await this.token.redeemIdleToken(BNify('15').mul(this.one), {from: nonOwner}); // 120
+    BNify(await this.token.userAvgPrices.call(nonOwner)).should.be.bignumber.equal(BNify('1600000000000000000'));
+    BNify(await this.DAIMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('113600000000000000000'));
+    BNify(await this.DAIMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('6400000000000000000'));
   });
   it('redeemGovTokens complex test', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -1787,33 +2047,45 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
     // Give comptrollerMock some COMP tokens
     await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.IdleControllerMock.address, BNify('10').mul(this.one), {from: creator});
     await this.setRebAllocations(['100000', '0', '0', '0']);
     // end setup
 
     await this.mintIdle(BNify('1').mul(this.one), someone);
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('1').mul(this.one));
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), foo); // someone 2 COMP
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('7').mul(this.one), someone); // +1 COMP -> someone + 0.5
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('11').mul(this.one), foo); // +1 COMP -> someone + 0.8888
     await this.COMPMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
     // +0.8 someone, +1.2 foo
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('100').mul(this.one), foo); // +1 COMP -> someone + 0.4, foo + 0.6
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
     // foo tot -> 0.5 + 0.11111 + 1.2 + 0.6 = 2.411111
     // someone -> 2 + 0.5 + 0.88888 + 0.8 + 0.4 = 4.58888
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('7')));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('7')));
     await this.token.redeemIdleToken(BNify('0'), {from: someone});
     await this.token.redeemIdleToken(this.one, {from: foo});
 
-
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('2411111111111111112'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('2411111111111111112'));
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('4588888888888888888'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('4588888888888888888'));
   });
   it('redeemGovTokens', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -1936,29 +2208,39 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Give comptrollerMock some COMP tokens
     await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.IdleControllerMock.address, BNify('10').mul(this.one), {from: creator});
 
     // Simulate a prev mint
     await this.mintIdle(BNify('100000000000000000'), someone); // 0.1
     BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.token.usersGovTokensIndexes.call(this.IDLEMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
     // Set rebalancer allocations
     await this.setRebAllocations(['50000', '50000', '0', '0']);
     await this.token.rebalance();
     await this.COMPMock.transfer(this.token.address, BNify('100000000000000000'), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('100000000000000000'), {from: creator});
 
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
 
     await this.mintIdle(BNify('100000000000000000'), someone);
     // at this point someone should be entitled to 1 COMP
 
     // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.govTokensIndexes.call(this.IDLEMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
     // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
+    // BNify(await this.token.govTokensLastBalances.call(this.IDLEMock.address), {from: foo}).should.be.bignumber.equal(this.one.div(BNify('10')));
     // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('50000000000000000'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.IDLEMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('50000000000000000'));
 
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.div(BNify('10')));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.div(BNify('10')));
     const govAmounts = await this.token.getGovTokensAmounts(someone, {from: someone});
     BNify(govAmounts[0]).should.be.bignumber.equal(BNify('100000000000000000'));
+    BNify(govAmounts[1]).should.be.bignumber.equal(BNify('100000000000000000'));
     await this.token.redeemIdleToken(BNify('0'), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('100000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('100000000000000000'));
   });
   it('redeemGovTokens with fee', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -1973,6 +2255,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Give comptrollerMock some COMP tokens
     await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.IdleControllerMock.address, BNify('10').mul(this.one), {from: creator});
 
     // Simulate a prev mint
     await this.mintIdle(BNify('1').mul(this.one), someone);
@@ -1981,36 +2264,53 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.rebalance();
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('1').mul(this.one));
 
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), foo);
     // at this point someone should be entitled to 1 COMP and foo to 0
     (await this.ComptrollerMock.compAddr.call()).should.be.equal(this.COMPMock.address);
+    (await this.IdleControllerMock.idleAddr.call()).should.be.equal(this.IDLEMock.address);
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
 
     // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensIndexes.call(this.IDLEMock.address), {from: foo}).should.be.bignumber.equal(this.one);
     // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.IDLEMock.address), {from: foo}).should.be.bignumber.equal(this.one);
     // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.IDLEMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
     // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.IDLEMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
 
     // // new COMP to the idletoken contract
     // await this.COMPMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
+    // await this.IDLEMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
 
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('1')));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('1')));
 
     await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
     await this.mintIdle(BNify('1').mul(this.one), someone);
     // 1 new COMP redeemed so tot 2, 1.5 for someone and 0.5 for foo (- 10% fee)
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
 
     await this.token.redeemIdleToken(this.one, {from: foo});
     // someone has 2 idleTOken and foo only one so 0.666667 to someone and 0.3333 to foo (- 10% fee)
     // user someone when minting will also redeemGovTokens prev accrued
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('750000000000000000'));
+    // No fee for IDLE
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('833333333333333333'));
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
     await this.token.redeemIdleToken(BNify('0'), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1950000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('2166666666666666666'));
     BNify(await this.COMPMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('299999999999999999'));
+    BNify(await this.IDLEMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
   });
   it('redeemGovTokens on transfer to new user', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -2025,6 +2325,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Give comptrollerMock some COMP tokens
     await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('2').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.IdleControllerMock.address, BNify('2').mul(this.one), {from: creator});
 
     // Simulate a prev mint
     await this.mintIdle(BNify('1').mul(this.one), someone);
@@ -2033,20 +2334,27 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.rebalance();
 
     await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('1').mul(this.one));
 
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     await this.mintIdle(this.one, foo); // +1 COMP for someone
     await this.token.transfer(nonOwner, this.one.div(BNify('2')), {from: someone});
     // COMP: 0.5 for someone and 0.5 for nonOwner
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
 
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     await this.token.redeemIdleToken(this.one, {from: foo});
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('500000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('500000000000000000'));
     await this.token.redeemIdleToken(this.one.div(BNify('2')), {from: nonOwner});
     BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('750000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('750000000000000000'));
     await this.token.redeemIdleToken(this.one.div(BNify('2')), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('750000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('750000000000000000'));
   });
   it('redeemGovTokens on transfer to existing user', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
@@ -2066,14 +2374,17 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.rebalance();
 
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     // +1 someone
     await this.mintIdle(this.one, nonOwner);
 
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     // +0.5 COMP for someone, +0.5 nonOwner
     await this.mintIdle(this.one.mul(BNify('2')), foo);
 
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     // +0.25 COMP someone, +0.25 nonOwner, 0.5 foo
 
     // TOT: 1.75 someone, 0.75 nonOwner, 0.5 foo
@@ -2082,19 +2393,27 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // IDLE -> someone: 0.5, nonOwner: 1.5, foo: 2
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
+    await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
     // +0.5 foo, +0.375 nonOwner, +0.125 someone
     BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('4000000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('4000000000000000000'));
     BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('0'));
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('0'));
 
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
     await this.token.redeemIdleToken(BNify('0'), {from: foo});
     BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1000000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1000000000000000000'));
     await this.token.redeemIdleToken(BNify('0'), {from: nonOwner});
     BNify(await this.COMPMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('1999999999999999999'));
+    BNify(await this.IDLEMock.balanceOf.call(nonOwner)).should.be.bignumber.equal(BNify('1999999999999999999'));
     await this.token.redeemIdleToken(BNify('0'), {from: someone});
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1000000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1000000000000000000'));
   });
   it('userNoFeeQty should behave correctly', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});

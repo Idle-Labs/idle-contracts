@@ -18,20 +18,20 @@ import "@openzeppelin/contracts-ethereum-package/contracts/lifecycle/Pausable.so
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
-import "./interfaces/iERC20Fulcrum.sol";
-import "./interfaces/ILendingProtocol.sol";
-import "./interfaces/IGovToken.sol";
-import "./interfaces/IIdleTokenV3_1.sol";
-import "./interfaces/IIdleRebalancerV3.sol";
+import "../interfaces/iERC20Fulcrum.sol";
+import "../interfaces/ILendingProtocol.sol";
+import "../interfaces/IGovToken.sol";
+import "../interfaces/IIdleTokenV3_1.sol";
+import "../interfaces/IIdleRebalancerV3.sol";
 
-import "./interfaces/Comptroller.sol";
-import "./interfaces/CERC20.sol";
-import "./interfaces/IdleController.sol";
-import "./interfaces/PriceOracle.sol";
+import "../interfaces/Comptroller.sol";
+import "../interfaces/CERC20.sol";
+import "../interfaces/IdleController.sol";
+import "../interfaces/PriceOracle.sol";
 
-import "./GST2ConsumerV2.sol";
+import "../GST2ConsumerV2.sol";
 
-contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
+contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -40,9 +40,9 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // eg. DAI address
   address public token;
   // eg. iDAI address
-  address private iToken;
+  address internal iToken;
   // eg. cDAI address
-  address private cToken;
+  address internal cToken;
   // Idle rebalancer current implementation address
   address public rebalancer;
   // Address collecting underlying fees
@@ -50,7 +50,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // Last iToken price, used to pause contract in case of a black swan event
   uint256 public lastITokenPrice;
   // eg. 18 for DAI
-  uint256 private tokenDecimals;
+  uint256 internal tokenDecimals;
   // Max unlent assets percentage for gas friendly swaps
   uint256 public maxUnlentPerc; // 100000 == 100% -> 1000 == 1%
   // Current fee on interest gained
@@ -73,9 +73,9 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // global indices for each gov tokens used as a reference to calculate a fair share for each user
   mapping (address => uint256) public govTokensIndexes;
   // Map that saves amount with no fee for each user
-  mapping(address => uint256) private userNoFeeQty;
+  mapping(address => uint256) internal userNoFeeQty;
   // variable used for avoid the call of mint and redeem in the same tx
-  bytes32 private _minterBlock;
+  bytes32 internal _minterBlock;
 
   // Events
   event Rebalance(address _rebalancer, uint256 _amount);
@@ -86,19 +86,19 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // TODO update this as a constant!!
   // TODO update this as a constant!!
   // Idle governance token
-  address public constant IDLE = address(0x0001);
+  address public IDLE = address(0x0001);
   // Compound governance token
   // TODO update this as a constant!!
   // TODO update this as a constant!!
   // TODO update this as a constant!!
-  address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+  address public COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
   // Idle distribution controller
   address public idleController;
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
-  mapping(address => address) private protocolTokenToGov;
+  mapping(address => address) internal protocolTokenToGov;
   // Whether openRebalance is enabled or not
   bool public isRiskAdjusted;
 
@@ -155,7 +155,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     // TODO update this address!!!
     idleController = address(0x0001);
     isRiskAdjusted = _isRiskAdjusted;
-    // same as setGovTokens, copied to avoid make the method public and save on bytecode size
+    /* setGovTokens(_newGovTokens, _protocolTokens); */
     govTokens = _newGovTokens;
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
@@ -163,7 +163,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       if (newGov == IDLE) { continue; }
       protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
     }
-
     fee = 0;
   }
 
