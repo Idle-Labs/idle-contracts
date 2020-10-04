@@ -22,7 +22,6 @@ import "../interfaces/iERC20Fulcrum.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/IGovToken.sol";
 import "../interfaces/IIdleTokenV3_1.sol";
-import "../interfaces/IIdleRebalancerV3.sol";
 
 import "../interfaces/Comptroller.sol";
 import "../interfaces/CERC20.sol";
@@ -35,7 +34,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
-  uint256 private constant ONE_18 = 10**18;
+  uint256 internal constant ONE_18 = 10**18;
   // State variables
   // eg. DAI address
   address public token;
@@ -82,15 +81,12 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   event Referral(uint256 _amount, address _ref);
 
   // ########## IdleToken V4_1 updates
-  // TODO update this as a constant!!
-  // TODO update this as a constant!!
-  // TODO update this as a constant!!
+  // TODO update this!
+  // TODO update this!
+  // TODO update this!
   // Idle governance token
   address public IDLE = address(0x0001);
   // Compound governance token
-  // TODO update this as a constant!!
-  // TODO update this as a constant!!
-  // TODO update this as a constant!!
   address public COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
   // Idle distribution controller
@@ -101,44 +97,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   mapping(address => address) internal protocolTokenToGov;
   // Whether openRebalance is enabled or not
   bool public isRiskAdjusted;
-
-  // During a black swan event is possible that iToken price decreases instead of increasing,
-  // with the consequence of lowering the IdleToken price. To mitigate this we implemented a
-  // check on the iToken price that prevents users from minting cheap IdleTokens or rebalancing
-  // the pool in this specific case. The redeemIdleToken won't be paused but the rebalance process
-  // won't be triggered in this case.
-  // this is the code as modifier but occupies too much bytecode
-  /*
-    modifier whenITokenPriceHasNotDecreased() {
-    if (iToken != address(0)) {
-      uint256 iTokenPrice = iERC20Fulcrum(iToken).tokenPrice();
-      require(
-        iTokenPrice >= lastITokenPrice,
-        "IDLE:ITOKEN_PRICE"
-      );
-
-      _;
-
-      if (iTokenPrice > lastITokenPrice) {
-        lastITokenPrice = iTokenPrice;
-      }
-    } else {
-      _;
-    }
-  } */
-  function _checkITokenPricePre() internal view returns (uint256 iTokenPrice) {
-    if (iToken == address(0)) { return iTokenPrice; }
-    iTokenPrice = iERC20Fulcrum(iToken).tokenPrice();
-    require(iTokenPrice >= lastITokenPrice, "IDLE:ITOKEN_PRICE");
-  }
-
-  function _checkITokenPriceAfter(uint256 iTokenPrice) internal {
-    // if iToken is disabled, then iTokenPrice would be 0 and so lastITokenPrice won't never be set
-    if (iTokenPrice > lastITokenPrice) {
-      lastITokenPrice = iTokenPrice;
-    }
-  }
-
+  // last allocations submitted by rebalancer
+  uint256[] internal lastRebalancerAllocations;
 
   // onlyOwner
   /**
@@ -155,7 +115,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     // TODO update this address!!!
     idleController = address(0x0001);
     isRiskAdjusted = _isRiskAdjusted;
-    /* setGovTokens(_newGovTokens, _protocolTokens); */
+    // same as setGovTokens, copied to avoid make the method public and save on bytecode size
     govTokens = _newGovTokens;
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
@@ -163,7 +123,11 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       if (newGov == IDLE) { continue; }
       protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
     }
+
     fee = 0;
+    iToken = address(0);
+    rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
+    lastRebalancerAllocations = lastAllocations;
   }
 
   /**
@@ -185,16 +149,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       protocolWrappers[protocolTokens[i]] = wrappers[i];
     }
     allAvailableTokens = protocolTokens;
-  }
-
-  /**
-   * It allows owner to set the _iToken address
-   *
-   * @param _iToken : new _iToken address (can be address(0) which means disabled)
-   */
-  function setIToken(address _iToken)
-    external onlyOwner {
-      iToken = _iToken;
   }
 
   /**
@@ -293,7 +247,41 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       isRiskAdjusted = _isRiskAdjusted;
   }
 
+  /**
+   * Used by Rebalancer to set the new allocations
+   *
+   * @param _allocations : array with allocations in percentages (100% => 100000)
+   */
+  function setAllocations(uint256[] calldata _allocations) external {
+    require(msg.sender == rebalancer || msg.sender == owner(), "IDLE:!AUTH");
+    _setAllocations(_allocations);
+  }
+
+  /**
+   * Used by Rebalancer or in openRebalance to set the new allocations
+   *
+   * @param _allocations : array with allocations in percentages (100% => 100000)
+   */
+  function _setAllocations(uint256[] memory _allocations) internal {
+    require(_allocations.length == allAvailableTokens.length, "IDLE:!EQ_LEN");
+    uint256 total;
+    for (uint256 i = 0; i < _allocations.length; i++) {
+      total = total.add(_allocations[i]);
+      lastRebalancerAllocations[i] = _allocations[i];
+    }
+    require(total == 100000, "IDLE:!EQ_TOT");
+  }
+
   // view
+  /**
+   * Get latest allocations submitted by rebalancer
+   *
+   * @return : array of allocations ordered as allAvailableTokens
+   */
+  function getAllocations() external view returns (uint256[] memory) {
+    return lastRebalancerAllocations;
+  }
+
   /**
    * IdleToken price calculation, in underlying
    *
@@ -476,7 +464,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function mintIdleToken(uint256 _amount, bool _skipRebalance, address _referral)
     external nonReentrant whenNotPaused
     returns (uint256 mintedTokens) {
-    uint256 _iTokenPrice = _checkITokenPricePre();
     _minterBlock = keccak256(abi.encodePacked(tx.origin, block.number));
     _redeemGovTokens(msg.sender, true);
     // Get current IdleToken price
@@ -500,7 +487,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
     }
-    _checkITokenPriceAfter(_iTokenPrice);
   }
 
   /**
@@ -529,9 +515,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
 
   /**
    * Here we calc the pool share one can withdraw given the amount of IdleToken they want to burn
-   * NOTE: If the contract is paused or iToken price has decreased one can still redeem but no rebalance happens.
-   * NOTE 2: If iToken price has decresed one should not redeem (but can do it) otherwise he would capitalize the loss.
-   *         Ideally one should wait until the black swan event is terminated
    *
    * @param _amount : amount of IdleTokens to be burned
    * @return redeemedTokens : amount of underlying tokens redeemed
@@ -647,15 +630,13 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function openRebalance(uint256[] calldata _newAllocations)
     external whenNotPaused
     returns (bool, uint256 avgApr) {
-      uint256 _iTokenPrice = _checkITokenPricePre();
       require(!isRiskAdjusted, "IDLE:NOT_ALLOWED");
       uint256 initialAPR = _getAvgAPR();
       // Validate and update rebalancer allocations
-      IIdleRebalancerV3(rebalancer).setAllocations(_newAllocations, allAvailableTokens);
+      _setAllocations(_newAllocations);
       bool hasRebalanced = _rebalance();
       uint256 newAprAfterRebalance = _getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "IDLE:NOT_IMPROV");
-      _checkITokenPriceAfter(_iTokenPrice);
       return (hasRebalanced, newAprAfterRebalance);
   }
 
@@ -697,9 +678,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function _rebalance()
     internal whenNotPaused
     returns (bool) {
-      uint256 _iTokenPrice = _checkITokenPricePre();
-      // check if we need to rebalance by looking at the allocations in rebalancer contract
-      uint256[] memory rebalancerLastAllocations = IIdleRebalancerV3(rebalancer).getAllocations();
+      // check if we need to rebalance by looking at the last allocations submitted by rebalancer
+      uint256[] memory rebalancerLastAllocations = lastRebalancerAllocations;
       bool areAllocationsEqual = rebalancerLastAllocations.length == lastAllocations.length;
       if (areAllocationsEqual) {
         for (uint256 i = 0; i < lastAllocations.length || !areAllocationsEqual; i++) {
@@ -714,7 +694,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       uint256 maxUnlentBalance;
 
       if (areAllocationsEqual && balance == 0) {
-        _checkITokenPriceAfter(_iTokenPrice);
         return false;
       }
 
@@ -732,7 +711,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       }
 
       if (areAllocationsEqual) {
-        _checkITokenPriceAfter(_iTokenPrice);
         return false;
       }
 
@@ -763,7 +741,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
 
       if (totalRedeemd <= maxUnlentBalance) {
-        _checkITokenPriceAfter(_iTokenPrice);
         return false;
       }
 
@@ -779,7 +756,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
 
       emit Rebalance(msg.sender, totalInUnderlying.add(maxUnlentBalance));
 
-      _checkITokenPriceAfter(_iTokenPrice);
       return true; // hasRebalanced
   }
 

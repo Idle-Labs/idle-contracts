@@ -57,7 +57,7 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
   function mintWithAmounts(address[] calldata tokenAddresses, uint256[] calldata protocolAmounts) external {
     _mintWithAmounts(tokenAddresses, protocolAmounts);
   }
-  function setAllocations(uint256[] calldata allocs) external {
+  function setLastAllocations(uint256[] calldata allocs) external {
     lastAllocations = allocs;
   }
   function setGST(address _gst) external {

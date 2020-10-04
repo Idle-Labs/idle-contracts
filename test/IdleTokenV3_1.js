@@ -183,6 +183,10 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     this.IdleControllerMock = await IdleControllerMock.new(this.IDLEMock.address, this.token.address, {from: creator});
     this.PriceOracleMock = await PriceOracleMock.new({from: creator});
+    await this.token.setLastAllocations(
+      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
+      {from: manager}
+    );
     await this.token.manualInitialize(
       [this.COMPMock.address, this.IDLEMock.address],
       [this.cDAIMock.address],
@@ -193,6 +197,9 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
     await this.token.setOracleAddress(this.PriceOracleMock.address, {from: creator});
     await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});
+    await this.token.setRebalancer(manager, {from: creator});
+
+    // TODO need to set allocations once in IdleToken contract for testing
 
     // helper methods
     this.mintIdle = async (amount, who) => {
@@ -276,9 +283,10 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     this.allocToWei = alloc => alloc.map(el => BNify(el).mul(this.one));
     this.setRebAllocations = async (allocs) => {
-      await this.IdleRebalancer.setAllocations(
+      // TODO need to set allocations once in IdleToken contract for testing
+
+      await this.token.setAllocations(
         [BNify(allocs[0]), BNify(allocs[1]), BNify(allocs[2]), BNify(allocs[3])],
-        this.protocolTokens,
         {from: manager}
       );
     }
@@ -297,7 +305,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     (await this.token.token()).should.equal(this.DAIMock.address);
   });
   it('initialize set a rebalancer address', async function () {
-    (await this.token.rebalancer()).should.equal(this.IdleRebalancer.address);
+    (await this.token.rebalancer()).should.equal(manager);
   });
   it('initialize set owner', async function () {
     (await this.token.owner()).should.equal(creator);
@@ -338,13 +346,13 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await expectRevert.unspecified(this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: nonOwner}));
   });
-  it('allows onlyOwner to setIToken', async function () {
-    const val = this.someAddr;
-    await this.token.setIToken(val, { from: creator });
-    // (await this.token.iToken()).should.be.equal(val); -> is private
-
-    await expectRevert.unspecified(this.token.setIToken(val, { from: nonOwner }));
-  });
+  // it('allows onlyOwner to setIToken', async function () {
+  //   const val = this.someAddr;
+  //   await this.token.setIToken(val, { from: creator });
+  //   // (await this.token.iToken()).should.be.equal(val); -> is private
+  //
+  //   await expectRevert.unspecified(this.token.setIToken(val, { from: nonOwner }));
+  // });
   it('allows onlyOwner to setRebalancer', async function () {
     const val = this.someAddr;
     await this.token.setRebalancer(val, { from: creator });
@@ -487,9 +495,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // First mint with tokenPrice = 1
     // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -536,9 +543,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // currTokenPrice = (6.1875 + 5.94 + 0.1) / 10 = 1.22275
     res1.should.be.bignumber.equal(BNify('1222750000000000000'));
 
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('30000'), BNify('70000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -666,9 +672,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // First mint with tokenPrice = 1
     // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
     // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
@@ -695,9 +700,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // First mint with tokenPrice = 1
     // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
     // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
@@ -719,61 +723,59 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       _ref: this.someAddr
     });
   });
-  it('cannot mints if iToken price has decreased', async function () {
-    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
-
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    const price = await this.token.lastITokenPrice.call();
-    price.should.be.bignumber.equal(BNify('1250000000000000000'));
-    await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.25DAI
-    await expectRevert(
-      this.mintIdle(BNify('10').mul(this.one), nonOwner),
-      'IDLE:ITOKEN_PRICE'
-    );
-  });
-  it('can mints if iToken price has decreased and contract has been manually played (ie itoken addr == 0)', async function () {
-    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
-    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
-
-    // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
-      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
-      {from: manager}
-    );
-
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    const price = await this.token.lastITokenPrice.call();
-    price.should.be.bignumber.equal(BNify('1250000000000000000'));
-    await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.25DAI
-
-    await this.token.setIToken(this.ETHAddr, {from: creator});
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    // lastITokenPrice should not be updated
-    const price2 = await this.token.lastITokenPrice.call();
-    price2.should.be.bignumber.equal(BNify('1250000000000000000'));
-  });
-  it('after mint lastITokenPrice is updated if has increased', async function () {
-    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
-    await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
-
-    // all funds will be sent to one protocol (Compound)
-    await this.IdleRebalancer.setAllocations(
-      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
-      {from: manager}
-    );
-
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    const price = await this.token.lastITokenPrice.call();
-    price.should.be.bignumber.equal(BNify('1250000000000000000'));
-
-    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000'));
-    await this.iDAIWrapper._setPriceInToken(BNify('1300000000000000000')); // 1.25DAI
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    const price2 = await this.token.lastITokenPrice.call();
-    price2.should.be.bignumber.equal(BNify('1300000000000000000'));
-  });
+  // it('cannot mints if iToken price has decreased', async function () {
+  //   await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+  //
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   const price = await this.token.lastITokenPrice.call();
+  //   price.should.be.bignumber.equal(BNify('1250000000000000000'));
+  //   await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.25DAI
+  //   await expectRevert(
+  //     this.mintIdle(BNify('10').mul(this.one), nonOwner),
+  //     'IDLE:ITOKEN_PRICE'
+  //   );
+  // });
+  // it('can mints if iToken price has decreased and contract has been manually played (ie itoken addr == 0)', async function () {
+  //   await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+  //   await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+  //
+  //   // all funds will be sent to one protocol (Compound)
+  //   await this.token.setAllocations(
+  //     [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
+  //     {from: manager}
+  //   );
+  //
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   const price = await this.token.lastITokenPrice.call();
+  //   price.should.be.bignumber.equal(BNify('1250000000000000000'));
+  //   await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.25DAI
+  //
+  //   await this.token.setIToken(this.ETHAddr, {from: creator});
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   // lastITokenPrice should not be updated
+  //   const price2 = await this.token.lastITokenPrice.call();
+  //   price2.should.be.bignumber.equal(BNify('1250000000000000000'));
+  // });
+  // it('after mint lastITokenPrice is updated if has increased', async function () {
+  //   await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
+  //   await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
+  //
+  //   // all funds will be sent to one protocol (Compound)
+  //   await this.token.setAllocations(
+  //     [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
+  //     {from: manager}
+  //   );
+  //
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   const price = await this.token.lastITokenPrice.call();
+  //   price.should.be.bignumber.equal(BNify('1250000000000000000'));
+  //
+  //   await this.iDAIMock.setPriceForTest(BNify('1300000000000000000'));
+  //   await this.iDAIWrapper._setPriceInToken(BNify('1300000000000000000')); // 1.25DAI
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   const price2 = await this.token.lastITokenPrice.call();
+  //   price2.should.be.bignumber.equal(BNify('1300000000000000000'));
+  // });
   it('cannot mints idle tokens when paused', async function () {
     await this.token.pause({from: creator});
     await this.DAIMock.transfer(nonOwner, BNify('10').mul(this.one), { from: creator });
@@ -790,9 +792,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
 
     // First mint with tokenPrice = 1
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -839,9 +840,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
 
     // First mint with tokenPrice = 1
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -891,9 +891,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.iDAIMock.setPriceForTest(BNify('1250000000000000000')); // 1.25DAI
 
     // First mint with tokenPrice = 1
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -942,51 +941,48 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.pause({from: creator});
     await expectRevert.unspecified(this.token.rebalance());
   });
-  it('cannot rebalance if iToken price has decreased', async function () {
-    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
-    await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-    await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
-    await expectRevert(
-      this.token.rebalance({ from: creator }),
-      'IDLE:ITOKEN_PRICE'
-    );
-  });
-  it('can rebalance if iToken price has decreased and contract has been manually played', async function () {
-    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
-    await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-    await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
-    await this.token.setIToken(this.ETHAddr, { from: creator });
-    await this.IdleRebalancer.setAllocations(
-      [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
-      {from: manager}
-    );
-    await this.token.rebalance({ from: creator });
-  });
-  it('after rebalance lastITokenPrice is updated if it increased', async function () {
-    await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
-    await this.mintIdle(BNify('10').mul(this.one), nonOwner);
-    const price = await this.token.lastITokenPrice.call();
-    price.should.be.bignumber.equal(BNify('1300000000000000000'));
-
-    await this.iDAIMock.setPriceForTest(BNify('1500000000000000000')); // 1.30DAI
-    await this.IdleRebalancer.setAllocations(
-      [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
-      {from: manager}
-    );
-    await this.token.rebalance({ from: creator });
-    const price2 = await this.token.lastITokenPrice.call();
-    price2.should.be.bignumber.equal(BNify('1500000000000000000'));
-  });
+  // it('cannot rebalance if iToken price has decreased', async function () {
+  //   await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
+  //   await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
+  //   await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
+  //   await expectRevert(
+  //     this.token.rebalance({ from: creator }),
+  //     'IDLE:ITOKEN_PRICE'
+  //   );
+  // });
+  // it('can rebalance if iToken price has decreased and contract has been manually played', async function () {
+  //   await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
+  //   await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
+  //   await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   await this.iDAIMock.setPriceForTest(BNify('1000000000000000000')); // 1.0DAI
+  //   await this.token.setIToken(this.ETHAddr, { from: creator });
+  //   await this.token.setAllocations(
+  //     [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
+  //     {from: manager}
+  //   );
+  //   await this.token.rebalance({ from: creator });
+  // });
+  // it('after rebalance lastITokenPrice is updated if it increased', async function () {
+  //   await this.iDAIMock.setPriceForTest(BNify('1300000000000000000')); // 1.30DAI
+  //   await this.mintIdle(BNify('10').mul(this.one), nonOwner);
+  //   const price = await this.token.lastITokenPrice.call();
+  //   price.should.be.bignumber.equal(BNify('1300000000000000000'));
+  //
+  //   await this.iDAIMock.setPriceForTest(BNify('1500000000000000000')); // 1.30DAI
+  //   await this.token.setAllocations(
+  //     [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
+  //     {from: manager}
+  //   );
+  //   await this.token.rebalance({ from: creator });
+  //   const price2 = await this.token.lastITokenPrice.call();
+  //   price2.should.be.bignumber.equal(BNify('1500000000000000000'));
+  // });
   it('rebalances when _newAmount > 0 and only one protocol is used', async function () {
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -1005,9 +1001,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     resBalanceDAI.should.be.bignumber.equal(BNify('100000000000000000'));
   });
   it('rebalances when _newAmount > 0 and only one protocol is used and no unlent pool', async function () {
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -1039,9 +1034,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
     await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
 
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('50000'), BNify('50000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
     // Approve and Mint 10 DAI for nonOwner
@@ -1052,9 +1046,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     (await this.DAIMock.balanceOf(this.token.address)).should.be.bignumber.equal(BNify('100000000000000000'));
     (await this.token.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('10').mul(this.one));
 
-    await this.IdleRebalancer.setAllocations(
+    await this.token.setAllocations(
       [BNify('20000'), BNify('80000'), BNify('0'), BNify('0')],
-      this.protocolTokens,
       {from: manager}
     );
 
@@ -1236,7 +1229,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Give protocol Tokens to IdleToken contract
     await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
 
-    await this.token.setAllocations([BNify('25000'), BNify('25000'), BNify('25000'), BNify('25000')]);
+    await this.token.setLastAllocations([BNify('25000'), BNify('25000'), BNify('25000'), BNify('25000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['33333', '33333', '16667', '16667']);
 
@@ -1265,7 +1258,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Give protocol Tokens to IdleToken contract
     await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
 
-    await this.token.setAllocations([BNify('25000'), BNify('25000'), BNify('25000'), BNify('25000')]);
+    await this.token.setLastAllocations([BNify('25000'), BNify('25000'), BNify('25000'), BNify('25000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['33333', '33333', '16667', '16667']);
 
@@ -1301,7 +1294,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
@@ -1337,7 +1330,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
@@ -1366,7 +1359,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.daiMultiTransfer(tokens, ['0', '0', '2', '0']);
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+    await this.token.setLastAllocations([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
     // All is in aave
 
     // Set rebalancer allocations to have everything on DyDx
@@ -1423,7 +1416,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
@@ -1454,7 +1447,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
@@ -1478,13 +1471,13 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
     await expectRevert(
       this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
-      'Alloc lengths are different'
+      'IDLE:!EQ_LEN -- Reason given: IDLE:!EQ_LEN'
     );
   });
   it('openRebalance reverts if it\'s risk adjusted instance', async function () {
@@ -1503,7 +1496,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setIsRiskAdjusted(true, {from: creator});
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
@@ -1527,13 +1520,13 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
     // Set equal allocations
     // Set idle allocations
-    await this.token.setAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
     // Set rebalancer allocations
     await this.setRebAllocations(['30000', '30000', '20000', '20000']);
 
     await expectRevert(
       this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
-      'Not allocating 100%'
+      'IDLE:!EQ_TOT -- Reason given: IDLE:!EQ_TOT'
     );
   });
   it('calculates fee correctly when minting / redeeming and no unlent', async function () {
