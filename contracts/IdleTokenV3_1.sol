@@ -102,32 +102,39 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   // onlyOwner
   /**
-   * It allows owner to set IDLE token address and oracle only once
+   * It allows owner to set IDLE token address and oracle
    */
   function manualInitialize(
     address[] calldata _newGovTokens, // should include IDLE
     address[] calldata _protocolTokens,
+    address[] calldata _wrappers,
+    uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted
   ) external onlyOwner {
-    require(oracle == address(0) && idleController == address(0), "IDLE:!0");
     // TODO update this address!!!
     oracle = address(0x0001);
     // TODO update this address!!!
     idleController = address(0x0001);
     isRiskAdjusted = _isRiskAdjusted;
+    // set all available tokens and set the protocolWrappers mapping in the for loop
+    allAvailableTokens = _protocolTokens;
     // same as setGovTokens, copied to avoid make the method public and save on bytecode size
     govTokens = _newGovTokens;
     // set protocol token to gov token mapping
+    address newGov;
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
-      address newGov = _newGovTokens[i];
-      if (newGov == IDLE) { continue; }
-      protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
+      protocolWrappers[_protocolTokens[i]] = _wrappers[i];
+      if (i < _newGovTokens.length) {
+        newGov = _newGovTokens[i];
+        if (newGov == IDLE) { continue; }
+        protocolTokenToGov[_protocolTokens[i]] = newGov;
+      }
     }
 
     fee = 0;
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
-    lastRebalancerAllocations = lastAllocations;
+    lastRebalancerAllocations = _lastRebalancerAllocations;
   }
 
   /**

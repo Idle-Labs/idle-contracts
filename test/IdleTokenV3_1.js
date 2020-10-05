@@ -187,10 +187,12 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
       {from: manager}
     );
+
     await this.token.manualInitialize(
       [this.COMPMock.address, this.IDLEMock.address],
-      [this.cDAIMock.address],
-      // [this.cDAIMock.address, this.ETHAddr],
+      this.protocolTokens,
+      this.protocolWrappers,
+      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
       false, // isRiskAdjusted
       {from: creator}
     );
