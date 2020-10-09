@@ -201,8 +201,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});
     await this.token.setRebalancer(manager, {from: creator});
 
-    // TODO need to set allocations once in IdleToken contract for testing
-
     // helper methods
     this.mintIdle = async (amount, who) => {
       // Give DAI to `who`

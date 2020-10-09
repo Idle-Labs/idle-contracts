@@ -81,11 +81,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   event Referral(uint256 _amount, address _ref);
 
   // ########## IdleToken V4_1 updates
-  // TODO update this!
-  // TODO update this!
-  // TODO update this!
   // Idle governance token
-  address public IDLE = address(0x0001);
+  address public IDLE = address(0x0001); // TODO update this!
   // Compound governance token
   address public COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
@@ -111,10 +108,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted
   ) external onlyOwner {
-    // TODO update this address!!!
-    oracle = address(0x0001);
-    // TODO update this address!!!
-    idleController = address(0x0001);
+    oracle = address(0x0001); // TODO update this address!
+    idleController = address(0x0001); // TODO update this address!!!
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -135,6 +130,14 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
+    // commented for tests
+    /* // Idle multisig
+    address idleMultisig = address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A);
+    addPauser(idleMultisig);
+    // Remove pause ability from msg.sender
+    renouncePauser();
+    // transfer ownership to idleMultisig
+    transferOwnership(idleMultisig); */
   }
 
   /**
