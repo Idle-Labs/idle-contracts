@@ -165,12 +165,17 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * In case of any errors gov distribution can be paused by passing an empty array
    *
    * @param _newGovTokens : array of governance token addresses
+   * @param _protocolTokens : array of interest bearing token addresses
    */
   function setGovTokens(
     address[] calldata _newGovTokens,
     address[] calldata _protocolTokens
   ) external onlyOwner {
     govTokens = _newGovTokens;
+    // Reset protocolTokenToGov mapping
+    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+      protocolTokenToGov[allAvailableTokens[i]] = address(0);
+    }
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
       address newGov = _newGovTokens[i];
@@ -368,7 +373,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    *
    * @return : apr scaled to 1e18
    */
-  function getGovApr(address _govToken) internal view returns (uint256)  {
+  function getGovApr(address _govToken) internal view returns (uint256) {
     // In case new Gov tokens will be supported this should be updated, no need to add IDLE apr
     if (_govToken == COMP && cToken != address(0)) {
       return PriceOracle(oracle).getCompApr(cToken, token);
