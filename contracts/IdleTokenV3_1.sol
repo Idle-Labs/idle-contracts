@@ -904,10 +904,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    */
   function _getFee(uint256 amount, uint256 redeemed, uint256 currPrice) internal returns (uint256) {
     uint256 noFeeQty = userNoFeeQty[msg.sender]; // in idleTokens
-    bool noFees = noFeeQty >= amount;
+    bool hasEnoughNoFeeQty = noFeeQty >= amount;
 
-    if (fee == 0 || noFees) {
-      userNoFeeQty[msg.sender] = noFees ? noFeeQty.sub(amount) : 0;
+    if (fee == 0 || hasEnoughNoFeeQty) {
+      userNoFeeQty[msg.sender] = hasEnoughNoFeeQty ? noFeeQty.sub(amount) : balanceOf(msg.sender).sub(amount);
       return redeemed;
     }
     userNoFeeQty[msg.sender] = 0;
