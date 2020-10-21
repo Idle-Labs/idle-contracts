@@ -908,7 +908,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       return redeemed;
     }
     userNoFeeQty[msg.sender] = 0;
-    uint256 elegibleGains = amount.sub(noFeeQty).mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
+    uint256 elegibleGains = currPrice < userAvgPrices[msg.sender] ? 0 :
+      amount.sub(noFeeQty).mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
     uint256 feeDue = elegibleGains.mul(fee).div(100000);
     IERC20(token).safeTransfer(feeAddress, feeDue);
     return redeemed.sub(feeDue);
