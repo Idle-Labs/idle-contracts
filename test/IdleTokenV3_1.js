@@ -166,6 +166,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       this.protocolTokens,
       [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
+      [], true
       {from: creator}
     );
     await this.token.setGovTokens(
@@ -330,7 +331,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
   //   await expectRevert.unspecified(this.token.initialize('a', 'b', this.someAddr, this.someAddr, this.someAddr, {from: creator}));
   // });
   it('setAllAvailableTokensAndWrappers', async function () {
-    await this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, {from: creator});
+    await this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], true, {from: creator});
 
     for (var i = 0; i < this.protocolTokens.length; i++) {
       (await this.token.allAvailableTokens(i)).should.equal(this.protocolTokens[i]);

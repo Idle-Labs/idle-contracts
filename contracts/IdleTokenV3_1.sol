@@ -145,18 +145,28 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    *
    * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
    * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
+   * @param allocations : array of allocations
+   * @param keepAllocations : whether to update lastRebalancerAllocations or not
    */
   function setAllAvailableTokensAndWrappers(
     address[] calldata protocolTokens,
-    address[] calldata wrappers
+    address[] calldata wrappers,
+    uint256[] calldata allocations,
+    bool keepAllocations
   ) external onlyOwner {
-    require(protocolTokens.length == wrappers.length, "IDLE:LEN_DIFF");
+    require(protocolTokens.length == wrappers.length && (allocations.length == wrappers.length || keepAllocations), "IDLE:LEN_DIFF");
 
     for (uint256 i = 0; i < protocolTokens.length; i++) {
       require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
       protocolWrappers[protocolTokens[i]] = wrappers[i];
     }
     allAvailableTokens = protocolTokens;
+
+    if (keepAllocations) {
+      require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
+      return;
+    }
+    lastRebalancerAllocations = allocations;
   }
 
   /**
