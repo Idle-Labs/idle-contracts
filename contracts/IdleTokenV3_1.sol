@@ -87,7 +87,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
   // Idle distribution controller
-  address public idleController;
+  address public constant idleController = address(0x0001); // TODO update this
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
@@ -109,7 +109,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     bool _isRiskAdjusted
   ) external onlyOwner {
     oracle = address(0x0001); // TODO update this address!
-    idleController = address(0x0001); // TODO update this address!!!
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -238,17 +237,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     external onlyOwner {
       require(_oracle != address(0), "IDLE:IS_0");
       oracle = _oracle;
-  }
-
-  /**
-   * It allows owner to set the idleController address for getting IDLE rewards
-   *
-   * @param _controller : new idleController address
-   */
-  function setIdleControllerAddress(address _controller)
-    external onlyOwner {
-      require(_controller != address(0), "IDLE:IS_0");
-      idleController = _controller;
   }
 
   /**
