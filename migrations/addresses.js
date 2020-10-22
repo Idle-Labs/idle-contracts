@@ -308,7 +308,13 @@ const idleWBTCV4 = '0x8C81121B15197fA0eEaEE1DC75533419DcfD3151';
 const idleDAISafeV4 = '0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16';
 const idleUSDCSafeV4 = '0x3391bc034f2935ef0e1e41619445f998b2680d35';
 const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
-const IDLE = '';
+const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
+
+// TODO update those addresses
+const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
+const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
+const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
+
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
@@ -350,5 +356,7 @@ module.exports = {
   idleDAISafeV4: idleDAISafeV4,
   idleUSDCSafeV4: idleUSDCSafeV4,
   idleUSDTSafeV4: idleUSDTSafeV4,
-  IDLE: IDLE
+  IDLE: IDLE,
+  timelock: timelock,
+  proxyAdmin: proxyAdmin
 };

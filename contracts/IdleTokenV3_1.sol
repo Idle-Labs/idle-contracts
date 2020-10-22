@@ -82,12 +82,12 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   // ########## IdleToken V4_1 updates
   // Idle governance token
-  address public constant IDLE = address(0x0001); // TODO update this!
+  address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e); // TODO update this!
   // Compound governance token
   address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
   // Idle distribution controller
-  address public constant idleController = address(0x0001); // TODO update this
+  address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE); // TODO update this
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
@@ -108,7 +108,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted
   ) external onlyOwner {
-    oracle = address(0x0001); // TODO update this address!
+    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181); // TODO update this address!
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -126,6 +126,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
 
     fee = 0;
+    feeAddress = address(0);
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
@@ -211,17 +212,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       // 100000 == 100% -> 10000 == 10%
       require(_fee <= 10000, "IDLE:TOO_HIGH");
       fee = _fee;
-  }
-
-  /**
-   * It allows owner to set the max unlent asset percentage (1000 == 1% of unlent asset max)
-   *
-   * @param _perc : max unlent perc where 100000 is 100%
-   */
-  function setMaxUnlentPerc(uint256 _perc)
-    external onlyOwner {
-      require(_perc <= 100000, "IDLE:TOO_HIGH");
-      maxUnlentPerc = _perc;
   }
 
   /**

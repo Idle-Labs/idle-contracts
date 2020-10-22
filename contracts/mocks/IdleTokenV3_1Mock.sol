@@ -63,6 +63,12 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
   function setIdleControllerAddress(address _controller) external onlyOwner {
     idleController = _controller;
   }
+  function setMaxUnlentPerc(uint256 _perc)
+    external onlyOwner {
+      require(_perc <= 100000, "IDLE:TOO_HIGH");
+      maxUnlentPerc = _perc;
+  }
+
   function setGST(address _gst) external {
     gst2 = GasTokenMock(_gst);
   }

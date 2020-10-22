@@ -1,15 +1,17 @@
 var IdleTokenV3_1 = artifacts.require("./IdleTokenV3_1.sol");
 var IERC20 = artifacts.require("./IERC20.sol");
+var IProxyAdmin = artifacts.require("./IProxyAdmin.sol");
 
 const {
   creator, rebalancerManager, feeAddress, gstAddress,
-  cDAI, iDAI, aDAI, CHAI, DAI, yxDAI, idleDAI, idleDAISafe,
-  cUSDC, iUSDC, aUSDC, USDC, yxUSDC, idleUSDC, idleUSDCSafe,
-  cUSDT, iUSDT, aUSDT, USDT, idleUSDT, idleUSDTSafe,
-  aTUSD, TUSD, idleTUSD,
-  aSUSD, SUSD, idleSUSD,
-  cWBTC, iWBTC, aWBTC, WBTC, idleWBTC,
-  COMP, IDLE
+  cDAI, iDAI, aDAI, CHAI, DAI, yxDAI, idleDAIV4, idleDAISafeV4,
+  cUSDC, iUSDC, aUSDC, USDC, yxUSDC, idleUSDCV4, idleUSDCSafeV4,
+  cUSDT, iUSDT, aUSDT, USDT, idleUSDTV4, idleUSDTSafeV4,
+  aTUSD, TUSD, idleTUSDV4,
+  aSUSD, SUSD, idleSUSDV4,
+  cWBTC, iWBTC, aWBTC, WBTC, idleWBTCV4,
+  COMP, IDLE,
+  timelock, idleMultisig, proxyAdmin
 } = require('./addresses.js');
 
 const BigNumber = require('bignumber.js');
@@ -26,6 +28,7 @@ module.exports = async function(deployer, network, accounts) {
   const one = BNify('1000000000000000000');
   const addr0 = '0x0000000000000000000000000000000000000000';
 
+  const idle = await IERC20.at(IDLE);
   const idleDAI = await IdleTokenV3_1.at(idleDAIV4);
   const idleUSDC = await IdleTokenV3_1.at(idleUSDCV4);
   const idleUSDT = await IdleTokenV3_1.at(idleUSDTV4);
@@ -48,6 +51,7 @@ module.exports = async function(deployer, network, accounts) {
     false, // isRiskAdjusted
     {from: creator}
   );
+  console.log('manually initialized idleDAI');
 
   const compoundV2DAISafe = '0x5CcBa376bc879362b1069323b74298Ee68fF83D6';
   const aaveDAISafe = '0x11833cf5145C4EC310b315Fa9781c53cdb4B9718';
@@ -60,6 +64,7 @@ module.exports = async function(deployer, network, accounts) {
     true, // isRiskAdjusted
     {from: creator}
   );
+  console.log('manually initialized idleDAISafe');
 
   // USDC
   const compoundUSDCBest = '0xE8981Aa72d495AA71681c41159c1Ec8746eE3fbD';
@@ -73,6 +78,7 @@ module.exports = async function(deployer, network, accounts) {
     false, // isRiskAdjusted
     {from: creator}
   );
+  console.log('manually initialized idleUSDC');
 
   const compoundUSDCSafe = '0x55583F7Ca92F4Cf051e6f55D77a967bA9B2C1edD';
   const aaveUSDCSafe = '0xE85f72Cb10Eb9406d3857397e194168e43De534d';
@@ -85,6 +91,7 @@ module.exports = async function(deployer, network, accounts) {
     true, // isRiskAdjusted
     {from: creator}
   );
+  console.log('manually initialized idleUSDCSafe');
 
   // USDT
   const compoundV2USDTBest = '0x3751b4466a238Db35C39B578D4889cFB6847A46B';
@@ -97,6 +104,7 @@ module.exports = async function(deployer, network, accounts) {
     false, // isRiskAdjusted
     {from: creator}
   );
+  console.log('manually initialized idleUSDT');
 
   const compoundUSDTSafe = '0x9fd4bF528563F0535fA84C93200e105612B39bFE';
   const aaveUSDTSafe = '0x292714dD74A03ADAf59c0dec61353340E8A85e67';
@@ -108,6 +116,7 @@ module.exports = async function(deployer, network, accounts) {
     true,
     {from: creator}
   );
+  console.log('manually initialized idleUSDTSafe');
 
   // TUSD
   const aaveTUSD = '0xff9338dae3d2335172156467c5440da4db05ae52';
@@ -119,6 +128,7 @@ module.exports = async function(deployer, network, accounts) {
     false,
     {from: creator}
   );
+  console.log('manually initialized idleTUSD');
 
   // SUSD
   const aaveSUSD = '0x9509af16566eb4d7401b50250de73d2f6dfb60c3';
@@ -130,6 +140,7 @@ module.exports = async function(deployer, network, accounts) {
     false,
     {from: creator}
   );
+  console.log('manually initialized idleSUSD');
 
   // WBTC
   const compoundWBTC = '0x969Ce00488720D4907C75Da5fD9565B5AC27E8BA';
@@ -142,4 +153,8 @@ module.exports = async function(deployer, network, accounts) {
     false,
     {from: creator}
   );
+  console.log('manually initialized idleWBTC');
+
+  // Deploy new implementation contract IdleTokenGovernance and set new implementation
+  // to all proxies via openzeppelin
 };

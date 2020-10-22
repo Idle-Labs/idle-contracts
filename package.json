@@ -39,7 +39,7 @@
     "@openzeppelin/contracts": "^2.4.0",
     "@openzeppelin/contracts-ethereum-package": "^2.5.0",
     "@openzeppelin/test-helpers": "^0.5.3",
-    "@openzeppelin/upgrades": "^2.8.2",
+    "@openzeppelin/upgrades": "^2.8.0",
     "@truffle/hdwallet-provider": "^1.0.25",
     "@umaprotocol/truffle-ledger-provider": "^1.0.3",
     "dotenv": "^6.2.0",
