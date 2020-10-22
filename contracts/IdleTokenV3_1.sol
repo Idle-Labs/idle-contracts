@@ -85,6 +85,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e); // TODO update this!
   // Compound governance token
   address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+  uint256 private constant FULL_ALLOC = 100000;
 
   // Idle distribution controller
   address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE); // TODO update this
@@ -274,7 +275,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       total = total.add(_allocations[i]);
       lastRebalancerAllocations[i] = _allocations[i];
     }
-    require(total == 100000, "IDLE:!EQ_TOT");
+    require(total == FULL_ALLOC, "IDLE:!EQ_TOT");
   }
 
   // view
@@ -703,7 +704,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       }
 
       if (balance > 0) {
-        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(100000);
+        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
         if (lastAllocations.length == 0) {
           // set in storage
           lastAllocations = rebalancerLastAllocations;
@@ -725,7 +726,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       (address[] memory tokenAddresses, uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
 
       if (balance == 0 && maxUnlentPerc > 0) {
-        totalInUnderlying = totalInUnderlying.sub(_getCurrentPoolValue().mul(maxUnlentPerc).div(100000));
+        totalInUnderlying = totalInUnderlying.sub(_getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC));
       }
       // calculate new allocations given the total (not counting unlent balance)
       uint256[] memory newAmounts = _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying);
@@ -740,7 +741,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
       // Do not count `maxUnlentPerc` from balance
       if (maxUnlentBalance == 0 && maxUnlentPerc > 0) {
-        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(100000);
+        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
       }
 
       uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
@@ -753,7 +754,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       uint256[] memory tempAllocations = new uint256[](toMintAllocations.length);
       for (uint256 i = 0; i < toMintAllocations.length; i++) {
         // Calc what would have been the correct allocations percentage if all was available
-        tempAllocations[i] = toMintAllocations[i].mul(100000).div(totalToMint);
+        tempAllocations[i] = toMintAllocations[i].mul(FULL_ALLOC).div(totalToMint);
       }
 
       uint256[] memory partialAmounts = _amountsFromAllocations(tempAllocations, totalRedeemd.sub(maxUnlentBalance));
@@ -818,7 +819,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
           uint256 feeDue;
           // no fee for IDLE governance token
           if (feeAddress != address(0) && fee > 0 && govToken != IDLE) {
-            feeDue = share.mul(fee).div(100000);
+            feeDue = share.mul(fee).div(FULL_ALLOC);
             // Transfer gov token fee to feeAddress
             IERC20(govToken).safeTransfer(feeAddress, feeDue);
           }
@@ -907,7 +908,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     userNoFeeQty[msg.sender] = 0;
     uint256 elegibleGains = currPrice < userAvgPrices[msg.sender] ? 0 :
       amount.sub(noFeeQty).mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
-    uint256 feeDue = elegibleGains.mul(fee).div(100000);
+    uint256 feeDue = elegibleGains.mul(fee).div(FULL_ALLOC);
     IERC20(token).safeTransfer(feeAddress, feeDue);
     return redeemed.sub(feeDue);
   }
@@ -953,7 +954,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       if (i == allocations.length - 1) {
         newAmounts[i] = total.sub(allocatedBalance);
       } else {
-        currBalance = total.mul(allocations[i]).div(100000);
+        currBalance = total.mul(allocations[i]).div(FULL_ALLOC);
         allocatedBalance = allocatedBalance.add(currBalance);
         newAmounts[i] = currBalance;
       }
