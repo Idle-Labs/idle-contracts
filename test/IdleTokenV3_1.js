@@ -166,7 +166,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       this.protocolTokens,
       [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
-      [], true
+      [], true,
       {from: creator}
     );
     await this.token.setGovTokens(
@@ -338,7 +338,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       (await this.token.protocolWrappers(this.protocolTokens[i])).should.equal(this.protocolWrappers[i]);
     }
 
-    await expectRevert.unspecified(this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, {from: nonOwner}));
+    await expectRevert.unspecified(this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], true, {from: nonOwner}));
   });
   it('setGovTokens', async function () {
     await this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: creator});
@@ -368,13 +368,13 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await expectRevert.unspecified(this.token.setOracleAddress(val, { from: nonOwner }));
   });
-  it('allows onlyOwner to setIdleControllerAddress', async function () {
-    const val = this.someAddr;
-    await this.token.setIdleControllerAddress(val, { from: creator });
-    (await this.token.idleController()).should.be.equal(val);
-
-    await expectRevert.unspecified(this.token.setIdleControllerAddress(val, { from: nonOwner }));
-  });
+  // it('allows onlyOwner to setIdleControllerAddress', async function () {
+  //   const val = this.someAddr;
+  //   await this.token.setIdleControllerAddress(val, { from: creator });
+  //   (await this.token.idleController()).should.be.equal(val);
+  //
+  //   await expectRevert.unspecified(this.token.setIdleControllerAddress(val, { from: nonOwner }));
+  // });
   it('allows onlyOwner to setFeeAddress', async function () {
     const val = this.someAddr;
     await this.token.setFeeAddress(val, { from: creator });

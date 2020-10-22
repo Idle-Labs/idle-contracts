@@ -102,7 +102,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * It allows owner to set IDLE token address and oracle
    */
   function manualInitialize(
-    address[] calldata _newGovTokens, // should include IDLE
+    address[] calldata _newGovTokens,
     address[] calldata _protocolTokens,
     address[] calldata _wrappers,
     uint256[] calldata _lastRebalancerAllocations,
@@ -130,12 +130,9 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
     // Idle multisig
-    address idleMultisig = address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A);
-    addPauser(idleMultisig);
+    addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
     renouncePauser();
-    // transfer ownership to idleMultisig
-    transferOwnership(idleMultisig);
   }
 
   /**
@@ -885,7 +882,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       }
       userNoFeeQty[from] = 0;
       userNoFeeQty[usr] = userNoFeeQty[usr].add(userNoFeeQtyFrom);
-    } else if (fee == 0) { // on deposits
+    } else if (fee == 0) { // on deposits with 0 fee
       userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
       return;
     }

@@ -87,7 +87,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   address public COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
   // Idle distribution controller
-  address public idleController;
+  address public idleController = address(0x0001); // TODO update this
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
@@ -102,14 +102,13 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * It allows owner to set IDLE token address and oracle
    */
   function manualInitialize(
-    address[] calldata _newGovTokens, // should include IDLE
+    address[] calldata _newGovTokens,
     address[] calldata _protocolTokens,
     address[] calldata _wrappers,
     uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted
   ) external onlyOwner {
     oracle = address(0x0001); // TODO update this address!
-    idleController = address(0x0001); // TODO update this address!!!
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -130,14 +129,10 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
-    // commented for tests
     /* // Idle multisig
-    address idleMultisig = address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A);
-    addPauser(idleMultisig);
+    addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
-    renouncePauser();
-    // transfer ownership to idleMultisig
-    transferOwnership(idleMultisig); */
+    renouncePauser(); */
   }
 
   /**
@@ -147,18 +142,28 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    *
    * @param protocolTokens : array of protocolTokens addresses (eg [cDAI, iDAI, ...])
    * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
+   * @param allocations : array of allocations
+   * @param keepAllocations : whether to update lastRebalancerAllocations or not
    */
   function setAllAvailableTokensAndWrappers(
     address[] calldata protocolTokens,
-    address[] calldata wrappers
+    address[] calldata wrappers,
+    uint256[] calldata allocations,
+    bool keepAllocations
   ) external onlyOwner {
-    require(protocolTokens.length == wrappers.length, "IDLE:LEN_DIFF");
+    require(protocolTokens.length == wrappers.length && (allocations.length == wrappers.length || keepAllocations), "IDLE:LEN_DIFF");
 
     for (uint256 i = 0; i < protocolTokens.length; i++) {
       require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
       protocolWrappers[protocolTokens[i]] = wrappers[i];
     }
     allAvailableTokens = protocolTokens;
+
+    if (keepAllocations) {
+      require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
+      return;
+    }
+    lastRebalancerAllocations = allocations;
   }
 
   /**
@@ -166,12 +171,17 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * In case of any errors gov distribution can be paused by passing an empty array
    *
    * @param _newGovTokens : array of governance token addresses
+   * @param _protocolTokens : array of interest bearing token addresses
    */
   function setGovTokens(
     address[] calldata _newGovTokens,
     address[] calldata _protocolTokens
   ) external onlyOwner {
     govTokens = _newGovTokens;
+    // Reset protocolTokenToGov mapping
+    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+      protocolTokenToGov[allAvailableTokens[i]] = address(0);
+    }
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
       address newGov = _newGovTokens[i];
@@ -234,17 +244,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     external onlyOwner {
       require(_oracle != address(0), "IDLE:IS_0");
       oracle = _oracle;
-  }
-
-  /**
-   * It allows owner to set the idleController address for getting IDLE rewards
-   *
-   * @param _controller : new idleController address
-   */
-  function setIdleControllerAddress(address _controller)
-    external onlyOwner {
-      require(_controller != address(0), "IDLE:IS_0");
-      idleController = _controller;
   }
 
   /**
@@ -369,7 +368,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    *
    * @return : apr scaled to 1e18
    */
-  function getGovApr(address _govToken) internal view returns (uint256)  {
+  function getGovApr(address _govToken) internal view returns (uint256) {
     // In case new Gov tokens will be supported this should be updated, no need to add IDLE apr
     if (_govToken == COMP && cToken != address(0)) {
       return PriceOracle(oracle).getCompApr(cToken, token);
@@ -883,7 +882,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       }
       userNoFeeQty[from] = 0;
       userNoFeeQty[usr] = userNoFeeQty[usr].add(userNoFeeQtyFrom);
-    } else if (fee == 0) { // on deposits
+    } else if (fee == 0) { // on deposits with 0 fee
       userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
       return;
     }
@@ -902,14 +901,15 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    */
   function _getFee(uint256 amount, uint256 redeemed, uint256 currPrice) internal returns (uint256) {
     uint256 noFeeQty = userNoFeeQty[msg.sender]; // in idleTokens
-    bool noFees = noFeeQty >= amount;
+    bool hasEnoughNoFeeQty = noFeeQty >= amount;
 
-    if (fee == 0 || noFees) {
-      userNoFeeQty[msg.sender] = noFees ? noFeeQty.sub(amount) : 0;
+    if (fee == 0 || hasEnoughNoFeeQty) {
+      userNoFeeQty[msg.sender] = hasEnoughNoFeeQty ? noFeeQty.sub(amount) : balanceOf(msg.sender).sub(amount);
       return redeemed;
     }
     userNoFeeQty[msg.sender] = 0;
-    uint256 elegibleGains = amount.sub(noFeeQty).mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
+    uint256 elegibleGains = currPrice < userAvgPrices[msg.sender] ? 0 :
+      amount.sub(noFeeQty).mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
     uint256 feeDue = elegibleGains.mul(fee).div(100000);
     IERC20(token).safeTransfer(feeAddress, feeDue);
     return redeemed.sub(feeDue);

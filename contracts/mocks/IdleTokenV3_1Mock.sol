@@ -60,6 +60,9 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
   function setLastAllocations(uint256[] calldata allocs) external {
     lastAllocations = allocs;
   }
+  function setIdleControllerAddress(address _controller) external onlyOwner {
+    idleController = _controller;
+  }
   function setGST(address _gst) external {
     gst2 = GasTokenMock(_gst);
   }
