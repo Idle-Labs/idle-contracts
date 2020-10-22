@@ -1,6 +1,5 @@
 var IdleTokenV3_1 = artifacts.require("./IdleTokenV3_1.sol");
 var IdleRebalancerV3_1 = artifacts.require("./IdleRebalancerV3_1.sol");
-var IdleRebalancerHelperDAI = artifacts.require("./IdleRebalancerHelperDAI.sol");
 var IdleCompoundV2 = artifacts.require("./IdleCompoundV2.sol");
 var IdleFulcrumV2 = artifacts.require("./IdleFulcrumV2.sol");
 var IdleAave = artifacts.require("./IdleAave.sol");
