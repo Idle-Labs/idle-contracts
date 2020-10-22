@@ -99,7 +99,13 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
 
   // onlyOwner
   /**
-   * It allows owner to set IDLE token address and oracle
+   * It allows owner to manually initialize new contract implementation which supports IDLE distribution
+   *
+   * @param _newGovTokens : array of gov token addresses
+   * @param _protocolTokens : array of protocol tokens supported
+   * @param _wrappers : array of wrappers for protocol tokens
+   * @param _lastRebalancerAllocations : array of allocations
+   * @param _isRiskAdjusted : flag whether is risk adjusted or not
    */
   function manualInitialize(
     address[] calldata _newGovTokens,
@@ -131,9 +137,9 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
     // Idle multisig
-    /* addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
+    addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
-    renouncePauser(); */
+    renouncePauser();
   }
 
   /**
@@ -614,8 +620,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * Allow any users to set new allocations as long as the new allocations
-   * give a better avg APR than before
+   * Allow any users to set new allocations as long as the new allocation
+   * gives a better avg APR than before
    * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
    * as lastAllocations variable and the sum of all value should be == 100000
    *
@@ -887,6 +893,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    *
    * @param amount : in idleTokens
    * @param redeemed : in underlying
+   * @param currPrice : current idleToken price
    * @return : net value in underlying
    */
   function _getFee(uint256 amount, uint256 redeemed, uint256 currPrice) internal returns (uint256) {
