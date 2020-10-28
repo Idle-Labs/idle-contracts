@@ -159,6 +159,36 @@
     "type": "event"
   },
   {
+    "constant": true,
+    "inputs": [],
+    "name": "COMP",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "IDLE",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "constant": false,
     "inputs": [
       {
@@ -417,6 +447,21 @@
     "type": "function"
   },
   {
+    "constant": true,
+    "inputs": [],
+    "name": "idleController",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "constant": false,
     "inputs": [
       {
@@ -438,6 +483,55 @@
         "type": "bool"
       }
     ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      },
+      {
+        "internalType": "uint8",
+        "name": "decimals",
+        "type": "uint8"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "initialize",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
     "type": "function"
@@ -467,6 +561,21 @@
       }
     ],
     "name": "isPauser",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "isRiskAdjusted",
     "outputs": [
       {
         "internalType": "bool",
@@ -538,6 +647,21 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "oracle",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -757,86 +881,32 @@
     "constant": false,
     "inputs": [
       {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
+        "internalType": "address[]",
+        "name": "_newGovTokens",
+        "type": "address[]"
       },
       {
-        "internalType": "string",
-        "name": "symbol",
-        "type": "string"
+        "internalType": "address[]",
+        "name": "_protocolTokens",
+        "type": "address[]"
       },
       {
-        "internalType": "uint8",
-        "name": "decimals",
-        "type": "uint8"
+        "internalType": "address[]",
+        "name": "_wrappers",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_lastRebalancerAllocations",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "_isRiskAdjusted",
+        "type": "bool"
       }
     ],
-    "name": "initialize",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
-    "name": "initialize",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "initialize",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_symbol",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "_token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_iToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_cToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_rebalancer",
-        "type": "address"
-      }
-    ],
-    "name": "initialize",
+    "name": "manualInitialize",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -854,6 +924,16 @@
         "internalType": "address[]",
         "name": "wrappers",
         "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "allocations",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "keepAllocations",
+        "type": "bool"
       }
     ],
     "name": "setAllAvailableTokensAndWrappers",
@@ -866,23 +946,13 @@
     "constant": false,
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_iToken",
-        "type": "address"
-      }
-    ],
-    "name": "setIToken",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
         "internalType": "address[]",
         "name": "_newGovTokens",
+        "type": "address[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "_protocolTokens",
         "type": "address[]"
       }
     ],
@@ -926,21 +996,6 @@
     "constant": false,
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_perc",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMaxUnlentPerc",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
         "internalType": "address",
         "name": "_feeAddress",
         "type": "address"
@@ -950,6 +1005,51 @@
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "_isRiskAdjusted",
+        "type": "bool"
+      }
+    ],
+    "name": "setIsRiskAdjusted",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_allocations",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "setAllocations",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getAllocations",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -994,7 +1094,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "avgApr",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1171,6 +1271,32 @@
         "internalType": "bool",
         "name": "",
         "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_newAllocations",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "openRebalance",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "avgApr",
+        "type": "uint256"
       }
     ],
     "payable": false,

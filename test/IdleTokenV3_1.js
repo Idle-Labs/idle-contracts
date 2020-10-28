@@ -28,7 +28,7 @@ const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
 
 const BNify = n => new BN(String(n));
 
-contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver]) {
+contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager, feeReceiver, bar]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.oneCToken = new BN('100000000'); // 8 decimals
@@ -2432,5 +2432,45 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await this.mintIdle(BNify('1').mul(this.one), foo);
     await this.token.redeemIdleToken(this.one, {from: foo});
+  });
+  it('transfer correctly updates userAvgPrice when transferring an amount > of no fee qty', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee 0%
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // Set prices in DAI => [0.02,...]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Price 1
+    await this.mintIdle(BNify('10').mul(this.one), foo);
+    await this.token.rebalance();
+    // Set prices in DAI => [0.04, ...]
+    await this.setPrices(['400000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Price 2
+    await this.mintIdle(BNify('10').mul(this.one), bar);
+    await this.token.rebalance();
+    // Set prices in DAI => [0.08, ...]
+    await this.setPrices(['800000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Set fee
+    await this.token.setFee(BNify('10000'), {from: creator});
+
+    // Price 4
+    await this.mintIdle(BNify('10').mul(this.one), foo);
+    await this.token.rebalance();
+    // Set prices in DAI => [0.16, ...]
+    await this.setPrices(['1600000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Price 8
+    await this.mintIdle(BNify('20').mul(this.one), bar);
+    await this.token.rebalance();
+
+    await this.token.transfer(bar, BNify('12500000000000000000'), {from: foo}); // 12.5 tranfer from foo to bar
+    (await this.token.userAvgPrices(bar)).should.be.bignumber.equal(BNify('6').mul(this.one));
   });
 });

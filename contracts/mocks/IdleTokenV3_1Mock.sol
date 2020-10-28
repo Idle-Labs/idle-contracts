@@ -68,6 +68,11 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
       require(_perc <= 100000, "IDLE:TOO_HIGH");
       maxUnlentPerc = _perc;
   }
+  function setOracleAddress(address _oracle)
+    external onlyOwner {
+      require(_oracle != address(0), "IDLE:IS_0");
+      oracle = _oracle;
+  }
 
   function setGST(address _gst) external {
     gst2 = GasTokenMock(_gst);

@@ -140,7 +140,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     // Idle multisig
     addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
-    // comment for tests
     /* renouncePauser(); */
   }
 
@@ -231,17 +230,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     external onlyOwner {
       require(_feeAddress != address(0), "IDLE:IS_0");
       feeAddress = _feeAddress;
-  }
-
-  /**
-   * It allows owner to set the oracle address for getting avgAPR
-   *
-   * @param _oracle : new oracle address
-   */
-  function setOracleAddress(address _oracle)
-    external onlyOwner {
-      require(_oracle != address(0), "IDLE:IS_0");
-      oracle = _oracle;
   }
 
   /**
@@ -386,7 +374,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
-    _updateUserFeeInfo(sender, recipient, amount, userAvgPrices[sender]);
+    _updateUserFeeInfoTransfer(sender, recipient, amount, userAvgPrices[sender]);
     return true;
   }
 
@@ -401,7 +389,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function transfer(address recipient, uint256 amount) public returns (bool) {
     _updateUserGovIdxTransfer(msg.sender, recipient, amount);
     _transfer(msg.sender, recipient, amount);
-    _updateUserFeeInfo(msg.sender, recipient, amount, userAvgPrices[msg.sender]);
+    _updateUserFeeInfoTransfer(msg.sender, recipient, amount, userAvgPrices[msg.sender]);
     return true;
   }
 
@@ -487,7 +475,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     _mint(msg.sender, mintedTokens);
 
     // Update avg price and/or userNoFeeQty
-    _updateUserFeeInfo(address(0), msg.sender, mintedTokens, idlePrice);
+    _updateUserFeeInfo(msg.sender, mintedTokens, idlePrice);
     // Update user idx for each gov tokens
     _updateUserGovIdx(msg.sender, mintedTokens);
 
@@ -861,29 +849,46 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * Always Update avg price paid for each idle token of a user and eventually userNoFeeQty
+   * Update userNoFeeQty of a user on transfers and eventually avg price paid for each idle token
    * userAvgPrice do not consider tokens bought when there was no fee
-
+   *
    * @param from : user address of the sender || address(0) on mint
    * @param usr : user that should have balance update
    * @param qty : new amount deposited / transferred, in idleToken
    * @param price : curr idleToken price in underlying
    */
-  function _updateUserFeeInfo(address from, address usr, uint256 qty, uint256 price) internal {
-    if (from != address(0)) { // on transfers
-      uint256 userNoFeeQtyFrom = userNoFeeQty[from];
-      if (userNoFeeQtyFrom >= qty) {
-        userNoFeeQty[from] = userNoFeeQtyFrom.sub(qty);
-        userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
-        // No avg price update needed
-        return;
-      }
-      userNoFeeQty[from] = 0;
-      userNoFeeQty[usr] = userNoFeeQty[usr].add(userNoFeeQtyFrom);
-    } else if (fee == 0) { // on deposits with 0 fee
+  function _updateUserFeeInfoTransfer(address from, address usr, uint256 qty, uint256 price) internal {
+    uint256 userNoFeeQtyFrom = userNoFeeQty[from];
+    if (userNoFeeQtyFrom >= qty) {
+      userNoFeeQty[from] = userNoFeeQtyFrom.sub(qty);
+      userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
+      // No avg price update needed
+      return;
+    }
+    // nofeeQty not counted
+    uint256 oldBalance = balanceOf(usr).sub(qty).sub(userNoFeeQty[usr]);
+    uint256 newBalance = qty.sub(userNoFeeQtyFrom);
+    // (avgPrice * oldBalance) + (currPrice * newQty)) / totBalance
+    userAvgPrices[usr] = userAvgPrices[usr].mul(oldBalance).add(price.mul(newBalance)).div(oldBalance.add(newBalance));
+    // update no fee quantities
+    userNoFeeQty[from] = 0;
+    userNoFeeQty[usr] = userNoFeeQty[usr].add(userNoFeeQtyFrom);
+  }
+
+  /**
+   * Update userNoFeeQty of a user on deposits and eventually avg price paid for each idle token
+   * userAvgPrice do not consider tokens bought when there was no fee
+   *
+   * @param usr : user that should have balance update
+   * @param qty : new amount deposited / transferred, in idleToken
+   * @param price : curr idleToken price in underlying
+   */
+  function _updateUserFeeInfo(address usr, uint256 qty, uint256 price) internal {
+    if (fee == 0) { // on deposits with 0 fee
       userNoFeeQty[usr] = userNoFeeQty[usr].add(qty);
       return;
     }
+    // on deposits with fee
     uint256 totBalance = balanceOf(usr).sub(userNoFeeQty[usr]);
     // noFeeQty should not be counted here
     // (avgPrice * oldBalance) + (currPrice * newQty)) / totBalance
