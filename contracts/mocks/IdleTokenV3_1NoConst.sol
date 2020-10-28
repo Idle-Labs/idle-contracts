@@ -140,7 +140,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     // Idle multisig
     addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
-    /* renouncePauser(); */
+    renouncePauser();
   }
 
   /**
@@ -517,8 +517,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function redeemIdleToken(uint256 _amount)
     external nonReentrant
     returns (uint256 redeemedTokens) {
-      // Check that no mint has been made in the same block from the same EOA
-      require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "IDLE:REENTR");
+      _checkMintRedeemSameTx();
+
       _redeemGovTokens(msg.sender, false);
 
       uint256 price = _tokenPrice();
@@ -561,6 +561,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    */
   function redeemInterestBearingTokens(uint256 _amount)
     external nonReentrant {
+      _checkMintRedeemSameTx();
+
       _redeemGovTokens(msg.sender, false);
 
       uint256 idleSupply = totalSupply();
@@ -867,9 +869,9 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     }
     // nofeeQty not counted
     uint256 oldBalance = balanceOf(usr).sub(qty).sub(userNoFeeQty[usr]);
-    uint256 newBalance = qty.sub(userNoFeeQtyFrom);
+    uint256 newQty = qty.sub(userNoFeeQtyFrom);
     // (avgPrice * oldBalance) + (currPrice * newQty)) / totBalance
-    userAvgPrices[usr] = userAvgPrices[usr].mul(oldBalance).add(price.mul(newBalance)).div(oldBalance.add(newBalance));
+    userAvgPrices[usr] = userAvgPrices[usr].mul(oldBalance).add(price.mul(newQty)).div(oldBalance.add(newQty));
     // update no fee quantities
     userNoFeeQty[from] = 0;
     userNoFeeQty[usr] = userNoFeeQty[usr].add(userNoFeeQtyFrom);
@@ -1069,6 +1071,13 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
 
       // add unlent balance
       total = total.add(IERC20(token).balanceOf(address(this)));
+  }
+
+  /**
+   * Check that no mint has been made in the same block from the same EOA
+   */
+  function _checkMintRedeemSameTx() internal view {
+    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "IDLE:REENTR");
   }
 
   // ILendingProtocols calls

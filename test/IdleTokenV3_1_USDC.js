@@ -55,6 +55,8 @@ contract('IdleTokenV3_1_USDC', function ([_, creator, nonOwner, someone, foo, ma
       this.ETHAddr,
       this.ETHAddr,
       this.IdleRebalancer.address,
+      this.COMPMock.address,
+      this.COMPMock.address,
       { from: creator }
     );
     this.idleTokenAddr = this.token.address;
@@ -69,16 +71,29 @@ contract('IdleTokenV3_1_USDC', function ([_, creator, nonOwner, someone, foo, ma
     await this.token.setAllAvailableTokensAndWrappers(
       this.protocolTokens,
       [this.cUSDCWrapper.address],
+      [], true,
       {from: creator}
     );
     await this.token.setGovTokens(
       [this.COMPMock.address], // govTokens
+      [this.cUSDCMock.address], // protocolTokens
       {from: creator}
     );
 
     await this.token.setGST(this.GSTMock.address);
 
     await this.cUSDCWrapper._setAvailableLiquidity(BNify('1000000').mul(this.oneToken)); // 1M
+
+    await this.token.manualInitialize(
+      [this.COMPMock.address],
+      [this.cUSDCMock.address],
+      [this.cUSDCWrapper.address],
+      [BNify('100000')],
+      false, // isRiskAdjusted
+      {from: creator}
+    );
+    await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
+    await this.token.setRebalancer(manager, {from: creator});
 
     // helper methods
     this.mintIdle = async (amount, who) => {
