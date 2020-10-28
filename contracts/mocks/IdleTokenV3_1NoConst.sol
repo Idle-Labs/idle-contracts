@@ -171,7 +171,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
       return;
     }
-    lastRebalancerAllocations = allocations;
+    _setAllocations(allocations);
   }
 
   /**

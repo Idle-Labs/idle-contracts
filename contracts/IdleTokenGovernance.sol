@@ -127,7 +127,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
       return;
     }
-    lastRebalancerAllocations = allocations;
+    _setAllocations(allocations);
   }
 
   /**
