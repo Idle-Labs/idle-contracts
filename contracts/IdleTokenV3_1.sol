@@ -910,7 +910,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     bool hasEnoughNoFeeQty = noFeeQty >= amount;
 
     if (fee == 0 || hasEnoughNoFeeQty) {
-      userNoFeeQty[msg.sender] = hasEnoughNoFeeQty ? noFeeQty.sub(amount) : balanceOf(msg.sender).sub(amount);
+      userNoFeeQty[msg.sender] = hasEnoughNoFeeQty ? noFeeQty.sub(amount) : 0;
       return redeemed;
     }
     userNoFeeQty[msg.sender] = 0;
