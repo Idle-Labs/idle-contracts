@@ -132,8 +132,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       }
     }
 
-    fee = 0;
-    feeAddress = address(0);
+    feeAddress = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     lastRebalancerAllocations = _lastRebalancerAllocations;
