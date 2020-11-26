@@ -82,13 +82,13 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   // ########## IdleToken V4_1 updates
   // Idle governance token
-  address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e); // TODO update this!
+  address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e);
   // Compound governance token
   address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
   uint256 private constant FULL_ALLOC = 100000;
 
   // Idle distribution controller
-  address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE); // TODO update this
+  address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE);
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
@@ -115,7 +115,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted
   ) external onlyOwner {
-    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181); // TODO update this address!
+    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181);
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -131,7 +131,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
         protocolTokenToGov[_protocolTokens[i]] = newGov;
       }
     }
-
     feeAddress = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
     iToken = address(0);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);

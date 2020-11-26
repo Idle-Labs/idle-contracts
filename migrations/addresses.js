@@ -310,7 +310,6 @@ const idleUSDCSafeV4 = '0x3391bc034f2935ef0e1e41619445f998b2680d35';
 const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
 const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
 
-// TODO update those addresses
 const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
 const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
@@ -318,7 +317,6 @@ const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
-  feeAddress: process.env.FEE_ADDRESS,
   gstAddress: "0x0000000000b3F879cb30FE243b4Dfee438691c04",
   idlePriceCalculator: '0xAefb1325A2C1756Bc3fcc516D6C2CF947D225358',
   idleDAIBest: '0x78751b12da02728f467a44eac40f5cbc16bd7934',
