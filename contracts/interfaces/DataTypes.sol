@@ -46,6 +46,7 @@ contract DataTypes {
   }
 
   enum InterestRateMode {NONE, STABLE, VARIABLE}
+<<<<<<< HEAD
 
   // copied from https://github.com/aave/protocol-v2/blob/dbd77ad9312f607b420da746c2cb7385d734b015/contracts/protocol/libraries/configuration/ReserveConfiguration.sol#L242
   function getReserveFactor(DataTypes.ReserveConfigurationMap memory self) internal pure returns (uint256) {
@@ -54,4 +55,6 @@ contract DataTypes {
 
     return (self.data & ~RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_START_BIT_POSITION;
   }
+=======
+>>>>>>> NEW: add aave v2 wrapper, tests are needed
 }
