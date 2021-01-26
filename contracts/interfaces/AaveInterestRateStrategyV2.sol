@@ -1,6 +1,6 @@
 pragma solidity 0.5.16;
 
-interface AaveInterestRateStrategy {
+interface AaveInterestRateStrategyV2 {
   function calculateInterestRates(
     address reserve,
     uint256 utilizationRate,

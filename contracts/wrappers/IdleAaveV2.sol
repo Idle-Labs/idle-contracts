@@ -6,6 +6,7 @@
  * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
@@ -15,11 +16,11 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/AaveLendingPoolProviderV2.sol";
-import "../interfaces/AaveLendingPool.sol";
+import "../interfaces/AaveLendingPoolV2.sol";
 import "../interfaces/DataTypes.sol";
 import "../interfaces/IVariableDebtToken.sol";
 import "../interfaces/IStableDebtToken.sol";
-import "../interfaces/AaveInterestRateStrategy.sol";
+import "../interfaces/AaveInterestRateStrategyV2.sol";
 
 contract IdleAaveV2 is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
@@ -53,10 +54,10 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
    * and all other params supplied.
    * on calculations.
    *
-   * @param params : array with all params needed for calculation (see below)
+   * @param _ : array with all params needed for calculation (see below)
    * @return : yearly net rate
    */
-  function nextSupplyRateWithParams(uint256[] calldata)
+  function nextSupplyRateWithParams(uint256[] calldata _)
     external view
     returns (uint256) {
     return 0;
@@ -71,9 +72,9 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
   function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256) {
-      AaveLendingPool core = AaveLendingPoolV2(provider.getLendingPool());
-      DataTypes.ReserveData data = core.getReserveData(underlying);
-      AaveInterestRateStrategy apr = AaveInterestRateStrategy(data.interestRateStrategyAddress);
+      AaveLendingPoolV2 core = AaveLendingPoolV2(provider.getLendingPool());
+      DataTypes.ReserveData memory data = core.getReserveData(underlying);
+      AaveInterestRateStrategyV2 apr = AaveInterestRateStrategyV2(data.interestRateStrategyAddress);
 
       (uint256 totalStableDebt, uint256 avgStableRate) = IStableDebtToken(data.stableDebtTokenAddress).getTotalSupplyAndAvgRate();
 
@@ -95,7 +96,7 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
   }
 
   // copied from https://github.com/aave/protocol-v2/blob/dbd77ad9312f607b420da746c2cb7385d734b015/contracts/protocol/libraries/configuration/ReserveConfiguration.sol#L242
-  function getReserveFactor(DataTypes.ReserveConfigurationMap storage self) pure view returns (uint256) {
+  function getReserveFactor(DataTypes.ReserveConfigurationMap memory self) internal pure returns (uint256) {
     uint256 RESERVE_FACTOR_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFFFFFF; // prettier-ignore
     uint256 RESERVE_FACTOR_START_BIT_POSITION = 64;
 
@@ -117,7 +118,7 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
   function getAPR()
     external view
     returns (uint256) {
-      DataTypes.ReserveData data = AaveLendingPoolV2(provider.getLendingPool()).getReserveData(underlying);
+      DataTypes.ReserveData memory data = AaveLendingPoolV2(provider.getLendingPool()).getReserveData(underlying);
       return uint256(data.currentLiquidityRate).mul(100).div(10**9);
   }
 
@@ -135,7 +136,8 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
       if (aTokens == 0) {
         return aTokens;
       }
-      AaveLendingPool lendingPool = AaveLendingPoolV2(provider.getLendingPool());
+      AaveLendingPoolV2 lendingPool = AaveLendingPoolV2(provider.getLendingPool());
+      uint256 balance = IERC20(underlying).balanceOf(address(this));
       lendingPool.deposit(underlying, balance, msg.sender, 29); // 29 -> referral
   }
 
