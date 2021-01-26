@@ -458,7 +458,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     external nonReentrant whenNotPaused
     returns (uint256 mintedTokens) {
     _minterBlock = keccak256(abi.encodePacked(tx.origin, block.number));
-    _redeemGovTokens(msg.sender, true);
+    _redeemGovTokens(msg.sender, false);
     // Get current IdleToken price
     uint256 idlePrice = _tokenPrice();
     // transfer tokens to this contract
@@ -558,7 +558,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
    * @param _amount : amount of IdleTokens to be burned
    */
   function redeemInterestBearingTokens(uint256 _amount)
-    external nonReentrant {
+    external nonReentrant whenPaused {
       _checkMintRedeemSameTx();
 
       _redeemGovTokens(msg.sender, false);
