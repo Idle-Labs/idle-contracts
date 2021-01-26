@@ -9,7 +9,6 @@ pragma solidity 0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -22,7 +21,7 @@ import "../interfaces/IVariableDebtToken.sol";
 import "../interfaces/IStableDebtToken.sol";
 import "../interfaces/AaveInterestRateStrategyV2.sol";
 
-contract IdleAaveV2 is ILendingProtocol, Ownable {
+contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -43,21 +42,13 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
 
     token = _token;
     underlying = _underlying;
-    IERC20(_underlying).safeApprove(
-      provider.getLendingPool(),
-      uint256(-1)
-    );
+    IERC20(_underlying).approve(provider.getLendingPool(), uint256(-1));
   }
 
   /**
-   * Calculate next supply rate for Aave, given an `_amount` supplied (last array param)
-   * and all other params supplied.
-   * on calculations.
-   *
-   * @param _ : array with all params needed for calculation (see below)
-   * @return : yearly net rate
+   * Not used
    */
-  function nextSupplyRateWithParams(uint256[] calldata _)
+  function nextSupplyRateWithParams(uint256[] calldata)
     external view
     returns (uint256) {
     return 0;
@@ -93,14 +84,6 @@ contract IdleAaveV2 is ILendingProtocol, Ownable {
         getReserveFactor(data.configuration)
       );
       return newLiquidityRate.mul(100).div(10**9);
-  }
-
-  // copied from https://github.com/aave/protocol-v2/blob/dbd77ad9312f607b420da746c2cb7385d734b015/contracts/protocol/libraries/configuration/ReserveConfiguration.sol#L242
-  function getReserveFactor(DataTypes.ReserveConfigurationMap memory self) internal pure returns (uint256) {
-    uint256 RESERVE_FACTOR_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFFFFFF; // prettier-ignore
-    uint256 RESERVE_FACTOR_START_BIT_POSITION = 64;
-
-    return (self.data & ~RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_START_BIT_POSITION;
   }
 
   /**

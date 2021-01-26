@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.5.16;
 
-library DataTypes {
+contract DataTypes {
   // refer to the whitepaper, section 1.1 basic concepts for a formal description of these properties.
   struct ReserveData {
     //stores the reserve configuration
@@ -46,4 +46,12 @@ library DataTypes {
   }
 
   enum InterestRateMode {NONE, STABLE, VARIABLE}
+
+  // copied from https://github.com/aave/protocol-v2/blob/dbd77ad9312f607b420da746c2cb7385d734b015/contracts/protocol/libraries/configuration/ReserveConfiguration.sol#L242
+  function getReserveFactor(DataTypes.ReserveConfigurationMap memory self) internal pure returns (uint256) {
+    uint256 RESERVE_FACTOR_MASK = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFFFFFF; // prettier-ignore
+    uint256 RESERVE_FACTOR_START_BIT_POSITION = 64;
+
+    return (self.data & ~RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_START_BIT_POSITION;
+  }
 }
