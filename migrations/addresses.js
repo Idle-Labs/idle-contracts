@@ -39,6 +39,11 @@ const aDAI = {
 
   'deploy': '', // used for truffle Teams deploy, now kovan
 };
+
+const aDAIV2 = {
+  'live': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+};
+
 const CHAI = {
   'live': '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215',
   'proxy': '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215',
@@ -128,6 +133,11 @@ const aUSDC = {
 
   'deploy': '', // used for truffle Teams deploy, now kovan
 };
+
+const aUSDCV2 = {
+  'live': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+}
+
 const USDC = {
   'live': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   'live-fork': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // needed for truffle
@@ -336,6 +346,7 @@ module.exports = {
   cDAI: cDAI,
   iDAI: iDAI,
   aDAI: aDAI,
+  aDAIV2: aDAIV2,
   CHAI: CHAI,
   DAI: DAI,
   yxDAI: yxDAI,
@@ -343,6 +354,7 @@ module.exports = {
   cUSDC: cUSDC,
   iUSDC: iUSDC,
   aUSDC: aUSDC,
+  aUSDCV2: aUSDCV2,
   USDC: USDC,
   yxUSDC: yxUSDC,
   cUSDT: cUSDT,

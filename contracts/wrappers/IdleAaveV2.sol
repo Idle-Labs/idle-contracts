@@ -144,6 +144,6 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
    * @return underlying tokens available
    */
   function availableLiquidity() external view returns (uint256) {
-    return IERC20(token).balanceOf(provider.getLendingPool());
+    return IERC20(underlying).balanceOf(token);
   }
 }
