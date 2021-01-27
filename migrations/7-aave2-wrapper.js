@@ -82,7 +82,11 @@ const test = async (deployer, token, underlying, decimals) => {
   checkIncreased(aDAIBalanceAfterMint, await aDAI.balanceOf(TOKENS_HOLDER), "TOKENS_HOLDER should have received aDAI");
 };
 
-module.exports = async (deployer) => {
+module.exports = async (deployer, network) => {
+  if (network === 'test' || network == 'coverage') {
+    return;
+  }
+
   await test(deployer, addresses.aDAIV2.live, addresses.DAI.live, 18);
   await test(deployer, addresses.aUSDCV2.live, addresses.USDC.live, 6);
 }
