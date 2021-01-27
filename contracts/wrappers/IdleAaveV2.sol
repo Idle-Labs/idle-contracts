@@ -30,18 +30,18 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
   // underlying token (token eg DAI) address
   address public underlying;
 
-  address public constant aaveAddressesProvider = address(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
-  AaveLendingPoolProviderV2 provider = AaveLendingPoolProviderV2(aaveAddressesProvider);
+  AaveLendingPoolProviderV2 provider;
 
   /**
    * @param _token : aToken address
    * @param _underlying : underlying token (eg DAI) address
    */
-  constructor(address _token, address _underlying) public {
+  constructor(address _token, address _underlying, address _addressesProvider) public {
     require(_token != address(0) && _underlying != address(0), 'AAVE: some addr is 0');
 
     token = _token;
     underlying = _underlying;
+    provider = AaveLendingPoolProviderV2(_addressesProvider);
     IERC20(_underlying).approve(provider.getLendingPool(), uint256(-1));
   }
 
