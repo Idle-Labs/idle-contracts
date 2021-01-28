@@ -18,7 +18,7 @@ contract aDAIMock is AToken, ERC20, ERC20Detailed {
     _mint(tokenOwner, 10**23); // 100.000 aDAI
   }
 
-  function redeem(uint256 amount) public {
+  function redeem(uint256 amount) external {
     _burn(msg.sender, amount);
     require(IERC20(dai).transfer(msg.sender, amount), "Error during transfer"); // 1 DAI
   }
@@ -28,6 +28,6 @@ contract aDAIMock is AToken, ERC20, ERC20Detailed {
 
   function burn(address user, address receiverOfUnderlying, uint256 amount, uint256 index) external {
     _burn(user, amount);
-    require(IERC20(dai).transfer(receiverOfUnderlying, amount), "Error during transfer"); // 1 DAI
+    require(IERC20(dai).transfer(receiverOfUnderlying, amount), "Error during transfer");
   }
 }
