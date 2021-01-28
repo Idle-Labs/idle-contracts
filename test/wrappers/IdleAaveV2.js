@@ -8,7 +8,7 @@ const aaveLendingPoolCoreMock = artifacts.require('aaveLendingPoolCoreMock');
 const AaveInterestRateStrategyMock = artifacts.require('AaveInterestRateStrategyMockV2');
 const AaveStableDebtTokenMock = artifacts.require('AaveStableDebtTokenMock');
 const AaveVariableDebtTokenMock = artifacts.require('AaveVariableDebtTokenMock');
-const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
+const aaveLendingPoolMockV2 = artifacts.require('aaveLendingPoolMockV2');
 const BNify = n => new BN(String(n));
 
 contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
@@ -25,7 +25,7 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     this.aaveLendingPoolProviderMock = await aaveLendingPoolProviderMock.new();
     this.aaveLendingPoolCoreMock = await aaveLendingPoolCoreMock.new();
     this.aaveInterestRateStrategyMock = await AaveInterestRateStrategyMock.new();
-    this.aaveLendingPoolMock = await aaveLendingPoolMock.new(this.DAIMock.address, this.aDAIMock.address);
+    this.aaveLendingPoolMock = await aaveLendingPoolMockV2.new(this.DAIMock.address, this.aDAIMock.address);
     await this.aaveLendingPoolProviderMock._setLendingPoolCore(this.aaveLendingPoolCoreMock.address);
     await this.aaveLendingPoolProviderMock._setLendingPool(this.aaveLendingPoolMock.address);
     await this.aaveLendingPoolCoreMock._setReserve(this.aaveInterestRateStrategyMock.address);
@@ -34,8 +34,8 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     await this.aaveInterestRateStrategyMock._setSupplyRate(this.oneRay.div(BNify('100')).mul(BNify('2')));
     await this.aaveInterestRateStrategyMock._setBorrowRate(this.oneRay.div(BNify('100')).mul(BNify('3')));
 
-    this.aaveStableDebtTokenMock = await AaveStableDebtTokenMock.new(77, 88);
-    this.aaveVariableDebtTokenMock = await AaveVariableDebtTokenMock.new(999);
+    this.aaveStableDebtTokenMock = await AaveStableDebtTokenMock.new(0, 0);
+    this.aaveVariableDebtTokenMock = await AaveVariableDebtTokenMock.new(0);
 
     await this.aaveLendingPoolMock.setStableDebtTokenAddress(this.aaveStableDebtTokenMock.address);
     await this.aaveLendingPoolMock.setVariableDebtTokenAddress(this.aaveVariableDebtTokenMock.address);
@@ -79,30 +79,30 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     res.should.be.bignumber.equal(BNify('0'));
   });
 
-  // it('mint creates aTokens and it sends them to msg.sender', async function () {
-  //   // deposit 100 DAI in aDAIWrapper
-  //   await this.DAIMock.transfer(this.aDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
-  //   await this.aDAIMock.transfer(this.aaveLendingPoolMock.address, BNify('100').mul(this.one), {from: creator});
+  it('mint creates aTokens and it sends them to msg.sender', async function () {
+    // deposit 100 DAI in aDAIWrapper
+    await this.DAIMock.transfer(this.aDAIWrapper.address, BNify('100').mul(this.one), {from: creator});
+    await this.aDAIMock.transfer(this.aaveLendingPoolMock.address, BNify('100').mul(this.one), {from: creator});
 
-  //   // mints in Aave with 100 DAI
-  //   const callRes = await this.aDAIWrapper.mint.call({ from: nonOwner });
-  //   // check return value
-  //   BNify(callRes).should.be.bignumber.equal(BNify('100').mul(this.one));
-  //   // do the effective tx
-  //   await this.aDAIWrapper.mint({ from: nonOwner });
-  //   (await this.aDAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('100').mul(this.one));
-  // });
+    // mints in Aave with 100 DAI
+    const callRes = await this.aDAIWrapper.mint.call({ from: nonOwner });
+    // check return value
+    BNify(callRes).should.be.bignumber.equal(BNify('100').mul(this.one));
+    // do the effective tx
+    await this.aDAIWrapper.mint({ from: nonOwner });
+    (await this.aDAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('100').mul(this.one));
+  });
 
-  // it('redeem creates aTokens and it sends them to msg.sender', async function () {
-  //   // fund aDAIMock with 100 DAI
-  //   await this.DAIMock.transfer(this.aDAIMock.address, BNify('100').mul(this.one), {from: creator});
-  //   // deposit 100 aDAI in aDAIWrapper
-  //   await this.aDAIMock.transfer(this.aDAIWrapper.address, BNify('100').mul(this.oneAToken), {from: creator});
-  //   const callRes = await this.aDAIWrapper.redeem.call(nonOwner, { from: nonOwner });
-  //   // check return value
-  //   BNify(callRes).should.be.bignumber.equal(BNify('100').mul(this.one));
-  //   // do the effective tx
-  //   await this.aDAIWrapper.redeem(nonOwner, { from: nonOwner });
-  //   (await this.DAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('100').mul(this.one));
-  // });
+  it('redeem creates aTokens and it sends them to msg.sender', async function () {
+    // fund aDAIMock with 100 DAI
+    await this.DAIMock.transfer(this.aDAIMock.address, BNify('100').mul(this.one), {from: creator});
+    // deposit 100 aDAI in aDAIWrapper
+    await this.aDAIMock.transfer(this.aDAIWrapper.address, BNify('100').mul(this.oneAToken), {from: creator});
+    const callRes = await this.aDAIWrapper.redeem.call(nonOwner, { from: nonOwner });
+    // check return value
+    BNify(callRes).should.be.bignumber.equal(BNify('100').mul(this.one));
+    // do the effective tx
+    await this.aDAIWrapper.redeem(nonOwner, { from: nonOwner });
+    (await this.DAIMock.balanceOf(nonOwner)).should.be.bignumber.equal(BNify('100').mul(this.one));
+  });
 });
