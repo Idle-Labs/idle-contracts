@@ -30,7 +30,7 @@ const advanceBlocks = async n => {
     if (i === 0 || i % 100 === 0) {
       process.stdout.clearLine();  // clear current text
       process.stdout.cursorTo(0);
-      process.stdout.write(`waiting for ${n - i} blocks`);
+      process.stdout.write(`waiting for ${n - i} blocks...`);
     }
 
     await time.advanceBlock();
@@ -79,7 +79,7 @@ module.exports = async (deployer, network, accounts) => {
 
   const aTokenAddress = addresses.aDAIV2.live;
   const underlyingTokenAddress = addresses.DAI.live;
-  await deployer.deploy(IdleAaveV2, aTokenAddress, underlyingTokenAddress, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", idleToken);
+  await deployer.deploy(IdleAaveV2, aTokenAddress, underlyingTokenAddress, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", idleToken.address);
   const aaveV2Wrapper = await IdleAaveV2.deployed();
 
   const idleInstance = await IIdle.at(addresses.IDLE)
@@ -91,7 +91,7 @@ module.exports = async (deployer, network, accounts) => {
   await vesterFounder.setDelegate(founder, {from: founder});
 
   const res = await idleToken.getAPRs();
-  let tokens = res["0"].map(v => v);
+  let tokens = res["0"].map(v => v.toString());
   let wrappers = [];
   for (var i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -102,15 +102,10 @@ module.exports = async (deployer, network, accounts) => {
   tokens = [...tokens, addresses.aDAIV2.live];
   wrappers = [...wrappers, aaveV2Wrapper.address];
 
-  console.log("***", tokens)
-  console.log("***", wrappers)
-
   const params = [
     ['address[]', 'address[]', 'uint256[]', 'bool'],
-    [tokens, wrappers, [20000, 20000, 20000, 20000], false]
+    [tokens, wrappers, [20000, 20000, 10000, 50000], true]
   ];
-
-  console.log("*******", params)
 
   let propName = 'add aavev2 wrapper';
   let proposal = {
@@ -121,8 +116,6 @@ module.exports = async (deployer, network, accounts) => {
     description: propName,
     from: founder
   }
-
-  console.log("*********", proposal)
 
   await createProposal(govInstance, founder, proposal, propName);
 };
