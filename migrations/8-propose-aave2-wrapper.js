@@ -1,5 +1,6 @@
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const IIdle = artifacts.require("IIdle")
+const IdleTokenV3_1 = artifacts.require("IdleTokenV3_1")
 const IERC20 = artifacts.require("IERC20.sol");
 const IVesterFactory = artifacts.require("IVesterFactory.sol");
 const IVester = artifacts.require("IVester");
@@ -72,14 +73,14 @@ module.exports = async (deployer, network, accounts) => {
     await advanceBlocks(2);
   };
 
+  const founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
+  const idleToken = await IdleTokenV3_1.at(addresses.idleDAIV4);
   const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
 
   const aTokenAddress = addresses.aDAIV2.live;
   const underlyingTokenAddress = addresses.DAI.live;
-  await deployer.deploy(IdleAaveV2, aTokenAddress, underlyingTokenAddress, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5");
+  await deployer.deploy(IdleAaveV2, aTokenAddress, underlyingTokenAddress, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", idleToken);
   const aaveV2Wrapper = await IdleAaveV2.deployed();
-
-  let founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";//accounts[0];
 
   const idleInstance = await IIdle.at(addresses.IDLE)
   const vesterFactory = await IVesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
@@ -89,18 +90,39 @@ module.exports = async (deployer, network, accounts) => {
   await idleInstance.delegate(founder, {from: founder});
   await vesterFounder.setDelegate(founder, {from: founder});
 
+  const res = await idleToken.getAPRs();
+  let tokens = res["0"].map(v => v);
+  let wrappers = [];
+  for (var i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const wrapper = await idleToken.protocolWrappers(token);
+    wrappers.push(wrapper);
+  };
+
+  tokens = [...tokens, addresses.aDAIV2.live];
+  wrappers = [...wrappers, aaveV2Wrapper.address];
+
+  console.log("***", tokens)
+  console.log("***", wrappers)
+
+  const params = [
+    ['address[]', 'address[]', 'uint256[]', 'bool'],
+    [tokens, wrappers, [20000, 20000, 20000, 20000], false]
+  ];
+
+  console.log("*******", params)
+
   let propName = 'add aavev2 wrapper';
   let proposal = {
-    targets: [addresses.idleDAIV4],
+    targets: [idleToken.address],
     values: [toBN("0")],
     signatures: ["setAllAvailableTokensAndWrappers(address[],address[],uint256[],bool)"],
-    calldatas: [web3.eth.abi.encodeParameters(
-      ['address[]', 'address[]', 'uint256[]', 'bool'],
-      [[addresses.DAI.live], [aaveV2Wrapper.address], [100000], false]
-    )],
+    calldatas: [web3.eth.abi.encodeParameters(...params)],
     description: propName,
     from: founder
   }
+
+  console.log("*********", proposal)
 
   await createProposal(govInstance, founder, proposal, propName);
 };

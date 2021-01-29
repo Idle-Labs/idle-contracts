@@ -19,7 +19,7 @@ const checkIncreased = (a, b, message) => {
 }
 
 const test = async (deployer, token, underlying, decimals) => {
-  await deployer.deploy(IdleAaveV2, token, underlying, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5");
+  await deployer.deploy(IdleAaveV2, token, underlying, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
   const wrapper = await IdleAaveV2.deployed();
 
   const DAI = await IERC20.at(underlying);
@@ -64,6 +64,7 @@ const test = async (deployer, token, underlying, decimals) => {
   // TOKENS_HOLDER calls mint
   const aDAIBalanceBeforeMint = toBN(await aDAI.balanceOf(TOKENS_HOLDER));
   const mintedValue = toBN(await DAI.balanceOf(wrapper.address));
+  console.log("mint")
   await wrapper.mint({ from: TOKENS_HOLDER });
 
   check(toBN(await DAI.balanceOf(token)), initialLiquidity.plus(mintedValue), "liquidity should increase");
@@ -76,7 +77,8 @@ const test = async (deployer, token, underlying, decimals) => {
   check(await aDAI.balanceOf(wrapper.address), aDAIBalanceAfterMint, `wrapper should have received ${toUnitString(aDAIBalanceAfterMint)} aDAI`);
 
   // TOKENS_HOLDER calls redeem
-  await wrapper.redeem(TOKENS_HOLDER);
+  console.log("redeem")
+  await wrapper.redeem(TOKENS_HOLDER, { from: TOKENS_HOLDER });
   check(await aDAI.balanceOf(wrapper.address), "0", `wrapper should have 0 aDAI`);
 
   checkIncreased(aDAIBalanceAfterMint, await aDAI.balanceOf(TOKENS_HOLDER), "TOKENS_HOLDER should have received aDAI");

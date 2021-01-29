@@ -29,6 +29,7 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
   address public token;
   // underlying token (token eg DAI) address
   address public underlying;
+  address public idleToken;
 
   AaveLendingPoolProviderV2 provider;
 
@@ -36,13 +37,22 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
    * @param _token : aToken address
    * @param _underlying : underlying token (eg DAI) address
    */
-  constructor(address _token, address _underlying, address _addressesProvider) public {
+  constructor(address _token, address _underlying, address _addressesProvider, address _idleToken) public {
     require(_token != address(0) && _underlying != address(0), 'AAVE: some addr is 0');
 
     token = _token;
     underlying = _underlying;
+    idleToken = _idleToken;
     provider = AaveLendingPoolProviderV2(_addressesProvider);
     IERC20(_underlying).approve(provider.getLendingPool(), uint256(-1));
+  }
+
+  /**
+   * Throws if called by any account other than IdleToken contract.
+   */
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
+    _;
   }
 
   /**
@@ -113,7 +123,7 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
    * @return aTokens minted
    */
   function mint()
-    external
+    external onlyIdle
     returns (uint256 aTokens) {
       aTokens = IERC20(underlying).balanceOf(address(this));
       if (aTokens == 0) {
@@ -132,7 +142,7 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
    * @return underlying tokens redeemd
    */
   function redeem(address _account)
-    external
+    external onlyIdle
     returns (uint256 tokens) {
       tokens = IERC20(token).balanceOf(address(this));
       AaveLendingPoolV2(provider.getLendingPool()).withdraw(underlying, tokens, _account);
