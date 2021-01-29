@@ -62,6 +62,14 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
   }
 
   /**
+   * Throws if called by any account other than IdleToken contract.
+   */
+  modifier onlyIdle() {
+    require(msg.sender == idleToken, "Ownable: caller is not IdleToken");
+    _;
+  }
+
+  /**
    * Not used
    */
   function nextSupplyRateWithParams(uint256[] calldata)
