@@ -31,7 +31,7 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
   address public underlying;
   address public idleToken;
 
-  AaveLendingPoolProviderV2 provider;
+  AaveLendingPoolProviderV2 public provider;
 
   /**
    * @param _token : aToken address
