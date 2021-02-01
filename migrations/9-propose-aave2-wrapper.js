@@ -61,7 +61,7 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
-  if (idleTokens) {
+  if (!idleTokens) {
     console.log("The idleTokens variable should be initialized with the output of migration 8.");
     process.exit(1);
   }
