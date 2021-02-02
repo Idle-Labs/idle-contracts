@@ -62,7 +62,7 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   if (!idleTokens) {
-    console.log("The idleTokens variable should be initialized with the output of migration 8.");
+    console.log("The idleTokens variable should be initialized with the output of migration 9.");
     process.exit(1);
   }
 
@@ -109,7 +109,6 @@ module.exports = async (deployer, network, accounts) => {
 
   const aTokenAddress = addresses.aDAIV2.live;
   const underlyingTokenAddress = addresses.DAI.live;
-  const aaveV2Wrapper = await IdleAaveV2.deployed();
 
   const idleInstance = await IIdle.at(addresses.IDLE)
   const vesterFactory = await IVesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
@@ -172,14 +171,20 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
+  await web3.eth.sendTransaction({ from: TOKENS_HOLDER, to: addresses.timelock, value: "1000000000000000000" });
 
   for (const idleTokenName in idleTokens) {
     const attrs = idleTokens[idleTokenName];
-    console.log("testing", idleTokenName);
+    console.log("\n\ntesting", idleTokenName);
 
     const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
     const underlyingToken = await IERC20.at(attrs.underlyingTokenAddress);
 
-    await setAllocations([10000, 10000, 10000, 70000]);
+    console.log("setting allocations for", idleTokenName);
+    const tokens = await idleToken.getAPRs();
+    console.log(tokens)
+    const tx = await idleToken.setAllocations([10000, 10000, 10000, 70000], { from: addresses.timelock });
+    console.log("done setting allocations for", idleTokenName);
+    console.log(tx)
   }
 };
