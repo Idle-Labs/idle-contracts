@@ -2,7 +2,7 @@ const rl = require("readline");
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const IIdle = artifacts.require("IIdle")
 const IdleTokenV3_1 = artifacts.require("IdleTokenV3_1")
-const IERC20 = artifacts.require("IERC20.sol");
+const IERC20 = artifacts.require("IERC20Detailed.sol");
 const IVesterFactory = artifacts.require("IVesterFactory.sol");
 const IVester = artifacts.require("IVester");
 const addresses = require("./addresses");
@@ -166,24 +166,17 @@ module.exports = async (deployer, network, accounts) => {
     from: founder
   }
 
-  await createProposal(govInstance, founder, proposal, propName);
+  // await createProposal(govInstance, founder, proposal, propName);
   if (network === 'live') {
     return;
   }
 
   await web3.eth.sendTransaction({ from: TOKENS_HOLDER, to: addresses.timelock, value: "1000000000000000000" });
 
-  for (const idleTokenName in idleTokens) {
-    const attrs = idleTokens[idleTokenName];
-    console.log("\n\ntesting", idleTokenName);
-
-    const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
-    const underlyingToken = await IERC20.at(attrs.underlyingTokenAddress);
-
+  const setAllocationsAndRebalance = async (idleToken, newWrapperAllocation) => {
     const tokens = (await idleToken.getAPRs()).addresses;
-    console.log("tokens", tokens);
+    console.log("tokens", tokens.join(", "));
     const totalAllocations = 100000;
-    const newWrapperAllocation = 50000;
     const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / (tokens.length - 1));
     const allocations = new Array(tokens.length - 1).fill(oldWrappersAllocation);
     allocations.push(newWrapperAllocation);
@@ -191,6 +184,10 @@ module.exports = async (deployer, network, accounts) => {
     if (tot < totalAllocations) {
       allocations[0] += totalAllocations - tot;
     }
+
+    const idleTokenDecimals = toBN(await idleToken.decimals());
+    const idleTokenName = await idleToken.name();
+    const toIdleTokenUnit = v => v.div(toBN("10").pow(idleTokenDecimals));
 
     console.log("new allocations", allocations)
     console.log("setting allocations for", idleTokenName);
@@ -201,12 +198,26 @@ module.exports = async (deployer, network, accounts) => {
     await idleToken.rebalance({ from: addresses.timelock });
     console.log("rebalancing done");
 
-    const totalSupply = await idleToken.totalSupply();
+    const totalSupply = toIdleTokenUnit(toBN(await idleToken.totalSupply()));
     console.log("total supply", totalSupply.toString());
     for (var i = 0; i < tokens.length; i++) {
       const token = await IERC20.at(tokens[i]);
-      const balance = await token.balanceOf(idleToken.address);
-      console.log("token balance", tokens[i], balance.toString());
+      const tokenDecimals = toBN(await token.decimals());
+      const toTokenUnit = v => v.div(toBN("10").pow(tokenDecimals));
+      const name = await token.name();
+      const balance = toTokenUnit(toBN(await token.balanceOf(idleToken.address)));
+      console.log("token balance", name, tokens[i], balance.toString());
     };
+  }
+
+  for (const idleTokenName in idleTokens) {
+    const attrs = idleTokens[idleTokenName];
+    console.log("\n\n********************************* testing", idleTokenName);
+
+    const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
+    console.log("--------------- 50000")
+    await setAllocationsAndRebalance(idleToken, 50000);
+    console.log("--------------- 0")
+    await setAllocationsAndRebalance(idleToken, 0);
   }
 };
