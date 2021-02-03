@@ -178,6 +178,10 @@ module.exports = async (deployer, network, accounts) => {
     const tokens = (await idleToken.getAPRs()).addresses;
     console.log("tokens", tokens.join(", "));
     const totalAllocations = 100000;
+<<<<<<< HEAD
+=======
+    const newWrapperAllocation = 50000;
+>>>>>>> fix
     const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / (tokens.length - 1));
     const allocations = new Array(tokens.length - 1).fill(oldWrappersAllocation);
     allocations.push(newWrapperAllocation);
