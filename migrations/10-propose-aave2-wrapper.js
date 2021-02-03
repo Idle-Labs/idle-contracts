@@ -200,5 +200,13 @@ module.exports = async (deployer, network, accounts) => {
     console.log("rebalancing");
     await idleToken.rebalance({ from: addresses.timelock });
     console.log("rebalancing done");
+
+    const totalSupply = await idleToken.totalSupply();
+    console.log("total supply", totalSupply);
+    for (var i = 0; i < tokens.length; i++) {
+      const token = await IERC20.at(tokens[i]);
+      const balance = await token.balanceOf(idleToken.address);
+      console.log("token balance", token[i], balance);
+    };
   }
 };
