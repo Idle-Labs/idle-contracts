@@ -202,11 +202,11 @@ module.exports = async (deployer, network, accounts) => {
     console.log("rebalancing done");
 
     const totalSupply = await idleToken.totalSupply();
-    console.log("total supply", totalSupply);
+    console.log("total supply", totalSupply.toString());
     for (var i = 0; i < tokens.length; i++) {
       const token = await IERC20.at(tokens[i]);
       const balance = await token.balanceOf(idleToken.address);
-      console.log("token balance", token[i], balance);
+      console.log("token balance", tokens[i], balance.toString());
     };
   }
 };
