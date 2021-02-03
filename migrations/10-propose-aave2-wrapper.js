@@ -184,8 +184,8 @@ module.exports = async (deployer, network, accounts) => {
     console.log("tokens", tokens);
     const totalAllocations = 100000;
     const newWrapperAllocation = 50000;
-    const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / tokens.length);
-    const allocations = new Array(tokens.length).fill(oldWrappersAllocation)
+    const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / (tokens.length - 1);
+    const allocations = new Array(tokens.length - 1).fill(oldWrappersAllocation);
     allocations.push(newWrapperAllocation);
     const tot = allocations.reduce((i, tot) => tot + i, 0);
     if (tot < totalAllocations) {
@@ -194,7 +194,7 @@ module.exports = async (deployer, network, accounts) => {
 
     console.log("new allocations", allocations)
     console.log("setting allocations for", idleTokenName);
-    await idleToken.setAllocations([10000, 10000, 10000, 70000], { from: addresses.timelock });
+    await idleToken.setAllocations(allocations, { from: addresses.timelock });
     console.log("done setting allocations for", idleTokenName);
   }
 };
