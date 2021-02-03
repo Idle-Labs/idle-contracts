@@ -192,7 +192,8 @@ module.exports = async (deployer, network, accounts) => {
     console.log("new allocations", allocations)
     console.log("setting allocations for", idleTokenName);
     await idleToken.setAllocations(allocations, { from: addresses.timelock });
-    console.log("done setting allocations for", idleTokenName);
+    const newAllocations = await idleToken.getAllocations();
+    console.log("done setting allocations for", idleTokenName, "-", newAllocations.join(", "));
 
     console.log("rebalancing");
     await idleToken.rebalance({ from: addresses.timelock });
