@@ -166,7 +166,7 @@ module.exports = async (deployer, network, accounts) => {
     from: founder
   }
 
-  // await createProposal(govInstance, founder, proposal, propName);
+  await createProposal(govInstance, founder, proposal, propName);
   if (network === 'live') {
     return;
   }
