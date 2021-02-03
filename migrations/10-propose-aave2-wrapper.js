@@ -184,7 +184,7 @@ module.exports = async (deployer, network, accounts) => {
     console.log("tokens", tokens);
     const totalAllocations = 100000;
     const newWrapperAllocation = 50000;
-    const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / (tokens.length - 1);
+    const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / (tokens.length - 1));
     const allocations = new Array(tokens.length - 1).fill(oldWrappersAllocation);
     allocations.push(newWrapperAllocation);
     const tot = allocations.reduce((i, tot) => tot + i, 0);
