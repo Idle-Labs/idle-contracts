@@ -180,11 +180,21 @@ module.exports = async (deployer, network, accounts) => {
     const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
     const underlyingToken = await IERC20.at(attrs.underlyingTokenAddress);
 
+    const tokens = (await idleToken.getAPRs()).addresses;
+    console.log("tokens", tokens);
+    const totalAllocations = 100000;
+    const newWrapperAllocation = 50000;
+    const oldWrappersAllocation = Math.floor((totalAllocations - newWrapperAllocation) / tokens.length);
+    const allocations = new Array(tokens.length).fill(oldWrappersAllocation)
+    allocations.push(newWrapperAllocation);
+    const tot = allocations.reduce((i, tot) => tot + i, 0);
+    if (tot < totalAllocations) {
+      allocations[0] += totalAllocations - tot;
+    }
+
+    console.log("new allocations", allocations)
     console.log("setting allocations for", idleTokenName);
-    const tokens = await idleToken.getAPRs();
-    console.log(tokens)
-    const tx = await idleToken.setAllocations([10000, 10000, 10000, 70000], { from: addresses.timelock });
+    await idleToken.setAllocations([10000, 10000, 10000, 70000], { from: addresses.timelock });
     console.log("done setting allocations for", idleTokenName);
-    console.log(tx)
   }
 };
