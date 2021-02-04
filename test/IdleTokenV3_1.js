@@ -2513,4 +2513,41 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       {from: manager}
     );
   })
+
+  it("setAllocations contract fix - setAllocations should not fail if wrappers count decreased", async function() {
+    const aDAIV2Mock = await DAIMock.new({from: creator});
+    const aDAIV2Wrapper = await aDAIWrapperMock.new(
+      aDAIV2Mock.address,
+      this.DAIMock.address,
+      {from: creator}
+    );
+
+    const tokens = (await this.token.getAPRs()).addresses.map(a => a); // transform to a normal array
+    const wrappers = [];
+    const allocations = await this.token.getAllocations();
+    for (var i = 0; i < tokens.length; i++) {
+      const wrapper = await this.token.protocolWrappers(tokens[i]);
+      wrappers.push(wrapper);
+    };
+
+    [tokens, wrappers, allocations].forEach(list => {
+      list.length.should.be.equal(4);
+    });
+
+    tokens.pop();
+    wrappers.pop();
+
+    await this.token.setAllAvailableTokensAndWrappers(
+      tokens,
+      wrappers,
+      [BNify('20000'), BNify('20000'), BNify('20000')],
+      true,
+      {from: creator}
+    );
+
+    await this.token.setAllocations(
+      [BNify('20000'), BNify('20000'), BNify('20000')],
+      {from: manager}
+    );
+  })
 });
