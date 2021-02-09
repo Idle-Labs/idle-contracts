@@ -14,7 +14,7 @@ const ledgerOptions = {
 };
 
 module.exports = {
-  plugins: ["truffle-security", "solidity-coverage", "truffle-plugin-verify"],
+  plugins: ["truffle-security", "solidity-coverage", "truffle-plugin-verify", "truffle-contract-size"],
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!
   api_keys: {
@@ -54,10 +54,10 @@ module.exports = {
     },
     // main ethereum network(mainnet)
     live: {
-      provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
-      // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
+      // provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
+      provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
-      gas: 250000,
+      gas: 3500000,
       gasPrice: 100 * 1e9, // 90 gwei
       skipDryRun: true
     },
