@@ -30,7 +30,7 @@ import "./interfaces/PriceOracle.sol";
 
 import "./GST2ConsumerV2.sol";
 
-contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
+contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -82,13 +82,13 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
 
   // ########## IdleToken V4_1 updates
   // Idle governance token
-  address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e); // TODO update this!
+  address public constant IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e);
   // Compound governance token
   address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
   uint256 private constant FULL_ALLOC = 100000;
 
   // Idle distribution controller
-  address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE); // TODO update this
+  address public constant idleController = address(0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE);
   // oracle used for calculating the avgAPR with gov tokens
   address public oracle;
   // eg cDAI -> COMP
