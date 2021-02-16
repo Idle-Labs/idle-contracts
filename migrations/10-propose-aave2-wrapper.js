@@ -13,6 +13,7 @@ const IGovernorAlpha = artifacts.require("IGovernorAlpha");
 const toBN = v => new BigNumber(v.toString());
 const timelockDelay = 172800
 const TOKENS_HOLDER = "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98";
+const addr0 = '0x0000000000000000000000000000000000000000';
 
 const prompt = (question) => {
   const r = rl.createInterface({
@@ -220,5 +221,28 @@ module.exports = async (deployer, network, accounts) => {
     await setAllocationsAndRebalance(idleToken, 50000);
     console.log("--------------- 0")
     await setAllocationsAndRebalance(idleToken, 0);
+
+    // test mint and redeem
+    const user = '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464';
+    const underlying = await idleToken.token();
+    console.log('underlying', underlying);
+    const underlyingContract = await IERC20.at(underlying);
+    const tokenDecimals = await underlyingContract.decimals();
+    console.log('tokenDecimals', tokenDecimals);
+    const oneToken = toBN(`1e${tokenDecimals}`);
+    const oneIdleToken = toBN(`1e18`);
+    const amount = oneToken.times('100');
+    await underlyingContract.transfer(user, amount, {from: TOKENS_HOLDER}); // whale
+    console.log('transfer complete');
+
+    await underlyingContract.approve(idleToken.address, amount, {from: user});
+    console.log('##### balance token user pre: ', toBN(await underlyingContract.balanceOf(user)).div(oneToken).toString());
+    console.log('##### balance idleToken user pre: ', toBN(await idleToken.balanceOf(user)).div(oneIdleToken).toString());
+    await idleToken.mintIdleToken(amount, true, addr0, {from: user});
+    console.log('##### balance token user post: ', toBN(await underlyingContract.balanceOf(user)).div(oneToken).toString());
+    console.log('##### balance idleToken user post: ', toBN(await idleToken.balanceOf(user)).div(oneIdleToken).toString());
+    await idleToken.redeemIdleToken(await idleToken.balanceOf(user), {from: user});
+    console.log('##### balance token user post 2: ', toBN(await underlyingContract.balanceOf(user)).div(oneToken).toString());
+    console.log('##### balance idleToken user post 2: ', toBN(await idleToken.balanceOf(user)).div(oneIdleToken).toString());
   }
 };
