@@ -260,8 +260,8 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     uint256 total;
     for (uint256 i = 0; i < _allocations.length; i++) {
       total = total.add(_allocations[i]);
-      lastRebalancerAllocations[i] = _allocations[i];
     }
+    lastRebalancerAllocations = _allocations;
     require(total == FULL_ALLOC, "IDLE:!EQ_TOT");
   }
 

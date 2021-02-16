@@ -916,7 +916,10 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     const resBalanceDAIOwnerBefore = await this.DAIMock.balanceOf.call(nonOwner, { from: nonOwner });
 
     // Redeems 10 IdleDAI
+    await this.token.pause({from: creator});
     await this.token.redeemInterestBearingTokens(BNify('10').mul(this.one), {from: nonOwner});
+    await this.token.unpause({from: creator});
+
     // so nonOwner has no IdleDAI
     const resBalanceIdle2 = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle2.should.be.bignumber.equal(BNify('0').mul(this.one));
@@ -2473,4 +2476,78 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.transfer(bar, BNify('12500000000000000000'), {from: foo}); // 12.5 tranfer from foo to bar
     (await this.token.userAvgPrices(bar)).should.be.bignumber.equal(BNify('6').mul(this.one));
   });
+
+  it("setAllocations contract fix - setAllocations should not fail if wrappers count increased", async function() {
+    const aDAIV2Mock = await DAIMock.new({from: creator});
+    const aDAIV2Wrapper = await aDAIWrapperMock.new(
+      aDAIV2Mock.address,
+      this.DAIMock.address,
+      {from: creator}
+    );
+
+    const tokens = (await this.token.getAPRs()).addresses.map(a => a); // transform to a normal array
+    const wrappers = [];
+    const allocations = await this.token.getAllocations();
+    for (var i = 0; i < tokens.length; i++) {
+      const wrapper = await this.token.protocolWrappers(tokens[i]);
+      wrappers.push(wrapper);
+    };
+
+    [tokens, wrappers, allocations].forEach(list => {
+      list.length.should.be.equal(4);
+    });
+
+    tokens.push(aDAIV2Mock.address);
+    wrappers.push(aDAIV2Wrapper.address);
+
+    await this.token.setAllAvailableTokensAndWrappers(
+      tokens,
+      wrappers,
+      [BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000')],
+      true,
+      {from: creator}
+    );
+
+    await this.token.setAllocations(
+      [BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000')],
+      {from: manager}
+    );
+  })
+
+  it("setAllocations contract fix - setAllocations should not fail if wrappers count decreased", async function() {
+    const aDAIV2Mock = await DAIMock.new({from: creator});
+    const aDAIV2Wrapper = await aDAIWrapperMock.new(
+      aDAIV2Mock.address,
+      this.DAIMock.address,
+      {from: creator}
+    );
+
+    const tokens = (await this.token.getAPRs()).addresses.map(a => a); // transform to a normal array
+    const wrappers = [];
+    const allocations = await this.token.getAllocations();
+    for (var i = 0; i < tokens.length; i++) {
+      const wrapper = await this.token.protocolWrappers(tokens[i]);
+      wrappers.push(wrapper);
+    };
+
+    [tokens, wrappers, allocations].forEach(list => {
+      list.length.should.be.equal(4);
+    });
+
+    tokens.pop();
+    wrappers.pop();
+
+    await this.token.setAllAvailableTokensAndWrappers(
+      tokens,
+      wrappers,
+      [BNify('20000'), BNify('20000'), BNify('20000')],
+      true,
+      {from: creator}
+    );
+
+    await this.token.setAllocations(
+      [BNify('20000'), BNify('20000'), BNify('20000')],
+      {from: manager}
+    );
+  })
 });
