@@ -314,6 +314,18 @@ const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
 const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
 
+const allIdleTokens = [
+  idleDAIV4,
+  idleUSDCV4,
+  idleUSDTV4,
+  idleSUSDV4,
+  idleTUSDV4,
+  idleWBTCV4,
+  idleDAISafeV4,
+  idleUSDCSafeV4,
+  idleUSDTSafeV4,
+];
+
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
@@ -356,5 +368,6 @@ module.exports = {
   idleUSDTSafeV4: idleUSDTSafeV4,
   IDLE: IDLE,
   timelock: timelock,
-  proxyAdmin: proxyAdmin
+  proxyAdmin: proxyAdmin,
+  allIdleTokens: allIdleTokens
 };
