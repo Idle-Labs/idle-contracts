@@ -3,6 +3,7 @@ const Idle = artifacts.require("Idle");
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
 const Vester = artifacts.require("Vester");
 const VesterFactory = artifacts.require("VesterFactory");
+const { time } = require('@openzeppelin/test-helpers');
 
 const {
   creator, rebalancerManager, feeAddress, gstAddress,
@@ -67,7 +68,6 @@ module.exports = async function (deployer, network, accounts) {
   const timelockAddress = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
   const ecosystemFund = '0xb0aA1f98523Ec15932dd5fAAC5d86e57115571C7';
   const ONE = BNify('1e18');
-  console.log(ONE.toString())
   console.log('##################################');
 
   const executeProposal = async ({targets, values, signatures, calldatas, description, from}) => {
@@ -143,7 +143,7 @@ module.exports = async function (deployer, network, accounts) {
   ); // calldatas
 
   // Add one action to withdraw 5000 Idle from ecosystem fund
-  targets.push(timelockAddress);
+  targets.push(ecosystemFund);
   values.push(BNify('0'));
   signatures.push('transfer(address,address,uint256)');
   calldatas.push(
