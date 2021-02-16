@@ -2365,7 +2365,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
     await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
 
-    // token's comp = 3; 0.5 + 2 should go to someone. 0.5 should go to foo
+    // token's comp = 3; 0.25 + 1 should go to someone, 0.25 + 1 should to go nonOwner. 0.5 should go to foo
     await this.COMPMock.transfer(this.token.address, this.one, {from: creator});
     await this.IDLEMock.transfer(this.token.address, this.one, {from: creator});
 
