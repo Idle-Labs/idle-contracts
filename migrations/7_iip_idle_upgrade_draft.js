@@ -58,7 +58,7 @@ module.exports = async function (deployer, network, accounts) {
   const timelockAddress = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
   const ecosystemFund = '0xb0aA1f98523Ec15932dd5fAAC5d86e57115571C7';
   const ONE = BNify('1e18');
-
+  console.log(ONE.toString())
   console.log('##################################');
 
   const executeProposal = async ({targets, values, signatures, calldatas, description, from}) => {
@@ -69,7 +69,7 @@ module.exports = async function (deployer, network, accounts) {
     // need 1 block to pass before being able to vote but less than 10
     await advanceBlocks(2);
 
-    await gov.castVote(BNify('1'), true, {from: founder});
+    await gov.castVote(BNify('1'), true, {from});
     console.log('voted');
 
     if (network === 'live') {
@@ -79,7 +79,7 @@ module.exports = async function (deployer, network, accounts) {
     // Need to advance 3d in blocs + 1
     await advanceBlocks(17281);
 
-    await gov.queue(BNify('1'), {from: creator});
+    await gov.queue(BNify('1'), {from});
     console.log('queued');
 
     const currTime2 = BNify((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
@@ -87,7 +87,7 @@ module.exports = async function (deployer, network, accounts) {
     await advanceTime(currTime2.plus(BNify('172800')).plus(BNify('100')));
     await advanceBlocks(1);
 
-    await gov.execute(BNify('1'), {from: creator});
+    await gov.execute(BNify('1'), {from});
     console.log('executed');
     await advanceBlocks(2);
   };
@@ -112,13 +112,12 @@ module.exports = async function (deployer, network, accounts) {
   if (network !== 'live') {
     // Simulate proposal in fork
     proposer = '0x3675D2A334f17bCD4689533b7Af263D48D96eC72';
-    const founderVesting = await vesterFactory.vestingContracts(founder);
-    const vesterFounder = await Vester.at(founderVesting);
-    console.log(txt, BNify(await idle.balanceOf(vesterFounder.address)).div(ONE).toString())
-    await idle.delegate(founder, {from: founder});
-    console.log('delegates founder to founder');
-    await vesterFounder.setDelegate(founder, {from: founder});
-    console.log('delegates vesterFounder to founder');
+    const founderVesting = await vesterFactory.vestingContracts(proposer);
+    const vesterProposer = await Vester.at(founderVesting);
+    await idle.delegate(proposer, {from: proposer});
+    console.log('delegates proposer to proposer');
+    await vesterProposer.setDelegate(proposer, {from: proposer});
+    console.log('delegates vesterProposer to proposer');
   }
 
   if (!newIdleContract || !proxyAdmin || !proposer || !committeeMultisig || !idle.address) {
@@ -140,7 +139,7 @@ module.exports = async function (deployer, network, accounts) {
   calldatas.push(
     web3.eth.abi.encodeParameters(
       ['address', 'address', 'uint256'],
-      [idle.address, committeeMultisig, BNify('5000').mul(ONE)]
+      [idle.address, committeeMultisig, BNify('5000').times(ONE)]
     )
   );
 
