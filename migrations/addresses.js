@@ -39,6 +39,11 @@ const aDAI = {
 
   'deploy': '', // used for truffle Teams deploy, now kovan
 };
+
+const aDAIV2 = {
+  'live': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+};
+
 const CHAI = {
   'live': '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215',
   'proxy': '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215',
@@ -128,6 +133,11 @@ const aUSDC = {
 
   'deploy': '', // used for truffle Teams deploy, now kovan
 };
+
+const aUSDCV2 = {
+  'live': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+}
+
 const USDC = {
   'live': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   'live-fork': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // needed for truffle
@@ -190,6 +200,9 @@ const aUSDT = {
 
   'deploy': '0x71fc860F7D3A592A4a98740e39dB31d25db65ae8', // used for truffle Teams deploy, now kovan
 };
+const aUSDTV2 = {
+  'live': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+};
 const USDT = {
   'live': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
   'live-fork': '0xdAC17F958D2ee523a2206206994597C13D831ec7', // needed for truffle
@@ -214,6 +227,11 @@ const aTUSD = {
   'coverage': '0x4DA9b813057D04BAef4e5800E36083717b4a0341',
   'deploy': '0x4DA9b813057D04BAef4e5800E36083717b4a0341', // used for truffle Teams deploy, now kovan
 };
+
+const aTUSDV2 = {
+  'live': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+};
+
 const TUSD = {
   'live': '0x0000000000085d4780B73119b644AE5ecd22b376',
   'live-fork': '0x0000000000085d4780B73119b644AE5ecd22b376', // needed for truffle
@@ -238,6 +256,9 @@ const aSUSD = {
   'coverage': '0x625ae63000f46200499120b906716420bd059240',
   'deploy': '0x625ae63000f46200499120b906716420bd059240', // used for truffle Teams deploy, now kovan
 };
+const aSUSDV2 = {
+  'live': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+}
 const SUSD = {
   'live': '0x57ab1ec28d129707052df4df418d58a2d46d5f51',
   'live-fork': '0x57ab1ec28d129707052df4df418d58a2d46d5f51', // needed for truffle
@@ -286,6 +307,11 @@ const aWBTC = {
 
   'deploy': '', // used for truffle Teams deploy, now kovan
 };
+
+const aWBTCV2 = {
+  'live': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+};
+
 const WBTC = {
   'live': '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
   'live-fork': '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', // needed for truffle
@@ -336,6 +362,7 @@ module.exports = {
   cDAI: cDAI,
   iDAI: iDAI,
   aDAI: aDAI,
+  aDAIV2: aDAIV2,
   CHAI: CHAI,
   DAI: DAI,
   yxDAI: yxDAI,
@@ -343,19 +370,24 @@ module.exports = {
   cUSDC: cUSDC,
   iUSDC: iUSDC,
   aUSDC: aUSDC,
+  aUSDCV2: aUSDCV2,
   USDC: USDC,
   yxUSDC: yxUSDC,
   cUSDT: cUSDT,
   iUSDT: iUSDT,
   aUSDT: aUSDT,
+  aUSDTV2: aUSDTV2,
   USDT: USDT,
   aTUSD: aTUSD,
+  aTUSDV2: aTUSDV2,
   TUSD: TUSD,
   aSUSD: aSUSD,
+  aSUSDV2: aSUSDV2,
   SUSD: SUSD,
   cWBTC: cWBTC,
   iWBTC: iWBTC,
   aWBTC: aWBTC,
+  aWBTCV2: aWBTCV2,
   WBTC: WBTC,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,

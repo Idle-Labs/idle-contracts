@@ -25,4 +25,9 @@ contract aDAIMock is AToken, ERC20, ERC20Detailed {
   function setPriceForTest(uint256 _price) external {
     price = _price;
   }
+
+  function burn(address user, address receiverOfUnderlying, uint256 amount, uint256 index) external {
+    _burn(user, amount);
+    require(IERC20(dai).transfer(receiverOfUnderlying, amount), "Error during transfer");
+  }
 }

@@ -1,8 +1,9 @@
 const BigNumber = require('bignumber.js');
 const Idle = artifacts.require("Idle");
-const GovernorAlpha = artifacts.require("GovernorAlpha");
+const IGovernorAlpha = artifacts.require("IGovernorAlpha");
 const Vester = artifacts.require("Vester");
 const VesterFactory = artifacts.require("VesterFactory");
+const { time } = require('@openzeppelin/test-helpers');
 
 const {
   creator, rebalancerManager, feeAddress, gstAddress,
@@ -47,18 +48,26 @@ module.exports = async function (deployer, network, accounts) {
   };
   const advanceBlocks = async n => {
     for (var i = 0; i < n; i++) {
-      await advanceTime();
+      if (i === 0 || i % 100 === 0) {
+        process.stdout.clearLine();  // clear current text
+        process.stdout.cursorTo(0);
+        process.stdout.write(`waiting for ${n - i} blocks...`);
+      }
+
+      await time.advanceBlock();
     }
-  };
+  }
+  const getLatestProposal = async (gov) => {
+    return gov.proposalCount.call()
+  }
 
   // ###############
   const idle = await Idle.at('0x875773784Af8135eA0ef43b5a374AaD105c5D39e');
-  const gov = await GovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B');
+  const gov = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B');
   const vesterFactory = await VesterFactory.at('0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972');
   const timelockAddress = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
   const ecosystemFund = '0xb0aA1f98523Ec15932dd5fAAC5d86e57115571C7';
   const ONE = BNify('1e18');
-  console.log(ONE.toString())
   console.log('##################################');
 
   const executeProposal = async ({targets, values, signatures, calldatas, description, from}) => {
@@ -69,7 +78,8 @@ module.exports = async function (deployer, network, accounts) {
     // need 1 block to pass before being able to vote but less than 10
     await advanceBlocks(2);
 
-    await gov.castVote(BNify('1'), true, {from});
+    const proposalId = await getLatestProposal(gov);
+    await gov.castVote(proposalId, true, {from});
     console.log('voted');
 
     if (network === 'live') {
@@ -79,7 +89,7 @@ module.exports = async function (deployer, network, accounts) {
     // Need to advance 3d in blocs + 1
     await advanceBlocks(17281);
 
-    await gov.queue(BNify('1'), {from});
+    await gov.queue(proposalId, {from});
     console.log('queued');
 
     const currTime2 = BNify((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
@@ -87,7 +97,7 @@ module.exports = async function (deployer, network, accounts) {
     await advanceTime(currTime2.plus(BNify('172800')).plus(BNify('100')));
     await advanceBlocks(1);
 
-    await gov.execute(BNify('1'), {from});
+    await gov.execute(proposalId, {from});
     console.log('executed');
     await advanceBlocks(2);
   };
@@ -133,7 +143,7 @@ module.exports = async function (deployer, network, accounts) {
   ); // calldatas
 
   // Add one action to withdraw 5000 Idle from ecosystem fund
-  targets.push(timelockAddress);
+  targets.push(ecosystemFund);
   values.push(BNify('0'));
   signatures.push('transfer(address,address,uint256)');
   calldatas.push(
