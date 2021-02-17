@@ -1,10 +1,10 @@
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
-const IVesterFactory = artifacts.require("IVesterFactory.sol");
-const IVester = artifacts.require("IVester");
+const VesterFactory = artifacts.require("VesterFactory.sol");
+const Vester = artifacts.require("Vester");
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
-const IIdle = artifacts.require("IIdle")
+const Idle = artifacts.require("Idle")
 const addresses = require("./addresses");
 
 const BNify = v => new BigNumber(v.toString());
@@ -73,10 +73,10 @@ module.exports = async (deployer, network, accounts) => {
   const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
   const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
 
-  const idleInstance = await IIdle.at(addresses.IDLE)
-  const vesterFactory = await IVesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
+  const idleInstance = await Idle.at(addresses.IDLE)
+  const vesterFactory = await VesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
   const founderVesting = await vesterFactory.vestingContracts.call(founder);
-  const vesterFounder = await IVester.at(founderVesting);
+  const vesterFounder = await Vester.at(founderVesting);
 
   await idleInstance.delegate(founder, {from: founder});
   await vesterFounder.setDelegate(founder, {from: founder});
