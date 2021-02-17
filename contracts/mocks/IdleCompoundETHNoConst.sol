@@ -17,7 +17,7 @@ import "../interfaces/IWETH.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/WhitePaperInterestRateModel.sol";
 
-contract IdleCompoundETH is ILendingProtocol, Ownable {
+contract IdleCompoundETHNoConst is ILendingProtocol, Ownable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -27,17 +27,18 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
   address public underlying;
   address public idleToken;
   uint256 public blocksPerYear;
-  address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+  address public weth;
 
   /**
    * @param _token : cToken address
    * @param _underlying : underlying token (eg DAI) address
    * @param _idleToken : idleToken token (eg DAI) address
    */
-  constructor(address _token, address _underlying, address _idleToken) public {
+  constructor(address _token, address _underlying, address _idleToken, address _weth) public {
     require(_token != address(0) && _underlying != address(0) && _idleToken != address(0), 'COMP: some addr is 0');
 
     token = _token;
+    weth = _weth;
     underlying = _underlying;
     idleToken = _idleToken;
     blocksPerYear = 2371428;
