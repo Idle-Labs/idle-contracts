@@ -10,7 +10,7 @@
     "compilerSettings": {
       "optimizer": {
         "enabled": true,
-        "runs": "7500"
+        "runs": "100"
       }
     },
     "typechain": {
