@@ -22,6 +22,7 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
+import "./interfaces/IFlashLoanReceiver.sol";
 
 import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
@@ -97,6 +98,25 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   bool public isRiskAdjusted;
   // last allocations submitted by rebalancer
   uint256[] private lastRebalancerAllocations;
+  // Fee for flash loan
+  uint256 public flashLoanFee = 9;
+  /**
+  * @dev Emitted on flashLoan()
+  * @param target The address of the flash loan receiver contract
+  * @param initiator The address initiating the flash loan
+  * @param asset The address of the asset being flash borrowed
+  * @param amount The amount flash borrowed
+  * @param premium The fee flash borrowed
+  * @param referral The referral code used
+  **/
+ event FlashLoan(
+   address indexed target,
+   address indexed initiator,
+   address indexed asset,
+   uint256 amount,
+   uint256 premium,
+   address referral
+ );
 
   // onlyOwner
   /**
@@ -613,6 +633,96 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       uint256 newAprAfterRebalance = _getAvgAPR();
       require(newAprAfterRebalance > initialAPR, "IDLE:NOT_IMPROV");
       return (hasRebalanced, newAprAfterRebalance);
+  }
+
+  /**
+   * Allow any users to borrow funds inside a tx if they return the same amount + `flashLoanFee`
+   *
+   * @param _receiverAddress : flash loan receiver, should have the IFlashLoanReceiver interface
+   * @param _amount : amount of `token` to borrow
+   * @param _params : params that should be passed to the _receiverAddress in the `executeOperation` call
+   * @param _referral : used to emit an event
+   */
+  function flashLoan(
+    address _receiverAddress,
+    uint256 _amount,
+    bytes calldata _params,
+    address _referral
+  ) external whenNotPaused gasDiscountFrom(msg.sender) {
+    IFlashLoanReceiver receiver = IFlashLoanReceiver(_receiverAddress);
+    uint256 balance = IERC20(token).balanceOf(address(this));
+    uint256 initialPoolValue = _tokenPrice().mul(totalSupply());
+    require(_amount > 0, "IDLE:IS_0");
+    require(_receiverAddress != address(0), "IDLE:IS_0");
+    require(initialPoolValue > _amount, "IDLE:TOO_MUCH");
+
+    if (_amount > balance) {
+      // some funds needs to be redeemed from underlying protocols
+      uint256 toRedeem = _amount.sub(balance);
+      uint256 _toRedeemAux;
+      address currToken;
+      uint256 currBalance;
+      uint256 currBalanceUnderlying;
+      uint256 availableLiquidity;
+      uint256 redeemd;
+      ILendingProtocol protocol;
+      bool isEnough;
+      bool haveWeInvestedEnough;
+
+      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+        currToken = allAvailableTokens[i];
+        protocol = ILendingProtocol(protocolWrappers[currToken]);
+        currBalance = IERC20(currToken).balanceOf(address(this));
+
+        // TTODO check if ONE_18 || ONE_TOKEN_DECIMALS
+        currBalanceUnderlying = currBalance.mul(protocol.getPriceInToken()).div(ONE_18);
+        availableLiquidity = protocol.availableLiquidity();
+
+        isEnough = availableLiquidity >= toRedeem;
+        haveWeInvestedEnough = currBalanceUnderlying >= toRedeem;
+        _toRedeemAux = haveWeInvestedEnough ?
+          (isEnough ? toRedeem : availableLiquidity) :
+          (currBalanceUnderlying <= availableLiquidity ? currBalanceUnderlying : availableLiquidity);
+
+        redeemd = _redeemProtocolTokens(
+          currToken,
+          // convert amount from underlying to protocol token
+          // TTODO check if ONE_18 || ONE_TOKEN_DECIMALS
+          _toRedeemAux.mul(ONE_18).div(protocol.getPriceInToken()),
+          address(this) // tokens are now in this contract
+        );
+
+        if (haveWeInvestedEnough && isEnough) {
+          break;
+        }
+
+        toRedeem = toRedeem.sub(redeemd);
+      }
+    }
+
+    // TODO add check for redeemed >= amount
+
+    uint256 tokenBalanceBefore = IERC20(token).balanceOf(address(this));
+    // transfer funds
+    IERC20(token).safeTransfer(_receiverAddress, _amount);
+    // calculate fee
+    // uint256 _flashFee = _amount.mul(flashLoanFee).div(10000); // 9 -> 0.09%
+    uint256 _flashFee = _amount.mul(9).div(10000); // 9 -> 0.09%
+    // call _receiverAddress `executeOperation`
+    require(
+      receiver.executeOperation(_amount, _flashFee, msg.sender, _params),
+      "IDLE:INVALID_FLASH_EXEC"
+    );
+    uint256 tokenBalanceAfter = IERC20(token).balanceOf(address(this));
+    // check that the fee has been transferred alongside the borrowed capital
+    require(
+      tokenBalanceAfter >= tokenBalanceBefore.add(_flashFee),
+      'IDLE:FLASH_NO_PROFIT'
+    );
+    // Put underlyings in lending once again with rebalance
+    _rebalance();
+
+    emit FlashLoan(_receiverAddress, msg.sender, token, _amount, _flashFee, _referral);
   }
 
   // internal
