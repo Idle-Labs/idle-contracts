@@ -324,8 +324,48 @@ const WBTC = {
 
   'deploy': '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', // used for truffle Teams deploy, now kovan
 };
+const cWETH = {
+  'live': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  'proxy': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  'live-fork': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5', // needed for truffle
+  'kovan': '0xe7bc397dbd069fc7d0109c0636d06888bb50668c',
+  'kovan-fork': '0xe7bc397dbd069fc7d0109c0636d06888bb50668c', // needed for truffle
+  'local': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  'local-fork': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  'test': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  'coverage': '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+
+  'deploy': '0xe7bc397dbd069fc7d0109c0636d06888bb50668c', // used for truffle Teams deploy, now kovan
+};
+const aWETH = {
+  'live': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'proxy': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'live-fork': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e', // needed for truffle
+  'kovan': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'kovan-fork': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e', // needed for truffle
+  'local': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'local-fork': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'test': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+  'coverage': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
+
+  'deploy': '', // used for truffle Teams deploy, now kovan
+};
+const WETH = {
+  'live': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'proxy': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'live-fork': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // needed for truffle
+  'kovan': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'kovan-fork': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // needed for truffle
+  'local': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'local-fork': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'test': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  'coverage': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+
+  'deploy': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // used for truffle Teams deploy, now kovan
+};
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
+const idleWETHV4 = '0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80';
 const idleUSDCV4 = '0x5274891bEC421B39D23760c04A6755eCB444797C';
 const idleUSDTV4 = '0xF34842d05A1c888Ca02769A633DF37177415C2f8';
 const idleSUSDV4 = '0xF52CDcD458bf455aeD77751743180eC4A595Fd3F';
@@ -389,7 +429,11 @@ module.exports = {
   aWBTC: aWBTC,
   aWBTCV2: aWBTCV2,
   WBTC: WBTC,
+  aWETH: aWETH,
+  cWETH: cWETH,
+  WETH: WETH,
   idleDAIV4: idleDAIV4,
+  idleWETHV4: idleWETHV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
   idleSUSDV4: idleSUSDV4,

@@ -113,32 +113,53 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     address[] calldata _protocolTokens,
     address[] calldata _wrappers,
     uint256[] calldata _lastRebalancerAllocations,
-    bool _isRiskAdjusted
+    bool _isRiskAdjusted,
+    address _cToken
   ) external onlyOwner {
-    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181);
+    cToken = _cToken;
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
     // same as setGovTokens, copied to avoid make the method public and save on bytecode size
     govTokens = _newGovTokens;
     // set protocol token to gov token mapping
-    address newGov;
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
       protocolWrappers[_protocolTokens[i]] = _wrappers[i];
       if (i < _newGovTokens.length) {
-        newGov = _newGovTokens[i];
-        if (newGov == IDLE) { continue; }
-        protocolTokenToGov[_protocolTokens[i]] = newGov;
+        if (_newGovTokens[i] == IDLE) { continue; }
+        protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
       }
     }
-    feeAddress = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
-    iToken = address(0);
-    rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
+
     lastRebalancerAllocations = _lastRebalancerAllocations;
     // Idle multisig
     addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
     renouncePauser();
+  }
+
+  function _init(
+    string calldata _name, // eg. IdleDAI
+    string calldata _symbol, // eg. IDLEDAI
+    address _token
+  ) external initializer {
+    // copied from old initialize() method removed at commit 04e29bd6f9282ef5677edc16570918da1a72dd3a
+    // Initialize inherited contracts
+    ERC20Detailed.initialize(_name, _symbol, 18);
+    Ownable.initialize(msg.sender);
+    Pausable.initialize(msg.sender);
+    ReentrancyGuard.initialize();
+    GST2ConsumerV2.initialize();
+    // Initialize storage variables
+    maxUnlentPerc = 1000;
+    token = _token;
+    tokenDecimals = ERC20Detailed(_token).decimals();
+    // end of old initialize method
+    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181);
+    feeAddress = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
+    rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
+    fee = 10000;
+    iToken = address(0);
   }
 
   /**
@@ -166,89 +187,113 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     allAvailableTokens = protocolTokens;
 
     if (keepAllocations) {
-      require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
       return;
     }
     _setAllocations(allocations);
   }
 
-  /**
-   * It allows owner to set gov tokens array
-   * In case of any errors gov distribution can be paused by passing an empty array
-   *
-   * @param _newGovTokens : array of governance token addresses
-   * @param _protocolTokens : array of interest bearing token addresses
-   */
-  function setGovTokens(
-    address[] calldata _newGovTokens,
-    address[] calldata _protocolTokens
-  ) external onlyOwner {
-    govTokens = _newGovTokens;
-    // Reset protocolTokenToGov mapping
-    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-      protocolTokenToGov[allAvailableTokens[i]] = address(0);
-    }
-    // set protocol token to gov token mapping
-    for (uint256 i = 0; i < _protocolTokens.length; i++) {
-      address newGov = _newGovTokens[i];
-      if (newGov == IDLE) { continue; }
-      protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
-    }
-  }
-
-  /**
-   * It allows owner to set the IdleRebalancerV3_1 address
-   *
-   * @param _rebalancer : new IdleRebalancerV3_1 address
-   */
-  function setRebalancer(address _rebalancer)
-    external onlyOwner {
-      require(_rebalancer != address(0), "IDLE:IS_0");
-      rebalancer = _rebalancer;
-  }
-
-  /**
-   * It allows owner to set the fee (1000 == 10% of gained interest)
-   *
-   * @param _fee : fee amount where 100000 is 100%, max settable is 10%
-   */
-  function setFee(uint256 _fee)
-    external onlyOwner {
-      // 100000 == 100% -> 10000 == 10%
-      require(_fee <= 10000, "IDLE:TOO_HIGH");
-      fee = _fee;
-  }
-
-  /**
-   * It allows owner to set the fee address
-   *
-   * @param _feeAddress : fee address
-   */
-  function setFeeAddress(address _feeAddress)
-    external onlyOwner {
-      require(_feeAddress != address(0), "IDLE:IS_0");
-      feeAddress = _feeAddress;
-  }
-
-  /**
-   * It allows owner to set the isRiskAdjusted flag
-   *
-   * @param _isRiskAdjusted : flag for openRebalance
-   */
-  function setIsRiskAdjusted(bool _isRiskAdjusted)
-    external onlyOwner {
-      isRiskAdjusted = _isRiskAdjusted;
-  }
-
-  /**
-   * Used by Rebalancer to set the new allocations
-   *
-   * @param _allocations : array with allocations in percentages (100% => 100000)
-   */
-  function setAllocations(uint256[] calldata _allocations) external {
-    require(msg.sender == rebalancer || msg.sender == owner(), "IDLE:!AUTH");
-    _setAllocations(_allocations);
-  }
+  // Commented on first deploy for each new token to avoid max bytecode size limit,
+  // renabled in IdleTokenGovernance after removing _init and manualInitialize
+  //
+  // /**
+  //  * It allows owner to set gov tokens array
+  //  * In case of any errors gov distribution can be paused by passing an empty array
+  //  *
+  //  * @param _newGovTokens : array of governance token addresses
+  //  * @param _protocolTokens : array of interest bearing token addresses
+  //  */
+  // function setGovTokens(
+  //   address[] calldata _newGovTokens,
+  //   address[] calldata _protocolTokens
+  // ) external onlyOwner {
+  //   govTokens = _newGovTokens;
+  //   // Reset protocolTokenToGov mapping
+  //   for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+  //     protocolTokenToGov[allAvailableTokens[i]] = address(0);
+  //   }
+  //   // set protocol token to gov token mapping
+  //   for (uint256 i = 0; i < _protocolTokens.length; i++) {
+  //     address newGov = _newGovTokens[i];
+  //     if (newGov == IDLE) { continue; }
+  //     protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
+  //   }
+  // }
+  //
+  // /**
+  //  * It allows owner to set the IdleRebalancerV3_1 address
+  //  *
+  //  * @param _rebalancer : new IdleRebalancerV3_1 address
+  //  */
+  // function setRebalancer(address _rebalancer)
+  //   external onlyOwner {
+  //     require(_rebalancer != address(0), "IDLE:IS_0");
+  //     rebalancer = _rebalancer;
+  // }
+  //
+  // /**
+  //  * It allows owner to set the fee (1000 == 10% of gained interest)
+  //  *
+  //  * @param _fee : fee amount where 100000 is 100%, max settable is 10%
+  //  */
+  // function setFee(uint256 _fee)
+  //   external onlyOwner {
+  //     // 100000 == 100% -> 10000 == 10%
+  //     require(_fee <= 10000, "IDLE:TOO_HIGH");
+  //     fee = _fee;
+  // }
+  //
+  // /**
+  //  * It allows owner to set the fee address
+  //  *
+  //  * @param _feeAddress : fee address
+  //  */
+  // function setFeeAddress(address _feeAddress)
+  //   external onlyOwner {
+  //     require(_feeAddress != address(0), "IDLE:IS_0");
+  //     feeAddress = _feeAddress;
+  // }
+  //
+  // /**
+  //  * It allows owner to set the oracle address for getting avgAPR
+  //  *
+  //  * @param _oracle : new oracle address
+  //  */
+  // function setOracleAddress(address _oracle)
+  //   external onlyOwner {
+  //     require(_oracle != address(0), "IDLE:IS_0");
+  //     oracle = _oracle;
+  // }
+  //
+  // /**
+  //  * It allows owner to set the max unlent asset percentage (1000 == 1% of unlent asset max)
+  //  *
+  //  * @param _perc : max unlent perc where 100000 is 100%
+  //  */
+  // function setMaxUnlentPerc(uint256 _perc)
+  //   external onlyOwner {
+  //     require(_perc <= 100000, "IDLE:TOO_HIGH");
+  //     maxUnlentPerc = _perc;
+  // }
+  //
+  // /**
+  //  * It allows owner to set the isRiskAdjusted flag
+  //  *
+  //  * @param _isRiskAdjusted : flag for openRebalance
+  //  */
+  // function setIsRiskAdjusted(bool _isRiskAdjusted)
+  //   external onlyOwner {
+  //     isRiskAdjusted = _isRiskAdjusted;
+  // }
+  //
+  // /**
+  //  * Used by Rebalancer to set the new allocations
+  //  *
+  //  * @param _allocations : array with allocations in percentages (100% => 100000)
+  //  */
+  // function setAllocations(uint256[] calldata _allocations) external {
+  //   require(msg.sender == rebalancer || msg.sender == owner(), "IDLE:!AUTH");
+  //   _setAllocations(_allocations);
+  // }
 
   /**
    * Used by Rebalancer or in openRebalance to set the new allocations
