@@ -71,6 +71,7 @@ module.exports = async (deployer, network, accounts) => {
 
   const founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
   const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
+  const idleWETHProxyAdmin = '0xc2ff102E62027DE1205a7EDd4C8a8F58C1E5e3e8';
   const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
 
   const idleInstance = await Idle.at(addresses.IDLE)
@@ -91,12 +92,16 @@ module.exports = async (deployer, network, accounts) => {
     addresses.idleDAISafeV4,
     addresses.idleUSDCSafeV4,
     addresses.idleUSDTSafeV4,
+    // addresses.idleWETHV4,
   ]
 
   const propName = '#Update IdleToken implementation to support flash loans';
+  const targets = allIdleTokens.map(a => proxyAdmin);
+  // targets[targets.length - 1] = idleWETHProxyAdmin; // idleWETH has a different Proxy Admin
+  const values = allIdleTokens.map(a => BNify('0'));
   const proposal = {
-    targets: allIdleTokens.map(a => proxyAdmin),
-    values: allIdleTokens.map(a => BNify('0')),
+    targets: targets,
+    values: values,
     signatures: allIdleTokens.map(a => 'upgrade(address,address)'),
     calldatas: allIdleTokens.map(a =>
       web3.eth.abi.encodeParameters(['address', 'address'], [a, newImplementation.address])

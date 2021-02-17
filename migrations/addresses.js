@@ -383,6 +383,7 @@ const idleUSDTV4 = '0xF34842d05A1c888Ca02769A633DF37177415C2f8';
 const idleSUSDV4 = '0xF52CDcD458bf455aeD77751743180eC4A595Fd3F';
 const idleTUSDV4 = '0xc278041fDD8249FE4c1Aad1193876857EEa3D68c';
 const idleWBTCV4 = '0x8C81121B15197fA0eEaEE1DC75533419DcfD3151';
+const idleWETHV4 = '0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80';
 const idleDAISafeV4 = '0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16';
 const idleUSDCSafeV4 = '0x3391bc034f2935ef0e1e41619445f998b2680d35';
 const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
@@ -400,6 +401,7 @@ const allIdleTokens = [
   idleSUSDV4,
   idleTUSDV4,
   idleWBTCV4,
+  idleWETHV4,
   idleDAISafeV4,
   idleUSDCSafeV4,
   idleUSDTSafeV4,
@@ -466,6 +468,7 @@ module.exports = {
   idleSUSDV4: idleSUSDV4,
   idleTUSDV4: idleTUSDV4,
   idleWBTCV4: idleWBTCV4,
+  idleWETHV4: idleWETHV4,
   idleDAISafeV4: idleDAISafeV4,
   idleUSDCSafeV4: idleUSDCSafeV4,
   idleUSDTSafeV4: idleUSDTSafeV4,
