@@ -124,10 +124,10 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     govTokens = _newGovTokens;
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
-      protocolWrappers[ _protocolTokens[i]] = _wrappers[i];
+      protocolWrappers[_protocolTokens[i]] = _wrappers[i];
       if (i < _newGovTokens.length) {
         if (_newGovTokens[i] == IDLE) { continue; }
-        protocolTokenToGov[ _protocolTokens[i]] = _newGovTokens[i];
+        protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
       }
     }
 
