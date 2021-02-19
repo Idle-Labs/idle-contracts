@@ -1,10 +1,10 @@
 const rl = require("readline");
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
-const IIdle = artifacts.require("IIdle")
-const IdleTokenV3_1 = artifacts.require("IdleTokenV3_1")
+const Idle = artifacts.require("Idle")
+const IdleTokenGovernance = artifacts.require("IdleTokenGovernance")
 const IERC20 = artifacts.require("IERC20Detailed.sol");
-const IVesterFactory = artifacts.require("IVesterFactory.sol");
-const IVester = artifacts.require("IVester");
+const VesterFactory = artifacts.require("VesterFactory.sol");
+const Vester = artifacts.require("Vester");
 const addresses = require("./addresses");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
@@ -111,10 +111,10 @@ module.exports = async (deployer, network, accounts) => {
   const aTokenAddress = addresses.aDAIV2.live;
   const underlyingTokenAddress = addresses.DAI.live;
 
-  const idleInstance = await IIdle.at(addresses.IDLE)
-  const vesterFactory = await IVesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
+  const idleInstance = await Idle.at(addresses.IDLE)
+  const vesterFactory = await VesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
   const founderVesting = await vesterFactory.vestingContracts.call(founder);
-  const vesterFounder = await IVester.at(founderVesting);
+  const vesterFounder = await Vester.at(founderVesting);
 
   await idleInstance.delegate(founder, {from: founder});
   await vesterFounder.setDelegate(founder, {from: founder});
@@ -127,7 +127,7 @@ module.exports = async (deployer, network, accounts) => {
   for (const idleTokenName in idleTokens) {
     console.log("preparing params for", idleTokenName);
     const attrs = idleTokens[idleTokenName];
-    const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
+    const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
     const res = await idleToken.getAPRs();
 
     let tokens = res["0"].map(v => v.toString());
@@ -216,7 +216,7 @@ module.exports = async (deployer, network, accounts) => {
     const attrs = idleTokens[idleTokenName];
     console.log("\n\n********************************* testing", idleTokenName);
 
-    const idleToken = await IdleTokenV3_1.at(attrs.idleTokenAddress);
+    const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
     console.log("--------------- 50000")
     await setAllocationsAndRebalance(idleToken, 50000);
     console.log("--------------- 0")
