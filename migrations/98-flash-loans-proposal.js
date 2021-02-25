@@ -3,6 +3,7 @@ const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
+const IProxyAdmin = artifacts.require("IProxyAdmin");
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
 const Idle = artifacts.require("Idle")
 const addresses = require("./addresses");
@@ -96,15 +97,37 @@ module.exports = async (deployer, network, accounts) => {
   ]
 
   const propName = '#Update IdleToken implementation to support flash loans';
-  const targets = allIdleTokens.map(a => proxyAdmin);
+  const targets = allIdleTokens.map(a => addresses.proxyAdmin);
   // targets[targets.length - 1] = idleWETHProxyAdmin; // idleWETH has a different Proxy Admin
   const values = allIdleTokens.map(a => BNify('0'));
+
+  // const initMethodToCallWithParams = web3.eth.abi.encodeFunctionCall({
+  //   name: '_init()',
+  //   type: 'function',
+  //   inputs: [
+  //     {
+  //       type: 'uint256',
+  //       name: 'myNumber'
+  //     }
+  //   ]
+  // }, [BNify('9')]);
+
+  const initMethodToCall = web3.eth.abi.encodeFunctionCall({
+    name: '_init()',
+    type: 'function',
+    inputs: []
+  }, []);
+  console.log('initMethodToCall', initMethodToCall);
+
   const proposal = {
-    targets: targets,
+    targets: targets.map(t => proxyAdmin),
     values: values,
-    signatures: allIdleTokens.map(a => 'upgrade(address,address)'),
+    signatures: allIdleTokens.map(a => 'upgradeAndCall(address,address,bytes)'),
     calldatas: allIdleTokens.map(a =>
-      web3.eth.abi.encodeParameters(['address', 'address'], [a, newImplementation.address])
+      web3.eth.abi.encodeParameters(
+        ['address', 'address', 'bytes'],
+        [a, newImplementation.address, initMethodToCall]
+      )
     ),
     description: propName,
     from: founder

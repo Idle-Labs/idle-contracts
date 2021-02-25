@@ -20,12 +20,12 @@ module.exports = async function(deployer) {
 
   const idleTokenAddress = addresses.idleDAIV4;
 
-  await deployer.deploy(IdleTokenGovernance);
-  const newImplementation = await IdleTokenGovernance.deployed();
-  console.log("implementation deployed at", newImplementation.address)
-
-  const proxyAdmin = await IProxyAdmin.at(proxyAdminAddress);
-  await proxyAdmin.upgrade(idleTokenAddress, newImplementation.address, { from: addresses.timelock });
+  // await deployer.deploy(IdleTokenGovernance);
+  // const newImplementation = await IdleTokenGovernance.deployed();
+  // console.log("implementation deployed at", newImplementation.address)
+  //
+  // const proxyAdmin = await IProxyAdmin.at(proxyAdminAddress);
+  // await proxyAdmin.upgrade(idleTokenAddress, newImplementation.address, { from: addresses.timelock });
 
   const dai = await IERC20.at(addresses.DAI.live);
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
@@ -38,44 +38,48 @@ module.exports = async function(deployer) {
 
   const executeFlashLoan = async (unitsAmount) => {
     const initialBalance = await dai.balanceOf(flashLoaner.address);
+    const initialBalanceIdle = await dai.balanceOf(idleToken.address);
     const loanAmount = fromUnits(unitsAmount);
+
+
     await idleToken.flashLoan(
       flashLoaner.address,
+      dai.address,
       loanAmount,
       web3.eth.abi.encodeParameters(["uint256"], [44]),
-      holder,
       { from: holder }
     );
 
     const amountReceived = await flashLoaner.amountReceived();
     const daiBalanceOnExecuteStart = await flashLoaner.daiBalanceOnExecuteStart();
-    const daiBalanceOnExecuteEnd = await flashLoaner.daiBalanceOnExecuteEnd();
+    const daiBalanceOnExecuteEnd = await dai.balanceOf(flashLoaner.address);
     const feeReceived = await flashLoaner.feeReceived();
     const initiatorReceived = await flashLoaner.initiatorReceived();
     const paramsReceived = await flashLoaner.paramsReceived();
     const daiToSendBack = await flashLoaner.daiToSendBack();
+    const endBalanceIdle = await dai.balanceOf(idleToken.address);
 
-    console.log("initialBalance", toUnitString(initialBalance));
+    console.log("initialBalanceIdle", toUnitString(initialBalanceIdle));
+    console.log("endBalanceIdle", toUnitString(endBalanceIdle));
+    console.log('#### this should be +0.09%');
+    console.log("initialBalance flash loaner", toUnitString(initialBalance));
+    console.log("endBalance flash loanes", toUnitString(daiBalanceOnExecuteEnd));
+    console.log('#### this should be -0.09%');
+  
     console.log("amountReceived", toUnitString(amountReceived));
     console.log("daiBalanceOnExecuteStart", toUnitString(daiBalanceOnExecuteStart));
     console.log("feeReceived", toUnitString(feeReceived));
     console.log("initiatorReceived", initiatorReceived);
     console.log("paramsReceived", paramsReceived);
     console.log("daiToSendBack", toUnitString(daiToSendBack));
-    console.log("daiBalanceOnExecuteEnd", toUnitString(daiBalanceOnExecuteEnd));
   }
 
   await executeFlashLoan("100");
   console.log("***********************");
-  await flashLoaner.setRemoveFromFee(toBN("1"));
 
   try {
     await executeFlashLoan("100");
-    throw("not-expected");
   } catch(err) {
-    if (err === "not-expected") {
-      throw("flash loan should have failed");
-    }
-    console.log("flash loan expected error:", err.toString())
+    throw("Error: ", err.toString());
   }
 };

@@ -22,7 +22,7 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
-import "./interfaces/IFlashLoanReceiver.sol";
+import "./interfaces/IERC3156FlashBorrower.sol";
 
 import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
@@ -106,20 +106,18 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   * @param initiator The address initiating the flash loan
   * @param amount The amount flash borrowed
   * @param premium The fee flash borrowed
-  * @param referral The referral code used
   **/
   event FlashLoan(
     address indexed target,
     address indexed initiator,
     uint256 amount,
-    uint256 premium,
-    address referral
+    uint256 premium
   );
 
   function _init() external {
-   require(flashLoanFee == 0, 'IDLE:INIT_DONE');
+    require(flashLoanFee == 0, 'IDLE:INIT_DONE');
 
-   flashLoanFee = 9;
+    flashLoanFee = 9;
   }
 
   // onlyOwner
@@ -640,22 +638,45 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   }
 
   /**
+   * @dev The fee to be charged for a given loan.
+   * @param _token The loan currency.
+   * @param _amount The amount of tokens lent.
+   * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+   */
+  function flashFee(address _token, uint256 _amount) external view returns (uint256) {
+    require(_token == token, 'IDLE:!EQ');
+    return _amount.mul(flashLoanFee).div(10000);
+  }
+
+  /**
+   * @dev The amount of currency available to be lent.
+   * @param _token The loan currency.
+   * @return The amount of `token` that can be borrowed.
+   */
+  function maxFlashLoan(address _token) external view returns (uint256) {
+    if (_token != token) {
+      return 0;
+    }
+    return _tokenPrice().mul(totalSupply());
+  }
+
+  /**
    * Allow any users to borrow funds inside a tx if they return the same amount + `flashLoanFee`
    *
-   * @param _receiverAddress : flash loan receiver, should have the IFlashLoanReceiver interface
+   * @param _receiver : flash loan receiver, should have the IERC3156FlashBorrower interface
+   * @param _token : used to check that the requested token is the correct one
    * @param _amount : amount of `token` to borrow
    * @param _params : params that should be passed to the _receiverAddress in the `executeOperation` call
-   * @param _referral : used to emit an event
    */
   function flashLoan(
-    address _receiverAddress,
+    IERC3156FlashBorrower _receiver,
+    address _token,
     uint256 _amount,
-    bytes calldata _params,
-    address _referral
-  ) external whenNotPaused {
-    require(_receiverAddress != address(0) && _amount > 0, "IDLE:IS_0");
+    bytes calldata _params
+  ) external whenNotPaused returns (bool) {
+    require(_token == token, "IDLE:!EQ");
+    require(address(_receiver) != address(0) && _amount > 0, "IDLE:IS_0");
 
-    IFlashLoanReceiver receiver = IFlashLoanReceiver(_receiverAddress);
     uint256 balance = IERC20(token).balanceOf(address(this));
 
     if (_amount > balance) {
@@ -704,23 +725,26 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     uint256 tokenBalanceBefore = IERC20(token).balanceOf(address(this));
     require(tokenBalanceBefore >= _amount, "IDLE:TOO_LOW");
     // transfer funds
-    IERC20(token).safeTransfer(_receiverAddress, _amount);
+    IERC20(token).safeTransfer(address(_receiver), _amount);
     // calculate fee
     uint256 _flashFee = _amount.mul(flashLoanFee).div(10000); // 9 -> 0.09%
-    // call _receiverAddress `executeOperation`
+    // call _receiver `onFlashLoan`
     require(
-      receiver.executeOperation(_amount, _flashFee, msg.sender, _params),
+      _receiver.onFlashLoan(msg.sender, token, _amount, _flashFee, _params) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
       "IDLE:EXEC"
     );
     // check that the fee has been transferred alongside the borrowed capital
     require(
+      IERC20(token).transferFrom(address(_receiver), address(this), _amount.add(_flashFee)) &&
       IERC20(token).balanceOf(address(this)) >= tokenBalanceBefore.add(_flashFee),
-      'IDLE:FEE'
+      "IDLE:REPAY"
     );
     // Put underlyings in lending once again with rebalance
     _rebalance();
 
-    emit FlashLoan(_receiverAddress, msg.sender, _amount, _flashFee, _referral);
+    emit FlashLoan(address(_receiver), msg.sender, _amount, _flashFee);
+
+    return true;
   }
 
   // internal
