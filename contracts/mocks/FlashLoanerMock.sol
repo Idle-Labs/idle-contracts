@@ -1,11 +1,12 @@
 pragma solidity 0.5.16;
 
-import "../interfaces/IFlashLoanReceiver.sol";
+import "../interfaces/IERC3156FlashBorrower.sol";
 import "../IdleTokenGovernance.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 
-contract FlashLoanerMock is IFlashLoanReceiver {
+contract FlashLoanerMock is IERC3156FlashBorrower {
   using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
   address public dai;
   address public idleToken;
@@ -27,23 +28,22 @@ contract FlashLoanerMock is IFlashLoanReceiver {
     removeFromFee = v;
   }
 
-  function executeOperation(
+  function onFlashLoan(
+    address _initiator,
+    address,
     uint256 _amount,
     uint256 _fee,
-    address _initiator,
     bytes calldata _params
-  ) external returns (bool) {
+  ) external returns (bytes32) {
     amountReceived = _amount;
     feeReceived = _fee;
     initiatorReceived = _initiator;
     paramsReceived = _params;
-    daiBalanceOnExecuteStart = ERC20Detailed(dai).balanceOf(address(this));
+    daiBalanceOnExecuteStart = IERC20(dai).balanceOf(address(this));
 
     daiToSendBack = _amount.add(_fee).sub(removeFromFee);
-    ERC20Detailed(dai).transfer(idleToken, daiToSendBack);
+    IERC20(dai).safeApprove(idleToken, daiToSendBack);
 
-    daiBalanceOnExecuteEnd = ERC20Detailed(dai).balanceOf(address(this));
-
-    return true;
+    return keccak256("ERC3156FlashBorrower.onFlashLoan");
   }
 }
