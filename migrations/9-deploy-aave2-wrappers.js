@@ -68,7 +68,7 @@ module.exports = async (deployer, network, accounts) => {
     console.log("underlyingTokenAddress", underlyingTokenAddress)
 
     // TODO use minimal proxy factory if possibile
-    await deployer.deploy(IdleAaveV2, aTokenAddress, underlyingTokenAddress, addressesProvider, idleTokenAddress);
+    await deployer.deploy(IdleAaveV2, aTokenAddress, addressesProvider, idleTokenAddress);
 
     const aaveV2Wrapper = await IdleAaveV2.deployed();
     attrs.aaveV2WrapperAddress = aaveV2Wrapper.address;

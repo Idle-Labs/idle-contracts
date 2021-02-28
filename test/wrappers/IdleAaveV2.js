@@ -44,8 +44,8 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
 
     this.aDAIWrapper = await IdleAaveV2.new(
       this.aDAIMock.address,
-      this.DAIMock.address,
       this.aaveLendingPoolProviderMock.address,
+      nonOwner,
       {from: creator}
     );
   });

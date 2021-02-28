@@ -19,7 +19,7 @@ const checkIncreased = (a, b, message) => {
 }
 
 const test = async (deployer, token, underlying, decimals) => {
-  await deployer.deploy(IdleAaveV2, token, underlying, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
+  await deployer.deploy(IdleAaveV2, token, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
   const wrapper = await IdleAaveV2.deployed();
 
   const DAI = await IERC20.at(underlying);

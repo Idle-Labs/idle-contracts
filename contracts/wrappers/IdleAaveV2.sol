@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "../interfaces/IAToken.sol";
 import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/AaveLendingPoolProviderV2.sol";
 import "../interfaces/AaveLendingPoolV2.sol";
@@ -36,12 +37,13 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
 
   /**
    * @param _token : aToken address
-   * @param _underlying : underlying token (eg DAI) address
+   * @param _addressesProvider : aave addresses provider
+   * @param _idleToken : idleToken address
    */
-  constructor(address _token, address _underlying, address _addressesProvider, address _idleToken) public {
-    require(_token != address(0) && _underlying != address(0), 'AAVE: some addr is 0');
+  constructor(address _token, address _addressesProvider, address _idleToken) public {
+    require(_token != address(0), 'AAVE: addr is 0');
     token = _token;
-    underlying = _underlying;
+    underlying = IAToken(_token).UNDERLYING_ASSET_ADDRESS();
     idleToken = _idleToken;
     provider = AaveLendingPoolProviderV2(_addressesProvider);
     _approveProvider();
@@ -99,7 +101,7 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
         avgStableRate,
         getReserveFactor(data.configuration)
       );
-      return newLiquidityRate.mul(100).div(10**9);
+      return newLiquidityRate.div(10**7); // .mul(100).div(10**9)
   }
 
   /**
@@ -118,26 +120,23 @@ contract IdleAaveV2 is ILendingProtocol, DataTypes, Ownable {
     external view
     returns (uint256) {
       DataTypes.ReserveData memory data = AaveLendingPoolV2(provider.getLendingPool()).getReserveData(underlying);
-      return uint256(data.currentLiquidityRate).mul(100).div(10**9);
+      return uint256(data.currentLiquidityRate).div(10**7); // .mul(100).div(10**9)
   }
 
   /**
    * Gets all underlying tokens in this contract and mints aTokens
    * tokens are then transferred to msg.sender
    * NOTE: underlying tokens needs to be sent here before calling this
+   * NOTE2: given that aToken price is always 1 token -> underlying.balanceOf(this) == token.balanceOf(this)
    *
    * @return aTokens minted
    */
   function mint()
     external onlyIdle
-    returns (uint256 aTokens) {
-      aTokens = IERC20(underlying).balanceOf(address(this));
-      if (aTokens == 0) {
-        return aTokens;
-      }
+    returns (uint256 tokens) {
+      tokens = IERC20(underlying).balanceOf(address(this));
       AaveLendingPoolV2 lendingPool = AaveLendingPoolV2(provider.getLendingPool());
-      uint256 balance = IERC20(underlying).balanceOf(address(this));
-      lendingPool.deposit(underlying, balance, msg.sender, 29); // 29 -> referral
+      lendingPool.deposit(underlying, tokens, msg.sender, 29); // 29 -> referral
   }
 
   /**
