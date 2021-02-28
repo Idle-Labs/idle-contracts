@@ -27,7 +27,6 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
   address public underlying;
   address public idleToken;
   uint256 public blocksPerYear;
-  address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
   /**
    * @param _token : cToken address
@@ -41,7 +40,6 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
     underlying = _underlying;
     idleToken = _idleToken;
     blocksPerYear = 2371428;
-    // IERC20(_underlying).safeApprove(_token, uint256(-1));
   }
 
   /**
@@ -170,15 +168,14 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
         return cTokens;
       }
       // convert weth to eth
-      IWETH(weth).withdraw(balance);
-      // get a handle for the corresponding cToken contract
-      CETH _cToken = CETH(token);
+      IWETH(underlying).withdraw(balance);
       // mint the cTokens and assert there is no error
-      _cToken.mint.value(address(this).balance)();
+      CETH(token).mint.value(address(this).balance)();
+      IERC20 _token = IERC20(token);
       // cTokens are now in this contract
-      cTokens = IERC20(token).balanceOf(address(this));
+      cTokens = _token.balanceOf(address(this));
       // transfer them to the caller
-      IERC20(token).safeTransfer(msg.sender, cTokens);
+      _token.safeTransfer(msg.sender, cTokens);
   }
 
   /**
@@ -192,12 +189,11 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
     external onlyIdle
     returns (uint256 tokens) {
       // Funds needs to be sended here before calling this
-      CETH _cToken = CETH(token);
       IERC20 _underlying = IERC20(underlying);
       // redeem all underlying sent in this contract
-      require(_cToken.redeem(IERC20(token).balanceOf(address(this))) == 0, "Error redeeming cTokens");
+      require(CETH(token).redeem(IERC20(token).balanceOf(address(this))) == 0, "Error redeeming cTokens");
       // convert ETH to WETH
-      IWETH(weth).deposit.value(address(this).balance)();
+      IWETH(underlying).deposit.value(address(this).balance)();
 
       tokens = _underlying.balanceOf(address(this));
       _underlying.safeTransfer(_account, tokens);
