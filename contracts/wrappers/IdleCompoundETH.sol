@@ -163,12 +163,8 @@ contract IdleCompoundETH is ILendingProtocol, Ownable {
   function mint()
     external onlyIdle
     returns (uint256 cTokens) {
-      uint256 balance = IERC20(underlying).balanceOf(address(this));
-      if (balance == 0) {
-        return cTokens;
-      }
       // convert weth to eth
-      IWETH(underlying).withdraw(balance);
+      IWETH(underlying).withdraw(IERC20(underlying).balanceOf(address(this)));
       // mint the cTokens and assert there is no error
       CETH(token).mint.value(address(this).balance)();
       IERC20 _token = IERC20(token);

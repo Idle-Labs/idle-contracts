@@ -1,12 +1,12 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 
-const IdleCompoundETHNoConst = artifacts.require('IdleCompoundETHNoConst');
+const IdleCompoundETH = artifacts.require('IdleCompoundETH');
 const WhitePaperMock = artifacts.require('WhitePaperMock');
 const cWETHMock = artifacts.require('cWETHMock');
 const WETHMock = artifacts.require('WETHMock');
 const BNify = n => new BN(String(n));
 
-contract('IdleCompoundETHNoConst', function ([_, creator, nonOwner, someone, foo]) {
+contract('IdleCompoundETH', function ([_, creator, nonOwner, someone, foo]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.oneCToken = new BN('100000000'); // 8 decimals
@@ -18,11 +18,10 @@ contract('IdleCompoundETHNoConst', function ([_, creator, nonOwner, someone, foo
     await this.WETHMock.deposit({from: creator, value: this.one.mul(BNify('2'))})
     this.WhitePaperMock = await WhitePaperMock.new({from: creator});
     this.cWETHMock = await cWETHMock.new(this.WETHMock.address, creator, this.WhitePaperMock.address, {from: creator});
-    this.cWETHWrapper = await IdleCompoundETHNoConst.new(
+    this.cWETHWrapper = await IdleCompoundETH.new(
       this.cWETHMock.address,
       this.WETHMock.address,
       nonOwner,
-      this.WETHMock.address,
       {from: creator}
     );
   });
