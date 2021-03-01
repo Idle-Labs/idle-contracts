@@ -445,5 +445,6 @@ module.exports = {
   IDLE: IDLE,
   timelock: timelock,
   proxyAdmin: proxyAdmin,
-  allIdleTokens: allIdleTokens
+  allIdleTokens: allIdleTokens,
+  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5'
 };
