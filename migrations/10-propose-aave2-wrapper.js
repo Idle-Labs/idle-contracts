@@ -1,11 +1,7 @@
 const rl = require("readline");
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const Idle = artifacts.require("Idle")
-<<<<<<< HEAD
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance")
-=======
-const IdleTokenV3_1 = artifacts.require("IdleTokenV3_1")
->>>>>>> fix interfaces imports in migrations
 const IERC20 = artifacts.require("IERC20Detailed.sol");
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
