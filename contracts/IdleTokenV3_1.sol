@@ -149,7 +149,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     Ownable.initialize(msg.sender);
     Pausable.initialize(msg.sender);
     ReentrancyGuard.initialize();
-    GST2ConsumerV2.initialize();
     // Initialize storage variables
     maxUnlentPerc = 1000;
     token = _token;
@@ -625,21 +624,6 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
       );
 
       _burn(msg.sender, _amount);
-  }
-
-  /**
-   * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
-   *
-   * NOTE: this method can be paused.
-   * msg.sender should approve this contract to spend GST2 tokens before calling
-   * this method
-   *
-   * @return : whether has rebalanced or not
-   */
-  function rebalanceWithGST()
-    external gasDiscountFrom(msg.sender)
-    returns (bool) {
-      return _rebalance();
   }
 
   /**

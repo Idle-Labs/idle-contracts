@@ -38,7 +38,6 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
       Ownable.initialize(msg.sender);
       Pausable.initialize(msg.sender);
       ReentrancyGuard.initialize();
-      GST2ConsumerV2.initialize();
       // Initialize storage variables
       maxUnlentPerc = 1000;
       token = _token;
