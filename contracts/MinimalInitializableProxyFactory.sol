@@ -1,7 +1,7 @@
 pragma solidity 0.5.16;
 
 contract MinimalInitializableProxyFactory {
-  event ProxyCreated(address);
+  event ProxyCreated(address indexed implementation, address proxy);
 
   function create(address target, string memory initSignature, bytes memory initData) public {
     address clone = createClone(target);
@@ -16,7 +16,7 @@ contract MinimalInitializableProxyFactory {
     // solium-disable-next-line security/no-call-value
     (bool success, bytes memory returnData) = clone.call(callData);
     require(success, "Initialization reverted");
-    emit ProxyCreated(clone);
+    emit ProxyCreated(target, clone);
   }
 
   function createClone(address target) internal returns (address result) {
