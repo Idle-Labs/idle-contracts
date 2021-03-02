@@ -2,6 +2,7 @@ const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const IERC20 = artifacts.require("IERC20.sol");
 const addresses = require("./addresses");
 const BigNumber = require('bignumber.js');
+const MinimalInitializableProxyFactory = artifacts.require("MinimalInitializableProxyFactory");
 
 const toBN = v => new BigNumber(v.toString());
 const TOKENS_HOLDER = "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98";
@@ -19,13 +20,26 @@ const checkIncreased = (a, b, message) => {
 }
 
 const test = async (deployer, token, underlying, decimals) => {
-  await deployer.deploy(IdleAaveV2, token, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
-  const wrapper = await IdleAaveV2.deployed();
+  await deployer.deploy(MinimalInitializableProxyFactory);
+  const proxyFactory = await MinimalInitializableProxyFactory.deployed();
+  console.log("MinimalInitializableProxyFactory deployed at", proxyFactory.address);
+
+  await deployer.deploy(IdleAaveV2)
+  const wrapperImplementation = await IdleAaveV2.deployed();
+  await wrapperImplementation.initialize(token, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
+
+  const initSig = "initialize(address,address,address)";
+  const initData = web3.eth.abi.encodeParameters(
+    ["address", "address", "address"],
+    [token, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER]
+  );
+
+  const receipt = await proxyFactory.create(wrapperImplementation.address, initSig, initData);
+  const wrapper = await IdleAaveV2.at(receipt.logs[0].args.proxy);
 
   const DAI = await IERC20.at(underlying);
   const aDAI = await IERC20.at(token);
 
-  // const ONE18 = toBN("1000000000000000000");
   const ONE_DECIMALS = toBN("10").pow(decimals);
   const fromUnderlyingTokenUnits = u => toBN(u).times(ONE_DECIMALS);
   const toUnit = v => v.div(ONE_DECIMALS);
