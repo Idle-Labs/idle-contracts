@@ -1,10 +1,15 @@
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
+const MinimalInitializableProxyFactory = artifacts.require("MinimalInitializableProxyFactory");
 const addresses = require("./addresses");
 
 module.exports = async (deployer, network, accounts) => {
   if (network === 'test' || network == 'coverage') {
     return;
   }
+
+  await deployer.deploy(MinimalInitializableProxyFactory);
+  const proxyFactory = await MinimalInitializableProxyFactory.deployed();
+  console.log("MinimalInitializableProxyFactory deployed at", proxyFactory.address);
 
   const idleTokens = {
     "idleDAIV4": {
@@ -56,6 +61,10 @@ module.exports = async (deployer, network, accounts) => {
 
   const addressesProvider = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
 
+  await deployer.deploy(IdleAaveV2);
+  const aaveV2WrapperImplementation = await IdleAaveV2.deployed();
+  console.log("IdleAaveV2 implementation deployed at", aaveV2WrapperImplementation.address, "\n\n");
+
   for (const name in idleTokens) {
     const attrs = idleTokens[name];
     const idleTokenAddress = attrs.idleTokenAddress;
@@ -67,13 +76,16 @@ module.exports = async (deployer, network, accounts) => {
     console.log("aTokenAddress", aTokenAddress)
     console.log("underlyingTokenAddress", underlyingTokenAddress)
 
-    // TODO use minimal proxy factory if possibile
-    await deployer.deploy(IdleAaveV2, aTokenAddress, addressesProvider, idleTokenAddress);
-
-    const aaveV2Wrapper = await IdleAaveV2.deployed();
+    const initSig = "initialize(address,address,address)";
+    const initData = web3.eth.abi.encodeParameters(
+      ["address", "address", "address"],
+      [aTokenAddress, addressesProvider, idleTokenAddress]
+    );
+    const receipt = await proxyFactory.create(aaveV2WrapperImplementation.address, initSig, initData);
+    const aaveV2Wrapper = await IdleAaveV2.at(receipt.logs[0].args.proxy);
     attrs.aaveV2WrapperAddress = aaveV2Wrapper.address;
-    console.log("deployed at", aaveV2Wrapper.address);
-    console.log("************************************\n\n\n\n")
+    console.log("AaveV2 wrapper for", name, "deployed at", aaveV2Wrapper.address);
+    console.log("\n************************************\n\n")
   };
 
   console.log("const idleTokens =", idleTokens);
