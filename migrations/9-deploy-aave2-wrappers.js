@@ -81,10 +81,10 @@ module.exports = async (deployer, network, accounts) => {
       ["address", "address", "address"],
       [aTokenAddress, addressesProvider, idleTokenAddress]
     );
-    const receipt = await proxyFactory.create(aaveV2WrapperImplementation.address, initSig, initData);
-    const aaveV2Wrapper = await IdleAaveV2.at(receipt.logs[0].args.proxy);
+    const result = await proxyFactory.create(aaveV2WrapperImplementation.address, initSig, initData);
+    const aaveV2Wrapper = await IdleAaveV2.at(result.logs[0].args.proxy);
     attrs.aaveV2WrapperAddress = aaveV2Wrapper.address;
-    console.log("AaveV2 wrapper for", name, "deployed at", aaveV2Wrapper.address);
+    console.log("AaveV2 wrapper for", name, "deployed at", aaveV2Wrapper.address, "gas used:", result.receipt.gasUsed);
     console.log("\n************************************\n\n")
   };
 
