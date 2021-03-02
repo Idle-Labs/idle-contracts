@@ -584,21 +584,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * Dynamic allocate all the pool across different lending protocols if needed, use gas refund from gasToken
-   *
-   * NOTE: this method can be paused.
-   * msg.sender should approve this contract to spend GST2 tokens before calling
-   * this method
-   *
-   * @return : whether has rebalanced or not
-   */
-  function rebalanceWithGST()
-    external gasDiscountFrom(msg.sender)
-    returns (bool) {
-      return _rebalance();
-  }
-
-  /**
    * Dynamic allocate all the pool across different lending protocols if needed,
    * rebalance without params
    *
