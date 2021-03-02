@@ -26,7 +26,6 @@ const test = async (deployer, token, underlying, decimals) => {
 
   await deployer.deploy(IdleAaveV2)
   const wrapperImplementation = await IdleAaveV2.deployed();
-  await wrapperImplementation.initialize(token, "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5", TOKENS_HOLDER);
 
   const initSig = "initialize(address,address,address)";
   const initData = web3.eth.abi.encodeParameters(
