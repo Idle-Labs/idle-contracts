@@ -19,6 +19,8 @@ contract MinimalInitializableProxyFactory {
     emit ProxyCreated(target, clone);
   }
 
+  // taken from:
+  // https://github.com/optionality/clone-factory/blob/ffa4dedcec53b68b11450b07685b4df80c33edcc/contracts/CloneFactory.sol#L32
   function createClone(address target) internal returns (address result) {
     bytes20 targetBytes = bytes20(target);
     assembly {
@@ -30,6 +32,8 @@ contract MinimalInitializableProxyFactory {
     }
   }
 
+  // taken from:
+  // https://github.com/optionality/clone-factory/blob/ffa4dedcec53b68b11450b07685b4df80c33edcc/contracts/CloneFactory.sol#L43
   function isClone(address target, address query) internal view returns (bool result) {
     bytes20 targetBytes = bytes20(target);
     assembly {
