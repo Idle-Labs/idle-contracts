@@ -101,8 +101,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   uint256[] private lastRebalancerAllocations;
   // Fee for flash loan
   uint256 public flashLoanFee;
-  // govToken -> user_address -> unclaimed_amount eg. usersGovTokensIndexes[govTokens[0]][msg.sender] = 1111123;
-  mapping (address => mapping (address => uint256)) public usersGovTokensUnclaimedShare;
 
   /**
   * @dev Emitted on flashLoan()
@@ -436,37 +434,33 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    *
    * @param _from : sender account
    * @param _to : recipient account
-   * @param _amount : value to transfer
+   * @param amount : value to transfer
    */
-  function _updateUserGovIdxTransfer(address _from, address _to, uint256 _amount) internal {
+  function _updateUserGovIdxTransfer(address _from, address _to, uint256 amount) internal {
     address govToken;
     uint256 govTokenIdx;
-    uint256 unclaimedShareFrom;
-    uint256 balanceOfTo = balanceOf(_to);
+    uint256 sharePerTokenFrom;
+    uint256 shareTo;
+    uint256 balanceTo = balanceOf(_to);
     for (uint256 i = 0; i < govTokens.length; i++) {
       govToken = govTokens[i];
-      govTokenIdx = govTokensIndexes[govToken];
-      unclaimedShareFrom = _amount.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_from])).div(ONE_18);
-      // user `_to` should have the same reward as before given that it's receiving idleToken with no gov token embedded
-      // unclaimedTo = usrBal * (govIdx - userIdx) -> userIdx = govIdx - unclaimedTo / usrBal
-      usersGovTokensIndexes[govToken][_to] = govTokenIdx.sub(
-        // unclaimedTo = balanceOfTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to]));
-        balanceOfTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to])).div(balanceOfTo.add(_amount))
-      );
-      usersGovTokensUnclaimedShare[govToken][_from] = unclaimedShareFrom;
-      govTokensLastBalances[govToken] = IERC20(govToken).balanceOf(address(this)).sub(unclaimedShareFrom);
-    }
-  }
+      if (balanceTo == 0) {
+        usersGovTokensIndexes[govToken][_to] = usersGovTokensIndexes[govToken][_from];
+        continue;
+      }
 
-  /**
-   * Claim unclaimed gov tokens of transfer and transferFrom
-   */
-  function claimUnclaimedGovTokens() external whenNotPaused nonReentrant {
-    address govToken;
-    for (uint256 i = 0; i < govTokens.length; i++) {
-      govToken = govTokens[i];
-      IERC20(govToken).transfer(msg.sender, usersGovTokensUnclaimedShare[govToken][msg.sender]);
-      usersGovTokensUnclaimedShare[govToken][msg.sender] = 0;
+      govTokenIdx = govTokensIndexes[govToken];
+      // calc 1 idleToken value in gov shares for user `_from`
+      sharePerTokenFrom = govTokenIdx.sub(usersGovTokensIndexes[govToken][_from]);
+      // calc current gov shares (before transfer) for user `_to`
+      shareTo = balanceTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to])).div(ONE_18);
+      // user `_to` should have -> shareTo + (sharePerTokenFrom * amount / 1e18) = (balanceTo + amount) * (govTokenIdx - userIdx) / 1e18
+      // so userIdx = govTokenIdx - ((shareTo * 1e18 + (sharePerTokenFrom * amount)) / (balanceTo + amount))
+      usersGovTokensIndexes[govToken][_to] = govTokenIdx.sub(
+        shareTo.mul(ONE_18).add(sharePerTokenFrom.mul(amount)).div(
+          balanceTo.add(amount)
+        )
+      );
     }
   }
 
@@ -1002,17 +996,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
         }
       }
 
-      // TODO can this be moved up? how to update govTokensIndexes then? if not then bundle it up
-      // with the `if (usrBal > 0)`
-      //
-      // gifting govTokens[i] accrued to the pool
-      if (_skipGovTokenRedeem[i]) {
-        // Update user gov idx to forfeit rewards for this token
-        usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
-        continue;
-      }
-
-      if (usrBal > 0) {
+      // if _skipGovTokenRedeem = true -> gift govTokens[i] accrued to the pool
+      if (usrBal > 0 || !_skipGovTokenRedeem[i]) {
         uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
         // update current user index for this gov token
         usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
