@@ -3,6 +3,7 @@ require('chai/register-should');
 const path = require("path");
 require('dotenv').config();
 const mnemonic = process.env.MAINNET_MNEMONIC;
+const kovanPrivateKey = process.env.KOVAN_PRIVATE_KEY;
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 const LedgerWalletProvider = require('@umaprotocol/truffle-ledger-provider');
 
@@ -39,7 +40,8 @@ module.exports = {
       gasPrice: 5000000000, // 5 gwei
     },
     kovan: {
-      provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
+      // provider: () => new HDWalletProvider(mnemonic, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
+      provider: () => new HDWalletProvider(kovanPrivateKey, 'https://eth-kovan.alchemyapi.io/v2/' + process.env.IDLE_ALCHEMY_KEY),
       // provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 42}, 'https://kovan.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: '42',
       gas: 3500000,
