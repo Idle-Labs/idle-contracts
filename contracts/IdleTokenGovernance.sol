@@ -101,6 +101,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   uint256[] private lastRebalancerAllocations;
   // Fee for flash loan
   uint256 public flashLoanFee;
+  // Fee for flash loan
 
   /**
   * @dev Emitted on flashLoan()
@@ -119,7 +120,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function _init() external {
     require(flashLoanFee == 0, 'IDLE:INIT_DONE');
 
-    flashLoanFee = 9;
+    flashLoanFee = 90;
   }
 
   // onlyOwner
@@ -691,7 +692,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function flashFee(address _token, uint256 _amount) external view returns (uint256) {
     require(_token == token, 'IDLE:!EQ');
-    return _amount.mul(flashLoanFee).div(10000);
+    return _amount.mul(flashLoanFee).div(FULL_ALLOC);
   }
 
   /**
@@ -773,7 +774,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     // transfer funds
     IERC20(token).safeTransfer(address(_receiver), _amount);
     // calculate fee
-    uint256 _flashFee = _amount.mul(flashLoanFee).div(10000); // 9 -> 0.09%
+    uint256 _flashFee = _amount.mul(flashLoanFee).div(FULL_ALLOC); // 9 -> 0.09%
     // call _receiver `onFlashLoan`
     require(
       _receiver.onFlashLoan(msg.sender, token, _amount, _flashFee, _params) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
