@@ -3,12 +3,12 @@ pragma solidity 0.5.16;
 contract MinimalInitializableProxyFactory {
   event ProxyCreated(address indexed implementation, address proxy);
 
-  function create(address target) public {
+  function create(address target) external {
     address clone = createClone(target);
     emit ProxyCreated(target, clone);
   }
 
-  function createAndCall(address target, string memory initSignature, bytes memory initData) public {
+  function createAndCall(address target, string calldata initSignature, bytes calldata initData) external {
     address clone = createClone(target);
     bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(initSignature))), initData);
 
