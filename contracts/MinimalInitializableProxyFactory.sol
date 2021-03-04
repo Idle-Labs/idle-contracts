@@ -3,18 +3,17 @@ pragma solidity 0.5.16;
 contract MinimalInitializableProxyFactory {
   event ProxyCreated(address indexed implementation, address proxy);
 
-  function create(address target, string memory initSignature, bytes memory initData) public {
+  function create(address target) public {
     address clone = createClone(target);
-    bytes memory callData;
+    emit ProxyCreated(target, clone);
+  }
 
-    if (bytes(initSignature).length == 0) {
-      callData = initData;
-    } else {
-      callData = abi.encodePacked(bytes4(keccak256(bytes(initSignature))), initData);
-    }
+  function createAndCall(address target, string memory initSignature, bytes memory initData) public {
+    address clone = createClone(target);
+    bytes memory callData = abi.encodePacked(bytes4(keccak256(bytes(initSignature))), initData);
 
     // solium-disable-next-line security/no-call-value
-    (bool success, bytes memory returnData) = clone.call(callData);
+    (bool success,) = clone.call(callData);
     require(success, "Initialization reverted");
     emit ProxyCreated(target, clone);
   }
