@@ -29,6 +29,7 @@ import "./interfaces/CERC20.sol";
 import "./interfaces/IdleController.sol";
 import "./interfaces/PriceOracle.sol";
 import "./interfaces/IUniswapV2Router02.sol";
+import "./IdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
 
@@ -99,9 +100,12 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   bool public isRiskAdjusted;
   // last allocations submitted by rebalancer
   uint256[] private lastRebalancerAllocations;
+
+  // ########## IdleToken V5 updates
   // Fee for flash loan
   uint256 public flashLoanFee;
-  // Fee for flash loan
+  // IdleToken helper address
+  address public tokenHelper;
 
   /**
   * @dev Emitted on flashLoan()
@@ -117,9 +121,9 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     uint256 premium
   );
 
-  function _init() external {
+  function _init(address _tokenHelper) external {
     require(flashLoanFee == 0, 'IDLE:INIT_DONE');
-
+    tokenHelper = _tokenHelper;
     flashLoanFee = 90;
   }
 
@@ -177,6 +181,17 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       if (newGov == IDLE) { continue; }
       protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
     }
+  }
+
+  /**
+   * It allows owner to set the IdleTokenHelper address
+   *
+   * @param _tokenHelper : new IdleTokenHelper address
+   */
+  function setIdleTokenHelper(address _tokenHelper)
+    external onlyOwner {
+      require(_tokenHelper != address(0), "IDLE:IS_0");
+      tokenHelper = _tokenHelper;
   }
 
   /**
@@ -280,6 +295,24 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   }
 
   /**
+  * Get currently used protocol tokens (cDAI, aDAI, ...)
+  *
+  * @return : array of protocol tokens supported
+  */
+  function getAllAvailableTokens() external view returns (address[] memory) {
+    return allAvailableTokens;
+  }
+
+  /**
+  * Get gov token associated to a protocol token eg protocolTokenToGov[cDAI] = COMP
+  *
+  * @return : address of the gov token
+  */
+  function getProtocolTokenToGov(address _protocolToken) external view returns (address) {
+    return protocolTokenToGov[_protocolToken];
+  }
+
+  /**
    * IdleToken price for a user considering fees, in underlying
    * this is useful when you need to redeem exactly X underlying
    *
@@ -288,22 +321,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function tokenPriceWithFee(address user)
     external view
     returns (uint256 priceWFee) {
-      /*
-       *  Price on minting is currentPrice
-       *  Price on redeem must consider the fee
-       *
-       *  Below the implementation of the following priceWFee formula
-       *
-       *  priceWFee := underlyingAmount/idleTokenAmount
-       *
-       *  priceWFee = currentPrice * (1 - scaledFee * ΔP%)
-       *
-       *  where:
-       *  - scaledFee   := fee/FULL_ALLOC
-       *  - ΔP% := 0 when currentPrice < userAvgPrice (no gain) and (currentPrice-userAvgPrice)/currentPrice
-       *
-       *  n.b: gain := idleTokenAmount * ΔP% * currentPrice
-       */
       uint256 userAvgPrice = userAvgPrices[user];
       uint256 price = _tokenPrice();
 
@@ -333,15 +350,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function getAPRs()
     external view
-    returns (address[] memory addresses, uint256[] memory aprs) {
-      address currToken;
-      addresses = new address[](allAvailableTokens.length);
-      aprs = new uint256[](allAvailableTokens.length);
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        currToken = allAvailableTokens[i];
-        addresses[i] = currToken;
-        aprs[i] = ILendingProtocol(protocolWrappers[currToken]).getAPR();
-      }
+    returns (address[] memory, uint256[] memory) {
+    return IdleTokenHelper(tokenHelper).getAPRs(address(this));
   }
 
   /**
@@ -350,52 +360,9 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @return avgApr: current weighted avg apr
    */
   function getAvgAPR()
-    external view
+    public view
     returns (uint256) {
-    return _getAvgAPR();
-  }
-
-  /**
-   * Get current avg APR of this IdleToken
-   *
-   * @return avgApr: current weighted avg apr
-   */
-  function _getAvgAPR()
-    internal view
-    returns (uint256 avgApr) {
-      (uint256[] memory amounts, uint256 total) = _getCurrentAllocations();
-      // IDLE gov token won't be counted here because is not in allAvailableTokens
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        if (amounts[i] == 0) {
-          continue;
-        }
-        address protocolToken = allAvailableTokens[i];
-        // avgApr = avgApr.add(currApr.mul(weight).div(ONE_18))
-        avgApr = avgApr.add(
-          ILendingProtocol(protocolWrappers[protocolToken]).getAPR().mul(
-            amounts[i]
-          )
-        );
-        // Add weighted gov tokens apr
-        address currGov = protocolTokenToGov[protocolToken];
-        if (govTokens.length > 0 && currGov != address(0)) {
-          avgApr = avgApr.add(amounts[i].mul(getGovApr(currGov)));
-        }
-      }
-
-      avgApr = avgApr.div(total);
-  }
-
-  /**
-   * Get gov token APR
-   *
-   * @return : apr scaled to 1e18
-   */
-  function getGovApr(address _govToken) internal view returns (uint256) {
-    // In case new Gov tokens will be supported this should be updated, no need to add IDLE apr
-    if (_govToken == COMP && cToken != address(0)) {
-      return PriceOracle(oracle).getCompApr(cToken, token);
-    }
+    return IdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
   }
 
   /**
@@ -511,8 +478,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     mintedTokens = _amount.mul(ONE_18).div(idlePrice);
     _mint(msg.sender, mintedTokens);
 
-    // Update avg price
-    // Update user idx for each gov tokens
+    // Update avg price and user idx for each gov tokens
     _updateUserInfo(msg.sender, mintedTokens, idlePrice);
 
     if (_referral != address(0)) {
@@ -521,7 +487,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   }
 
   /**
-   * Helper method for mintIdleToken, updates minter gov indexes
+   * Helper method for mintIdleToken, updates minter gov indexes and avg price
    *
    * @param _to : minter account
    * @param _mintedTokens : number of newly minted tokens
@@ -676,11 +642,11 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     external whenNotPaused
     returns (bool hasRebalanced, uint256 avgApr) {
       require(!isRiskAdjusted, "IDLE:NOT_ALLOWED");
-      uint256 initialAPR = _getAvgAPR();
+      uint256 initialAPR = getAvgAPR();
       // Validate and update rebalancer allocations
       _setAllocations(_newAllocations);
       hasRebalanced = _rebalance();
-      avgApr = _getAvgAPR();
+      avgApr = getAvgAPR();
       require(avgApr > initialAPR, "IDLE:NOT_IMPROV");
   }
 
@@ -801,34 +767,12 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function sellGovTokens(uint256[] calldata _minTokenOut) external {
     require(msg.sender == rebalancer || msg.sender == owner(), "IDLE:!AUTH");
-
-    uint256 govLen = govTokens.length;
-    require(_minTokenOut.length == govLen, "IDLE:!EQ");
-
-    IUniswapV2Router02 uniswapRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-
-    uint256 _currentBalance;
-    address[] memory path = new address[](3);
-    path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // weth
-    path[2] = token; // output will always be token
-
-    for (uint256 i = 0; i < govLen; i++) {
-      address newGov = govTokens[i];
-      if (newGov == IDLE || _minTokenOut[i] == 0) { continue; }
-      _currentBalance = IERC20(newGov).balanceOf(address(this));
-      if (_currentBalance > 0) {
-        // create route govToken -> WETH -> token
-        path[0] = address(newGov);
-        // swap token
-        uniswapRouterV2.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-          _currentBalance,
-          _minTokenOut[i],
-          path,
-          address(this),
-          block.timestamp.add(1800)
-        );
-      }
+    for (uint256 i = 0; i < govTokens.length; i++) {
+      IERC20 newGov = IERC20(govTokens[i]);
+      if (address(newGov) == IDLE || _minTokenOut[i] == 0) { continue; }
+      newGov.safeTransfer(tokenHelper, newGov.balanceOf(address(this)));
     }
+    IdleTokenHelper(tokenHelper).sellGovTokens(address(this), _minTokenOut);
   }
 
   // internal
@@ -889,7 +833,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
 
       if (balance > 0) {
-        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
+        maxUnlentBalance = _maxUnlentBalance();
         if (lastAllocations.length == 0) {
           // set in storage
           lastAllocations = rebalancerLastAllocations;
@@ -897,7 +841,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
 
         if (balance > maxUnlentBalance) {
           // mint the difference
-          _mintWithAmounts(_amountsFromAllocations(rebalancerLastAllocations, balance.sub(maxUnlentBalance)));
+          _mintWithAmounts(rebalancerLastAllocations, balance.sub(maxUnlentBalance));
         }
       }
 
@@ -911,7 +855,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       (uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
 
       if (balance == 0 && maxUnlentPerc > 0) {
-        totalInUnderlying = totalInUnderlying.sub(_getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC));
+        totalInUnderlying = totalInUnderlying.sub(_maxUnlentBalance());
       }
 
       (uint256[] memory toMintAllocations, uint256 totalToMint, bool lowLiquidity) = _redeemAllNeeded(
@@ -929,7 +873,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
 
       // Do not count `maxUnlentPerc` from balance
       if (maxUnlentBalance == 0 && maxUnlentPerc > 0) {
-        maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
+        maxUnlentBalance = _maxUnlentBalance();
       }
 
       uint256 totalRedeemd = IERC20(token).balanceOf(address(this));
@@ -946,7 +890,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
 
       // partial amounts
-      _mintWithAmounts(_amountsFromAllocations(tempAllocations, totalRedeemd.sub(maxUnlentBalance)));
+      _mintWithAmounts(tempAllocations, totalRedeemd.sub(maxUnlentBalance));
 
       emit Rebalance(msg.sender, totalInUnderlying.add(maxUnlentBalance));
 
@@ -1087,11 +1031,14 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   /**
    * Mint specific amounts of protocols tokens
    *
-   * @param protocolAmounts : array of amounts to be minted
+   * @param rebalancerLastAllocations : array of amounts to be minted
+   * @param total : total amount
    * @return : net value in underlying
    */
-  function _mintWithAmounts(uint256[] memory protocolAmounts) internal {
+  function _mintWithAmounts(uint256[] memory allocations, uint256 total) internal {
     // mint for each protocol and update currentTokensUsed
+    uint256[] memory protocolAmounts = _amountsFromAllocations(allocations, total);
+
     uint256 currAmount;
     address protWrapper;
 
@@ -1130,6 +1077,15 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
     }
     return newAmounts;
+  }
+
+  /**
+   * Calculate max unlent balance in underlying
+   *
+   * @return : max unlent balance in underlying
+   */
+  function _maxUnlentBalance() private view returns(uint256) {
+    return _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
   }
 
   /**
@@ -1188,25 +1144,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @return total : total AUM in underlying
    */
   function _getCurrentAllocations() internal view
-    returns (uint256[] memory amounts, uint256 total) {
-      // Get balance of every protocol implemented
-      uint256 tokensLen = allAvailableTokens.length;
-      amounts = new uint256[](tokensLen);
-
-      address currentToken;
-      uint256 currTokenPrice;
-
-      for (uint256 i = 0; i < tokensLen; i++) {
-        currentToken = allAvailableTokens[i];
-        currTokenPrice = ILendingProtocol(protocolWrappers[currentToken]).getPriceInToken();
-        amounts[i] = currTokenPrice.mul(
-          IERC20(currentToken).balanceOf(address(this))
-        ).div(ONE_18);
-        total = total.add(amounts[i]);
-      }
-
-      // return addresses and respective amounts in underlying
-      return (amounts, total);
+    returns (uint256[] memory, uint256) {
+      return IdleTokenHelper(tokenHelper).getCurrentAllocations(address(this));
   }
 
   /**
