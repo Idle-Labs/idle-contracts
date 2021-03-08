@@ -98,6 +98,26 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
   // last allocations submitted by rebalancer
   uint256[] private lastRebalancerAllocations;
 
+  // ########## IdleToken V5 updates
+  // Fee for flash loan
+  uint256 public flashLoanFee;
+  // IdleToken helper address
+  address public tokenHelper;
+
+  /**
+  * @dev Emitted on flashLoan()
+  * @param target The address of the flash loan receiver contract
+  * @param initiator The address initiating the flash loan
+  * @param amount The amount flash borrowed
+  * @param premium The fee flash borrowed
+  **/
+  event FlashLoan(
+    address indexed target,
+    address indexed initiator,
+    uint256 amount,
+    uint256 premium
+  );
+
   // onlyOwner
   /**
    * It allows owner to manually initialize new contract implementation which supports IDLE distribution
@@ -132,6 +152,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     }
 
     lastRebalancerAllocations = _lastRebalancerAllocations;
+    lastAllocations = _lastRebalancerAllocations;
     // Idle multisig
     addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
     // Remove pause ability from msg.sender
@@ -155,7 +176,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     tokenDecimals = ERC20Detailed(_token).decimals();
     // end of old initialize method
     oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181);
-    feeAddress = address(0x69a62C24F16d4914a48919613e8eE330641Bcb94);
+    feeAddress = address(0xBecC659Bfc6EDcA552fa1A67451cC6b38a0108E4);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     fee = 10000;
     iToken = address(0);
