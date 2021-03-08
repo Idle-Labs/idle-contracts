@@ -1,17 +1,29 @@
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const MinimalInitializableProxyFactory = artifacts.require("MinimalInitializableProxyFactory");
 const addresses = require("./addresses");
+const BigNumber = require('bignumber.js');
+
+const toBN = v => new BigNumber(v.toString());
+
+const proxyFactoryAddress = "";
+const aaveV2ImplementationAddress = "";
+
+const addressesProvider = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
+// const addressesProviderKovan = "0x88757f2f99175387ab4c6a4b3067c77a695b0349";
 
 module.exports = async (deployer, network, accounts) => {
   if (network === 'test' || network == 'coverage') {
     return;
   }
 
-  await deployer.deploy(MinimalInitializableProxyFactory);
-  const proxyFactory = await MinimalInitializableProxyFactory.deployed();
-  console.log("MinimalInitializableProxyFactory deployed at", proxyFactory.address);
+  const proxyFactory = await MinimalInitializableProxyFactory.at(proxyFactoryAddress);
 
   const idleTokens = {
+    // "idleDAIV4-KOVAN": {
+    //   idleTokenAddress: "0x295CA5bC5153698162dDbcE5dF50E436a58BA21e",
+    //   aTokenAddress: "0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8",
+    //   underlyingTokenAddress: "0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD",
+    // },
     "idleDAIV4": {
       idleTokenAddress: addresses.idleDAIV4,
       aTokenAddress: addresses.aDAIV2.live,
@@ -59,12 +71,9 @@ module.exports = async (deployer, network, accounts) => {
     },
   }
 
-  const addressesProvider = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
+  const aaveV2WrapperImplementation = await IdleAaveV2.at(aaveV2ImplementationAddress);
 
-  await deployer.deploy(IdleAaveV2);
-  const aaveV2WrapperImplementation = await IdleAaveV2.deployed();
-  console.log("IdleAaveV2 implementation deployed at", aaveV2WrapperImplementation.address, "\n\n");
-
+  let totalGas = toBN("0");
   for (const name in idleTokens) {
     const attrs = idleTokens[name];
     const idleTokenAddress = attrs.idleTokenAddress;
@@ -81,12 +90,16 @@ module.exports = async (deployer, network, accounts) => {
       ["address", "address", "address"],
       [aTokenAddress, addressesProvider, idleTokenAddress]
     );
+    console.log("initSig", initSig);
+    console.log("initData", initData);
     const result = await proxyFactory.createAndCall(aaveV2WrapperImplementation.address, initSig, initData);
     const aaveV2Wrapper = await IdleAaveV2.at(result.logs[0].args.proxy);
     attrs.aaveV2WrapperAddress = aaveV2Wrapper.address;
     console.log("AaveV2 wrapper for", name, "deployed at", aaveV2Wrapper.address, "gas used:", result.receipt.gasUsed);
     console.log("\n************************************\n")
+    totalGas = totalGas.plus(toBN(result.receipt.gasUsed));
   };
 
   console.log("const idleTokens =", idleTokens);
+  console.log("total gas used", totalGas.toString());
 }

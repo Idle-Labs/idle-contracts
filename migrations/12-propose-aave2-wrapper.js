@@ -54,7 +54,7 @@ const advanceBlocks = async n => {
   }
 }
 
-// take output from migration 9
+// take output from migration 11
 const idleTokens = null;
 
 module.exports = async (deployer, network, accounts) => {
