@@ -120,36 +120,6 @@ contract IdleTokenHelper {
       }
   }
 
-  function tokenPriceWithFee(address _idleToken, address user)
-    external view
-    returns (uint256 priceWFee) {
-      IdleTokenGovernance idleToken = IdleTokenGovernance(_idleToken);
-      /*
-       *  Price on minting is currentPrice
-       *  Price on redeem must consider the fee
-       *
-       *  Below the implementation of the following priceWFee formula
-       *
-       *  priceWFee := underlyingAmount/idleTokenAmount
-       *
-       *  priceWFee = currentPrice * (1 - scaledFee * ΔP%)
-       *
-       *  where:
-       *  - scaledFee   := fee/FULL_ALLOC
-       *  - ΔP% := 0 when currentPrice < userAvgPrice (no gain) and (currentPrice-userAvgPrice)/currentPrice
-       *
-       *  n.b: gain := idleTokenAmount * ΔP% * currentPrice
-       */
-      uint256 userAvgPrice = idleToken.userAvgPrices(user);
-      uint256 price = idleToken.tokenPrice();
-
-      if (userAvgPrice == 0 || price < userAvgPrice) {
-        priceWFee = price;
-      } else {
-        priceWFee = price.mul(FULL_ALLOC).sub(idleToken.fee().mul(price.sub(userAvgPrice))).div(FULL_ALLOC);
-      }
-  }
-
   /**
    * Covert gov tokens in underlyings, this method is expected to be called from an idleToken
    * tokens needs to be transferred here before
