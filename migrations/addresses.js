@@ -392,6 +392,11 @@ const allIdleTokens = [
   idleUSDTSafeV4,
 ];
 
+const minimalInitializableProxyFactory = "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8";
+const idleAaveV2Implementation = "0x01A3688D7d01390677e85256406B3156aCd59C64";
+const idleAaveV2DAI = idleAaveV2Implementation;
+const idleAaveV2USDC = "0xC9f16B7496843A82e51457aA84002d55036d8aA2";
+
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
@@ -446,5 +451,9 @@ module.exports = {
   timelock: timelock,
   proxyAdmin: proxyAdmin,
   allIdleTokens: allIdleTokens,
-  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5'
+  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+  minimalInitializableProxyFactory,
+  idleAaveV2Implementation,
+  idleAaveV2DAI,
+  idleAaveV2USDC,
 };
