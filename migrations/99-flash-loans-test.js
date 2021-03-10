@@ -15,7 +15,10 @@ const toUnit = v => v.div(ONE_18);
 const toUnitString = v => toUnit(toBN(v)).toString();
 const fromUnits = u => toBN(u).times(ONE_18);
 
-module.exports = async function(deployer) {
+module.exports = async function(deployer, network) {
+  if (network === 'test' || network == 'coverage') {
+    return;
+  }
   await web3.eth.sendTransaction({ from: holder, to: addresses.timelock, value: "1000000000000000000" });
 
   const idleTokenAddress = addresses.idleDAIV4;
@@ -65,7 +68,7 @@ module.exports = async function(deployer) {
     console.log("initialBalance flash loaner", toUnitString(initialBalance));
     console.log("endBalance flash loanes", toUnitString(daiBalanceOnExecuteEnd));
     console.log('#### this should be -0.09%');
-  
+
     console.log("amountReceived", toUnitString(amountReceived));
     console.log("daiBalanceOnExecuteStart", toUnitString(daiBalanceOnExecuteStart));
     console.log("feeReceived", toUnitString(feeReceived));
