@@ -26,12 +26,12 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
     address _token,
-    address _iToken,
-    address _cToken,
-    address _rebalancer,
     address _idle,
     address _comp
     ) public {
+      IDLE = _idle;
+      COMP = _comp;
+
       _initV1(_name, _symbol, _token);
   }
   function amountsFromAllocations(uint256[] calldata allocations, uint256 total)

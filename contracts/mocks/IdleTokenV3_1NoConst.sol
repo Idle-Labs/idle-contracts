@@ -997,7 +997,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       }
 
       // if _skipGovTokenRedeem = true -> gift govTokens[i] accrued to the pool
-      if (usrBal > 0 || !_skipGovTokenRedeem[i]) {
+      if (usrBal > 0 && !_skipGovTokenRedeem[i]) {
         uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
         // update current user index for this gov token
         usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
@@ -1040,7 +1040,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
       address[] memory holders = new address[](1);
       address[] memory tokens = new address[](1);
       holders[0] = address(this);
-
       if (_govToken == IDLE) {
         tokens[0] = address(this);
         IdleController(idleController).claimIdle(holders, tokens);
