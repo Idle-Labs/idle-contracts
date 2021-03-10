@@ -28,7 +28,6 @@ import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
 import "./interfaces/IdleController.sol";
 import "./interfaces/PriceOracle.sol";
-import "./interfaces/IUniswapV2Router02.sol";
 import "./IdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
@@ -375,7 +374,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
-    _updateUserFeeInfoTransfer(recipient, amount, userAvgPrices[sender]);
+    _updateUserFeeInfo(recipient, amount, userAvgPrices[sender]);
     return true;
   }
 
@@ -390,7 +389,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function transfer(address recipient, uint256 amount) public returns (bool) {
     _updateUserGovIdxTransfer(msg.sender, recipient, amount);
     _transfer(msg.sender, recipient, amount);
-    _updateUserFeeInfoTransfer(recipient, amount, userAvgPrices[msg.sender]);
+    _updateUserFeeInfo(recipient, amount, userAvgPrices[msg.sender]);
     return true;
   }
 
@@ -505,8 +504,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       );
     }
 
-    // (avgPrice * oldBalance) + (currPrice * newQty)) / totBalance
-    userAvgPrices[_to] = userAvgPrices[_to].mul(usrBal.sub(_mintedTokens)).add(_idlePrice.mul(_mintedTokens)).div(usrBal);
+    _updateUserFeeInfo(_to, _mintedTokens, _idlePrice);
   }
 
   /**
@@ -990,12 +988,12 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    *
    * @param usr : user that should have balance update
    * @param qty : new amount deposited / transferred, in idleToken
-   * @param senderAvgPrice : sender userAvgPrice
+   * @param price : sender userAvgPrice
    */
-  function _updateUserFeeInfoTransfer(address usr, uint256 qty, uint256 senderAvgPrice) private {
+  function _updateUserFeeInfo(address usr, uint256 qty, uint256 price) private {
     uint256 usrBal = balanceOf(usr);
     // (avgPrice * oldBalance) + (senderAvgPrice * newQty)) / totBalance
-    userAvgPrices[usr] = userAvgPrices[usr].mul(usrBal.sub(qty)).add(senderAvgPrice.mul(qty)).div(usrBal);
+    userAvgPrices[usr] = userAvgPrices[usr].mul(usrBal.sub(qty)).add(price.mul(qty)).div(usrBal);
   }
 
   /**
