@@ -546,7 +546,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     _mint(msg.sender, mintedTokens);
 
     // Update avg price and user idx for each gov tokens
-    _updateUserInfo(msg.sender, mintedTokens, idlePrice);
+    _updateUserInfo(msg.sender, mintedTokens);
+    _updateUserFeeInfo(msg.sender, mintedTokens, idlePrice);
 
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
@@ -558,9 +559,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    *
    * @param _to : minter account
    * @param _mintedTokens : number of newly minted tokens
-   * @param _idlePrice : curr idleToken price in underlying
    */
-  function _updateUserInfo(address _to, uint256 _mintedTokens, uint256 _idlePrice) internal {
+  function _updateUserInfo(address _to, uint256 _mintedTokens) internal {
     address govToken;
     uint256 usrBal = balanceOf(_to);
     uint256 _usrIdx;
@@ -574,8 +574,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
         _mintedTokens.mul(govTokensIndexes[govToken].sub(_usrIdx)).div(usrBal)
       );
     }
-
-    _updateUserFeeInfo(_to, _mintedTokens, _idlePrice);
   }
 
   /**

@@ -2533,5 +2533,18 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       [BNify('60000'), BNify('20000'), BNify('20000')],
       {from: manager}
     );
-  })
+  });
+
+  // tests to do
+  // setIdleTokenHelper
+  // getGovTokens
+  // getAllAvailableTokens
+  // getProtocolTokenToGov
+  // flashLoanFee
+  // maxFlashLoan
+
+  // tokenPriceWithFee
+  // redeemIdleTokenSkipGov
+  // flashLoan
+  // sellGovTokens
 });
