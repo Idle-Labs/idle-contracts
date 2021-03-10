@@ -2419,30 +2419,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1000000000000000000'));
     BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('1000000000000000000'));
   });
-  it('userNoFeeQty should behave correctly', async function () {
-    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-    // Set fee 0%
-    await this.token.setFee(BNify('0'), {from: creator});
-    // Set fee address
-    await this.token.setFeeAddress(feeReceiver, {from: creator});
-    // set available liquidity for providers
-    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-    // Set prices in DAI => [0.02, 1.25, 1, 2]
-    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-
-    // Simulate a prev mint
-    await this.mintIdle(BNify('1').mul(this.one), foo);
-    // Set rebalancer allocations
-    await this.setRebAllocations(['50000', '50000', '0', '0']);
-    await this.token.rebalance();
-    await this.token.redeemIdleToken(this.one, {from: foo});
-
-    // set fee to 10%
-    await this.token.setFee(BNify('10000'), {from: creator});
-
-    await this.mintIdle(BNify('1').mul(this.one), foo);
-    await this.token.redeemIdleToken(this.one, {from: foo});
-  });
   it('transfer correctly updates userAvgPrice when transferring an amount > of no fee qty', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee 0%
