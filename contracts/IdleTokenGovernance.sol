@@ -926,7 +926,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
 
       // if _skipGovTokenRedeem = true -> gift govTokens[i] accrued to the pool
-      if (usrBal > 0 || !_skipGovTokenRedeem[i]) {
+      if (usrBal > 0 && !_skipGovTokenRedeem[i]) {
         uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
         // update current user index for this gov token
         usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
