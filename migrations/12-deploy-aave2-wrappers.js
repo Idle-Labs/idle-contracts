@@ -25,41 +25,48 @@ module.exports = async (deployer, network, accounts) => {
       underlyingTokenAddress: addresses.USDC.live,
       aaveV2WrapperAddress: addresses.idleAaveV2USDC,
     },
-    // "idleUSDTV4": {
-    //   idleTokenAddress: addresses.idleUSDTV4,
-    //   aTokenAddress: addresses.aUSDTV2.live,
-    //   underlyingTokenAddress: addresses.USDT.live,
-    // },
-    // "idleSUSDV4": {
-    //   idleTokenAddress: addresses.idleSUSDV4,
-    //   aTokenAddress: addresses.aSUSDV2.live,
-    //   underlyingTokenAddress: addresses.SUSD.live,
-    // },
-    // "idleTUSDV4": {
-    //   idleTokenAddress: addresses.idleTUSDV4,
-    //   aTokenAddress: addresses.aTUSDV2.live,
-    //   underlyingTokenAddress: addresses.TUSD.live,
-    // },
-    // "idleWBTCV4": {
-    //   idleTokenAddress: addresses.idleWBTCV4,
-    //   aTokenAddress: addresses.aWBTCV2.live,
-    //   underlyingTokenAddress: addresses.WBTC.live,
-    // },
-    // "idleDAISafeV4": {
-    //   idleTokenAddress: addresses.idleDAISafeV4,
-    //   aTokenAddress: addresses.aDAIV2.live,
-    //   underlyingTokenAddress: addresses.DAI.live,
-    // },
-    // "idleUSDCSafeV4": {
-    //   idleTokenAddress: addresses.idleUSDCSafeV4,
-    //   aTokenAddress: addresses.aUSDCV2.live,
-    //   underlyingTokenAddress: addresses.USDC.live,
-    // },
-    // "idleUSDTSafeV4": {
-    //   idleTokenAddress: addresses.idleUSDTSafeV4,
-    //   aTokenAddress: addresses.aUSDTV2.live,
-    //   underlyingTokenAddress: addresses.USDT.live,
-    // },
+    "idleUSDTV4": {
+      idleTokenAddress: addresses.idleUSDTV4,
+      aTokenAddress: addresses.aUSDTV2.live,
+      underlyingTokenAddress: addresses.USDT.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2USDT,
+    },
+    "idleSUSDV4": {
+      idleTokenAddress: addresses.idleSUSDV4,
+      aTokenAddress: addresses.aSUSDV2.live,
+      underlyingTokenAddress: addresses.SUSD.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2SUSD,
+    },
+    "idleTUSDV4": {
+      idleTokenAddress: addresses.idleTUSDV4,
+      aTokenAddress: addresses.aTUSDV2.live,
+      underlyingTokenAddress: addresses.TUSD.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2TUSD,
+    },
+    "idleWBTCV4": {
+      idleTokenAddress: addresses.idleWBTCV4,
+      aTokenAddress: addresses.aWBTCV2.live,
+      underlyingTokenAddress: addresses.WBTC.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2WBTC,
+    },
+    "idleDAISafeV4": {
+      idleTokenAddress: addresses.idleDAISafeV4,
+      aTokenAddress: addresses.aDAIV2.live,
+      underlyingTokenAddress: addresses.DAI.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2DAISafe,
+    },
+    "idleUSDCSafeV4": {
+      idleTokenAddress: addresses.idleUSDCSafeV4,
+      aTokenAddress: addresses.aUSDCV2.live,
+      underlyingTokenAddress: addresses.USDC.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2USDCSafe,
+    },
+    "idleUSDTSafeV4": {
+      idleTokenAddress: addresses.idleUSDTSafeV4,
+      aTokenAddress: addresses.aUSDTV2.live,
+      underlyingTokenAddress: addresses.USDT.live,
+      aaveV2WrapperAddress: addresses.idleAaveV2USDTSafe,
+    },
   }
 
   const aaveV2WrapperImplementation = await IdleAaveV2.at(addresses.idleAaveV2Implementation);

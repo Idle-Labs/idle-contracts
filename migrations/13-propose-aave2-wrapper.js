@@ -228,7 +228,7 @@ module.exports = async (deployer, network, accounts) => {
     console.log('underlying', underlying);
     const underlyingContract = await IERC20.at(underlying);
     const tokenDecimals = await underlyingContract.decimals();
-    console.log('tokenDecimals', tokenDecimals);
+    console.log('tokenDecimals', tokenDecimals.toString());
     const oneToken = toBN(`1e${tokenDecimals}`);
     const oneIdleToken = toBN(`1e18`);
     const amount = oneToken.times('100');
