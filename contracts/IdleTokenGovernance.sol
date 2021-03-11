@@ -121,7 +121,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   );
 
   function _init(address _tokenHelper) external {
-    require(flashLoanFee == 0, 'IDLE:INIT_DONE');
+    require(tokenHelper == address(0), 'IDLE:INIT_DONE');
     tokenHelper = _tokenHelper;
     flashLoanFee = 90;
   }
@@ -513,7 +513,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function redeemIdleToken(uint256 _amount)
     external
-    returns (uint256 redeemedTokens) {
+    returns (uint256) {
       return _redeemIdleToken(_amount, new bool[](govTokens.length));
   }
 
@@ -527,7 +527,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function redeemIdleTokenSkipGov(uint256 _amount, bool[] calldata _skipGovTokenRedeem)
     external
-    returns (uint256 redeemedTokens) {
+    returns (uint256) {
       return _redeemIdleToken(_amount, _skipGovTokenRedeem);
   }
 
@@ -663,7 +663,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     if (_token != token) {
       return 0;
     }
-    return _tokenPrice().mul(totalSupply());
+    return _tokenPrice().mul(totalSupply()).div(ONE_18);
   }
 
   /**

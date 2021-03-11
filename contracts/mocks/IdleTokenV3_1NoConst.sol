@@ -192,7 +192,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   // ####################################################
 
   function _init(address _tokenHelper) external {
-    require(flashLoanFee == 0, 'IDLE:INIT_DONE');
+    require(tokenHelper == address(0), 'IDLE:INIT_DONE');
     tokenHelper = _tokenHelper;
     flashLoanFee = 90;
   }
@@ -584,7 +584,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    */
   function redeemIdleToken(uint256 _amount)
     external
-    returns (uint256 redeemedTokens) {
+    returns (uint256) {
       return _redeemIdleToken(_amount, new bool[](govTokens.length));
   }
 
@@ -598,7 +598,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    */
   function redeemIdleTokenSkipGov(uint256 _amount, bool[] calldata _skipGovTokenRedeem)
     external
-    returns (uint256 redeemedTokens) {
+    returns (uint256) {
       return _redeemIdleToken(_amount, _skipGovTokenRedeem);
   }
 
@@ -734,7 +734,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     if (_token != token) {
       return 0;
     }
-    return _tokenPrice().mul(totalSupply());
+    return _tokenPrice().mul(totalSupply()).div(ONE_18);
   }
 
   /**
