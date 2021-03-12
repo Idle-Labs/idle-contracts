@@ -994,8 +994,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
         }
       }
 
-      // if _skipGovTokenRedeem = true -> gift govTokens[i] accrued to the pool
-      if (usrBal > 0 && !_skipGovTokenRedeem[i]) {
+      if (usrBal > 0) {
         uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
         // update current user index for this gov token
         usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
@@ -1008,7 +1007,15 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
         if (share > bal) {
           share = bal;
         }
-
+        if (_skipGovTokenRedeem[i]) { // -> gift govTokens[i] accrued to the pool
+          // update global index with ratio of govTokens per idleToken
+          govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
+            // check how much gov tokens for each idleToken we gained since last update
+            share.mul(ONE_18).div(supply.sub(usrBal))
+          );
+          usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
+          continue;
+        }
         uint256 feeDue;
         // no fee for IDLE governance token
         if (feeAddress != address(0) && fee > 0 && govToken != IDLE) {

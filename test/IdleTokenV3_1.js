@@ -2534,17 +2534,189 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       {from: manager}
     );
   });
+  it('getGovTokens', async function () {
+    const res = await this.token.getGovTokens.call({from: creator});
+    res[0].should.be.equal(this.COMPMock.address);
+    res[1].should.be.equal(this.IDLEMock.address);
+  });
+  it('getAllAvailableTokens', async function () {
+    const res = await this.token.getAllAvailableTokens.call({from: creator});
+    res[0].should.be.equal(this.cDAIMock.address);
+    res[1].should.be.equal(this.iDAIMock.address);
+    res[2].should.be.equal(this.aDAIMock.address);
+    res[3].should.be.equal(this.yxDAIMock.address);
+  });
+  it('getProtocolTokenToGov', async function () {
+    const res = await this.token.getProtocolTokenToGov.call(this.cDAIMock.address, {from: creator});
+    res.should.be.equal(this.COMPMock.address);
+  });
+  it('getAllocations', async function () {
+    const res = await this.token.getAllocations.call({from: creator});
+    res[0].should.be.bignumber.equal(BNify('100000'));
+    res[1].should.be.bignumber.equal(BNify('0'));
+    res[2].should.be.bignumber.equal(BNify('0'));
+    res[3].should.be.bignumber.equal(BNify('0'));
+  });
+  it('flashLoanFee', async function () {
+    const res = await this.token.flashLoanFee.call({from: creator});
+    res.should.be.bignumber.equal(BNify('90'));
+  });
+  it('maxFlashLoan', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee 0%
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // Set prices in DAI => [0.02,...]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Price 1
+    await this.mintIdle(BNify('10').mul(this.one), foo);
+    await this.token.rebalance();
+
+    const res = await this.token.maxFlashLoan.call(this.DAIMock.address, {from: creator});
+    res.should.be.bignumber.equal(BNify('10').mul(this.one));
+  });
+  it('allows onlyOwner to setIdleTokenHelper', async function () {
+    const val = this.someAddr;
+    await this.token.setIdleTokenHelper(val, { from: creator });
+    (await this.token.tokenHelper()).should.be.equal(val);
+
+    await expectRevert.unspecified(this.token.setIdleTokenHelper(val, { from: nonOwner }));
+  });
+  it('tokenPriceWithFee', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee 0%
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    await this.setRebAllocations(['100000', '0', '0', '0']);
+    // Set prices in DAI => [0.02,...]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // Set fee
+    await this.token.setFee(BNify('10000'), {from: creator});
+
+    let res = await this.token.tokenPriceWithFee.call(foo, {from: creator});
+    res.should.be.bignumber.equal(BNify('1').mul(this.one));
+
+    // Price 1
+    await this.mintIdle(BNify('10').mul(this.one), foo);
+    await this.token.rebalance();
+    res = await this.token.userAvgPrices.call(foo, {from: creator});
+    res.should.be.bignumber.equal(BNify('1').mul(this.one));
+    res = await this.token.tokenPriceWithFee.call(foo, {from: creator});
+    res.should.be.bignumber.equal(BNify('1').mul(this.one));
+
+    // Set prices in DAI => [0.04, ...]
+    await this.setPrices(['400000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    res = await this.token.tokenPrice.call({from: creator});
+    res.should.be.bignumber.equal(BNify('2').mul(this.one));
+    const bar = await this.token.tokenPriceWithFee.call(foo, {from: creator});
+    bar.should.be.bignumber.equal(BNify('1900000000000000000'));
+
+    // Price 2
+    await this.mintIdle(BNify('10').mul(this.one), foo);
+    await this.token.rebalance();
+    // Set prices in DAI => [0.08, ...]
+    await this.setPrices(['800000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+
+    res = await this.token.tokenPriceWithFee.call(foo, {from: creator});
+    // 56 / 15 = 3.7333
+    res.should.be.bignumber.equal(BNify('3733333333333333333'));
+  });
+  it('redeemIdleTokenSkipGov', async function () {
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('10000'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Give comptrollerMock some COMP tokens
+    await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.IdleControllerMock.address, BNify('10').mul(this.one), {from: creator});
+
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), someone); // someone's deposits 1
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '50000', '0', '0']);
+    await this.token.rebalance();
+
+    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('1').mul(this.one));
+
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator}); // token's comps 1 (1 comps should go to someone)
+    await this.IDLEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('1').mul(this.one), foo); // token's comps 2 - foo's deposits 1 - someone's deposits 1 (2 comps should go to someone, 0 to foo)
+    // at this point someone should be entitled to 2 COMP and foo to 0
+    (await this.ComptrollerMock.compAddr.call()).should.be.equal(this.COMPMock.address);
+    (await this.IdleControllerMock.idleAddr.call()).should.be.equal(this.IDLEMock.address);
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(this.one.mul(BNify('0')));
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('2')));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('2')));
+
+    await this.COMPMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+
+    // token's comps 4 - foo's deposits 1 - someone's deposits 2 - (someone gets 3, 1 to foo)
+    // someone 3 - 10%
+    // foo should get 1
+
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('4').mul(this.one));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('4').mul(this.one));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('0'));
+
+    // + 1 COMP
+    // 3.5 someone 1.5 foo in theory but foo is gifting tokens here
+    await this.token.redeemIdleTokenSkipGov(this.one.div(BNify('2')), [true, true], {from: foo});
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('5').mul(this.one));
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('5').mul(this.one));
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+    // BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0').mul(this.one));
+    // BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0').mul(this.one));
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('4500000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('5000000000000000000'));
+    BNify(await this.COMPMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('500000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
+
+    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('1').mul(this.one));
+    await this.COMPMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+    await this.IDLEMock.transfer(this.token.address, BNify('2').mul(this.one), {from: creator});
+    await this.token.redeemIdleTokenSkipGov(this.one.div(BNify('2')), [false, false], {from: foo}); // +3, tot supply 1.5 -> foo should have 1 (-0.1 fee) and someone 2 - (0.2 fee)
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('900000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1000000000000000000'));
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.IdleControllerMock.setAmount(BNify('0').mul(this.one));
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('6300000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('7000000000000000000'));
+    BNify(await this.COMPMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('800000000000000000'));
+    BNify(await this.IDLEMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
+  });
 
   // tests to do
-  // setIdleTokenHelper
-  // getGovTokens
-  // getAllAvailableTokens
-  // getProtocolTokenToGov
-  // flashLoanFee
-  // maxFlashLoan
-
-  // tokenPriceWithFee
-  // redeemIdleTokenSkipGov
   // flashLoan
   // sellGovTokens
+
+  // integrations
+  // flash loans
+  // if I skip gov tokens redeem everyone has some more gov tokens
+  // sell gov tokens and everyone get something more
 });
