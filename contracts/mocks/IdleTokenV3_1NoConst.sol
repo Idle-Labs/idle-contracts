@@ -1080,8 +1080,9 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @return : net value in underlying
    */
   function _getFee(uint256 amount, uint256 redeemed, uint256 currPrice) internal returns (uint256) {
-    uint256 elegibleGains = currPrice < userAvgPrices[msg.sender] ? 0 :
-      amount.mul(currPrice.sub(userAvgPrices[msg.sender])).div(ONE_18); // in underlyings
+    uint256 avgPrice = userAvgPrices[msg.sender];
+    uint256 elegibleGains = currPrice < avgPrice ? 0 :
+      amount.mul(currPrice.sub(avgPrice)).div(ONE_18); // in underlyings
     uint256 feeDue = elegibleGains.mul(fee).div(FULL_ALLOC);
     IERC20(token).safeTransfer(feeAddress, feeDue);
     return redeemed.sub(feeDue);
