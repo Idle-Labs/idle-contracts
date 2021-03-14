@@ -14,7 +14,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/SafeERC20
 import "./interfaces/PriceOracle.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IUniswapV2Router02.sol";
-import "./IdleTokenGovernance.sol";
+import "./interfaces/IIdleTokenGovernance.sol";
 
 contract IdleTokenHelper {
   using SafeMath for uint256;
@@ -30,7 +30,7 @@ contract IdleTokenHelper {
   function getAPR(address _idleToken, address _cToken) external view returns (uint256 avgApr) {
     (uint256[] memory amounts, uint256 total) = getCurrentAllocations(_idleToken);
 
-    IdleTokenGovernance idleToken = IdleTokenGovernance(_idleToken);
+    IIdleTokenGovernance idleToken = IIdleTokenGovernance(_idleToken);
     address[] memory allAvailableTokens = idleToken.getAllAvailableTokens();
 
     // IDLE gov token won't be counted here because is not in allAvailableTokens
@@ -60,7 +60,7 @@ contract IdleTokenHelper {
    *
    * @return : apr scaled to 1e18
    */
-  function getGovApr(IdleTokenGovernance idleToken, address _cToken, address _govToken) internal view returns (uint256) {
+  function getGovApr(IIdleTokenGovernance idleToken, address _cToken, address _govToken) internal view returns (uint256) {
     // In case new Gov tokens will be supported this should be updated, no need to add IDLE apr
     if (_govToken == COMP && _cToken != address(0)) {
       return PriceOracle(idleToken.oracle()).getCompApr(_cToken, idleToken.token());
@@ -76,7 +76,7 @@ contract IdleTokenHelper {
    */
   function getCurrentAllocations(address _idleToken) public view
     returns (uint256[] memory amounts, uint256 total) {
-      IdleTokenGovernance idleToken = IdleTokenGovernance(_idleToken);
+      IIdleTokenGovernance idleToken = IIdleTokenGovernance(_idleToken);
       address[] memory allAvailableTokens = idleToken.getAllAvailableTokens();
       // Get balance of every protocol implemented
       uint256 tokensLen = allAvailableTokens.length;
@@ -107,7 +107,7 @@ contract IdleTokenHelper {
   function getAPRs(address _idleToken)
     external view
     returns (address[] memory addresses, uint256[] memory aprs) {
-      IdleTokenGovernance idleToken = IdleTokenGovernance(_idleToken);
+      IIdleTokenGovernance idleToken = IIdleTokenGovernance(_idleToken);
       address[] memory allAvailableTokens = idleToken.getAllAvailableTokens();
 
       address currToken;
@@ -127,7 +127,7 @@ contract IdleTokenHelper {
    * @param _minTokenOut : minOutputAmount uniswap, 0 to skip swap for token
    */
   function sellGovTokens(address _idleToken, uint256[] calldata _minTokenOut) external {
-    IdleTokenGovernance idleToken = IdleTokenGovernance(_idleToken);
+    IIdleTokenGovernance idleToken = IIdleTokenGovernance(_idleToken);
     require(tx.origin == idleToken.owner() || tx.origin == idleToken.rebalancer(), "IDLEHELP:!AUTH");
 
     address[] memory govTokens = idleToken.getGovTokens();
