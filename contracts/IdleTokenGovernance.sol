@@ -22,7 +22,7 @@ import "./interfaces/iERC20Fulcrum.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
-import "./interfaces/IERC3156FlashBorrower.sol";
+import "./interfaces/IERC3156FlashLender.sol";
 
 import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
@@ -32,7 +32,7 @@ import "./IdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
 
-contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
+contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2, IERC3156FlashLender {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
