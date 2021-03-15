@@ -283,6 +283,18 @@ const cWBTC = {
 
   'deploy': '0xC11b1268C1A384e55C48c2391d8d480264A3A7F4', // used for truffle Teams deploy, now kovan
 };
+const cWBTCV2 = {
+  'live': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+  'live-fork': '0xccf4429db6322d5c611ee964527d42e5d685dd6a', // needed for truffle
+  'kovan': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+  'kovan-fork': '0xccf4429db6322d5c611ee964527d42e5d685dd6a', // needed for truffle
+  'local': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+  'local-fork': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+  'test': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+  'coverage': '0xccf4429db6322d5c611ee964527d42e5d685dd6a',
+
+  'deploy': '0xccf4429db6322d5c611ee964527d42e5d685dd6a', // used for truffle Teams deploy, now kovan
+};
 const iWBTC = {
   'live': '0xBA9262578EFef8b3aFf7F60Cd629d6CC8859C8b5',
   'live-fork': '0xBA9262578EFef8b3aFf7F60Cd629d6CC8859C8b5', // needed for truffle
@@ -438,6 +450,7 @@ module.exports = {
   aSUSDV2: aSUSDV2,
   SUSD: SUSD,
   cWBTC: cWBTC,
+  cWBTCV2: cWBTCV2,
   iWBTC: iWBTC,
   aWBTC: aWBTC,
   aWBTCV2: aWBTCV2,
