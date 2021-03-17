@@ -392,6 +392,19 @@ const allIdleTokens = [
   idleUSDTSafeV4,
 ];
 
+const minimalInitializableProxyFactory = "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8";
+const idleAaveV2Implementation = "0x01A3688D7d01390677e85256406B3156aCd59C64";
+const idleAaveV2DAI = idleAaveV2Implementation;
+const idleAaveV2USDC = "0xC9f16B7496843A82e51457aA84002d55036d8aA2";
+const idleAaveV2USDT = "0x52E6CFE2f0dF1a76b4110a1F0BF79e7149eAd9db";
+                     // 0xa462e7799e6f141402d183600D2335AC0E8AC7C7 duplicate
+const idleAaveV2SUSD = "0x8678ACE49f9F60F19994E6A1D6D5526D162C1172";
+const idleAaveV2TUSD = "0xE35c52F30Ba68C77E94c4ECED51551fEA6801B8e";
+const idleAaveV2WBTC = "0x69435730D6Af2249265C4fF578D89Ec4c827C475";
+const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
+const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
+const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
+
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
@@ -446,5 +459,16 @@ module.exports = {
   timelock: timelock,
   proxyAdmin: proxyAdmin,
   allIdleTokens: allIdleTokens,
-  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5'
+  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+  minimalInitializableProxyFactory,
+  idleAaveV2Implementation,
+  idleAaveV2DAI,
+  idleAaveV2USDC,
+  idleAaveV2USDT,
+  idleAaveV2SUSD,
+  idleAaveV2TUSD,
+  idleAaveV2WBTC,
+  idleAaveV2DAISafe,
+  idleAaveV2USDCSafe,
+  idleAaveV2USDTSafe,
 };

@@ -54,7 +54,7 @@ const advanceBlocks = async n => {
   }
 }
 
-// take output from migration 9
+// take output from migration 12
 const idleTokens = null;
 
 module.exports = async (deployer, network, accounts) => {
@@ -105,19 +105,23 @@ module.exports = async (deployer, network, accounts) => {
     await advanceBlocks(2);
   };
 
-  const founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
-  const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
+  let founder = "";
 
-  const aTokenAddress = addresses.aDAIV2.live;
-  const underlyingTokenAddress = addresses.DAI.live;
+  if (network !== 'live') {
+    founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
+    const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
 
-  const idleInstance = await Idle.at(addresses.IDLE)
-  const vesterFactory = await VesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
-  const founderVesting = await vesterFactory.vestingContracts.call(founder);
-  const vesterFounder = await Vester.at(founderVesting);
+    const aTokenAddress = addresses.aDAIV2.live;
+    const underlyingTokenAddress = addresses.DAI.live;
 
-  await idleInstance.delegate(founder, {from: founder});
-  await vesterFounder.setDelegate(founder, {from: founder});
+    const idleInstance = await Idle.at(addresses.IDLE)
+    const vesterFactory = await VesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
+    const founderVesting = await vesterFactory.vestingContracts.call(founder);
+    const vesterFounder = await Vester.at(founderVesting);
+
+    await idleInstance.delegate(founder, {from: founder});
+    await vesterFounder.setDelegate(founder, {from: founder});
+  }
 
   const targets = [];
   const values = [];
@@ -228,7 +232,7 @@ module.exports = async (deployer, network, accounts) => {
     console.log('underlying', underlying);
     const underlyingContract = await IERC20.at(underlying);
     const tokenDecimals = await underlyingContract.decimals();
-    console.log('tokenDecimals', tokenDecimals);
+    console.log('tokenDecimals', tokenDecimals.toString());
     const oneToken = toBN(`1e${tokenDecimals}`);
     const oneIdleToken = toBN(`1e18`);
     const amount = oneToken.times('100');
