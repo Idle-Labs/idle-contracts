@@ -152,7 +152,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     allAvailableTokens = protocolTokens;
 
     if (keepAllocations) {
-      require(protocolTokens.length == allAvailableTokens.length, "IDLE:LEN_DIFF2");
       return;
     }
     _setAllocations(allocations);
