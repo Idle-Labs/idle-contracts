@@ -471,4 +471,6 @@ module.exports = {
   idleAaveV2DAISafe,
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
+  addr0: '0x0000000000000000000000000000000000000000',
+  idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE'
 };
