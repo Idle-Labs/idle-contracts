@@ -29,6 +29,7 @@ const aaveLendingPoolProviderMock = artifacts.require('aaveLendingPoolProviderMo
 const aaveLendingPoolCoreMock = artifacts.require('aaveLendingPoolCoreMock');
 const aaveInterestRateStrategyMock = artifacts.require('aaveInterestRateStrategyMock');
 const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
+const FlashLoanerMock = artifacts.require("FlashLoanerMock");
 
 const BNify = n => new BN(String(n));
 
@@ -2711,12 +2712,102 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.IDLEMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
   });
 
-  // tests to do
-  // flashLoan
-  // sellGovTokens
+  it('executes a flash loan', async function () {
+    const fromUnit = u => BNify(u).mul(this.one);
 
-  // integrations
-  // flash loans
-  // if I skip gov tokens redeem everyone has some more gov tokens
-  // sell gov tokens and everyone get something more
+    const executeFlashLoan = async (loanerBalance, loanAmount, initiator, params, amountToRemoveFromFee) => {
+      const totalSupplyBefore = await this.token.totalSupply();
+      const tokenPriceBefore = await this.token.tokenPrice();
+      const tokenDAIBalanceBefore = await this.DAIMock.balanceOf(this.token.address);
+
+      const flashLoaner = await FlashLoanerMock.new(this.DAIMock.address, this.token.address);
+      await this.DAIMock.transfer(flashLoaner.address, loanerBalance, { from: creator });
+      await flashLoaner.setRemoveFromFee(amountToRemoveFromFee);
+
+      await this.token.flashLoan(
+        flashLoaner.address,
+        this.DAIMock.address,
+        loanAmount,
+        web3.eth.abi.encodeParameters(params.types, params.values),
+        { from: initiator }
+      );
+
+      const amountReceived = BNify(await flashLoaner.amountReceived());
+      amountReceived.should.be.bignumber.equal(loanAmount);
+
+      const daiBalanceOnExecuteStart = await flashLoaner.daiBalanceOnExecuteStart();
+      daiBalanceOnExecuteStart.should.be.bignumber.equal(loanerBalance.add(loanAmount));
+
+      const feeReceived = await flashLoaner.feeReceived();
+      const expectedFee = loanAmount.mul(BNify("90")).div(BNify("100000"));
+      feeReceived.should.be.bignumber.equal(expectedFee);
+
+      const daiBalanceOnExecuteEnd = BNify(await this.DAIMock.balanceOf(flashLoaner.address));
+      daiBalanceOnExecuteEnd.should.be.bignumber.equal(loanerBalance.sub(expectedFee));
+
+      const initiatorReceived = await flashLoaner.initiatorReceived();
+      initiatorReceived.should.be.equal(initiator);
+
+      const paramsReceived = await flashLoaner.paramsReceived();
+      paramsReceived.should.be.equal(web3.eth.abi.encodeParameters(params.types, params.values));
+
+      const daiToSendBack = await flashLoaner.daiToSendBack();
+      daiToSendBack.should.be.bignumber.equal(loanAmount.add(expectedFee));
+
+      const totalSupplyAfter = await this.token.totalSupply();
+      totalSupplyAfter.should.be.bignumber.equal(totalSupplyBefore);
+
+      const tokenDAIBalanceAfter = await this.DAIMock.balanceOf(this.token.address);
+      // 1% is left in the token and the rest is lent
+      tokenDAIBalanceAfter.should.be.bignumber.equal(tokenDAIBalanceBefore.add(expectedFee).div(BNify("100")));
+
+      const tokenPriceAfter = await this.token.tokenPrice();
+      //TODO: check tokenPriceAfter
+    }
+
+    // paying the right amount of fee
+    await this.mintIdle(fromUnit("1000"), someone);
+    await executeFlashLoan(fromUnit("2000"), fromUnit("1000"), someone, { types: ["uint256"], values: [44] }, BNify("0"));
+
+    // paying less fee
+    try {
+      await this.mintIdle(fromUnit("1000"), someone);
+      await executeFlashLoan(fromUnit("2"), fromUnit("1"), someone, { types: ["uint256"], values: [44] }, BNify("1"));
+      throw("flash loan paying less fee should have failed");
+    } catch(e) {
+      e.should.match(/revert SafeERC20: low-level call failed/);
+    }
+  });
+
+  it('sells gov tokens', async function () {
+    this.IDLEMock.transfer(this.token.address, BNify("100"), { from: creator });
+    this.COMPMock.transfer(this.token.address, BNify("200"), { from: creator });
+
+    // 100 idle sent to the token
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
+    // 200 comp sent to the token
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('200'));
+
+    // token helper doesn't have any idle or comp
+    BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+    BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+
+    // call sellGovTokens
+    await this.token.sellGovTokens([BNify("20"), BNify("30")], { from: creator });
+
+    // token should still have idle tokens
+    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
+    // token should no longer have comp tokens
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
+
+    // helper should not have idle tokens
+    BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+    // helper should have received all comp tokens
+    BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('200'));
+
+    (await this.tokenHelper.sellReceivedIdleToken()).should.be.equal(this.token.address);
+    (await this.tokenHelper.sellReceivedMinTokenOutCount()).should.be.bignumber.equal(BNify(2));
+    (await this.tokenHelper.sellReceivedMinTokenOut(0)).should.be.bignumber.equal(BNify("20"));
+    (await this.tokenHelper.sellReceivedMinTokenOut(1)).should.be.bignumber.equal(BNify("30"));
+  });
 });

@@ -12,7 +12,6 @@ contract FlashLoanerMock is IERC3156FlashBorrower {
   address public idleToken;
   uint256 public amountReceived;
   uint256 public daiBalanceOnExecuteStart;
-  uint256 public daiBalanceOnExecuteEnd;
   uint256 public feeReceived;
   uint256 public daiToSendBack;
   address public initiatorReceived;
