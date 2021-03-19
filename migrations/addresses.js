@@ -42,6 +42,16 @@ const aDAI = {
 
 const aDAIV2 = {
   'live': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'proxy': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'live-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3', // needed for truffle
+  'kovan': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'kovan-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3', // needed for truffle
+  'local': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'local-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'test': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  'coverage': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+
+  'deploy': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
 };
 
 const CHAI = {
@@ -136,6 +146,15 @@ const aUSDC = {
 
 const aUSDCV2 = {
   'live': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  'live-fork': '0xBcca60bB61934080951369a648Fb03DF4F96263C', // needed for truffle
+  'kovan': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  'kovan-fork': '0xBcca60bB61934080951369a648Fb03DF4F96263C', // needed for truffle
+  'local': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  'local-fork': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  'test': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  'coverage': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+
+  'deploy': '0xBcca60bB61934080951369a648Fb03DF4F96263C'
 }
 
 const USDC = {
@@ -202,6 +221,15 @@ const aUSDT = {
 };
 const aUSDTV2 = {
   'live': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  'live-fork': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811', // needed for truffle
+  'kovan': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  'kovan-fork': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811', // needed for truffle
+  'local': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  'local-fork': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  'test': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  'coverage': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+
+  'deploy': '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
 };
 const USDT = {
   'live': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -230,6 +258,15 @@ const aTUSD = {
 
 const aTUSDV2 = {
   'live': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+  'live-fork': '0x101cc05f4A51C0319f570d5E146a8C625198e636', // needed for truffle
+  'kovan': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+  'kovan-fork': '0x101cc05f4A51C0319f570d5E146a8C625198e636', // needed for truffle
+  'local': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+  'local-fork': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+  'test': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+  'coverage': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+
+  'deploy': '0x101cc05f4A51C0319f570d5E146a8C625198e636',
 };
 
 const TUSD = {
@@ -258,6 +295,15 @@ const aSUSD = {
 };
 const aSUSDV2 = {
   'live': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+  'live-fork': '0x6c5024cd4f8a59110119c56f8933403a539555eb', // needed for truffle
+  'kovan': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+  'kovan-fork': '0x6c5024cd4f8a59110119c56f8933403a539555eb', // needed for truffle
+  'local': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+  'local-fork': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+  'test': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+  'coverage': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+
+  'deploy': '0x6c5024cd4f8a59110119c56f8933403a539555eb',
 }
 const SUSD = {
   'live': '0x57ab1ec28d129707052df4df418d58a2d46d5f51',
@@ -322,6 +368,15 @@ const aWBTC = {
 
 const aWBTCV2 = {
   'live': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+  'live-fork': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656', // needed for truffle
+  'kovan': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+  'kovan-fork': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656', // needed for truffle
+  'local': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+  'local-fork': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+  'test': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+  'coverage': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+
+  'deploy': '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656'
 };
 
 const WBTC = {
