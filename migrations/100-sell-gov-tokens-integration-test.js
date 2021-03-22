@@ -52,6 +52,38 @@ module.exports = async function(deployer, network) {
   const totalSupplyBefore = await idleToken.totalSupply();
   const tokenPriceBefore = await idleToken.tokenPrice();
 
+  // if I skip gov tokens redeem everyone has some more gov tokens
+
+  const comp = await IERC20.at(addresses.COMP.live);
+
+  const calculateExpectedGovAmount = async (user) => {
+    const FULL_ALLOC = toBN("100000");
+    const usrBal = toBN(await idleToken.balanceOf(user));
+    const usrIndex = toBN(await idleToken.usersGovTokensIndexes(addresses.COMP.live, user));
+    const delta = toBN(await idleToken.govTokensIndexes(addresses.COMP.live)).minus(usrIndex);
+    const share = usrBal.times(delta).dividedBy(ONE_18);
+    const contractBal = await comp.balanceOf(addresses.idleDAIV4);
+    const fee = toBN(await idleToken.fee());
+    const feeDue = share.times(fee).div(FULL_ALLOC);
+    const finalAmount = share.minus(feeDue);
+
+    return finalAmount;
+  };
+
+  user1 = "0x87806fa6481dee55438d90bac808919f35a027e0";
+  user2 = "0x1a32ee8ac16a7d5f45a81503fe06cdc665d218b1";
+
+  const user1ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user1));
+  const user2ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user2));
+
+  await idleToken.redeemIdleTokenSkipGov("0", [true, true], { from: user2});
+
+  const user1ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user1));
+  const user2ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user2));
+
+  check(user2ExpectedGovTokensAfter, toBN("0"));
+  checkIncreased(user1ExpectedGovTokensBefore, user1ExpectedGovTokensAfter);
+
   await idleToken.sellGovTokens([toBN("1"), toBN("1")], { from: addresses.timelock });
 
   const totalSupplyAfter = await idleToken.totalSupply();
@@ -65,7 +97,5 @@ module.exports = async function(deployer, network) {
   // sell gov tokens and everyone get something more
   check(totalSupplyBefore, totalSupplyAfter, "same supply should remain the same");
   checkIncreased(tokenPriceBefore, tokenPriceAfter, "token price should increase");
-
-  // if I skip gov tokens redeem everyone has some more gov tokens
 }
 
