@@ -391,6 +391,7 @@ const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
 const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
 const proxyAdmin = '0x7740792812A00510b50022D84e5c4AC390e01417';
+const proxyAdminETH = '0xc2ff102E62027DE1205a7EDd4C8a8F58C1E5e3e8';
 
 const allIdleTokens = [
   idleDAIV4,
@@ -471,6 +472,7 @@ module.exports = {
   IDLE: IDLE,
   timelock: timelock,
   proxyAdmin: proxyAdmin,
+  proxyAdminETH: proxyAdminETH,
   allIdleTokens: allIdleTokens,
   aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
   minimalInitializableProxyFactory,
@@ -485,5 +487,12 @@ module.exports = {
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
   addr0: '0x0000000000000000000000000000000000000000',
-  idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE'
+  idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE',
+  governorAlpha: '0x2256b25CFC8E35c3135664FD03E77595042fe31B',
+  ecosystemFund: '0xb0aA1f98523Ec15932dd5fAAC5d86e57115571C7',
+  vesterFactory: '0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972',
+  whale: '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE',
+  forkProposer: '0x3675D2A334f17bCD4689533b7Af263D48D96eC72',
+  bountyAddressForEB: '0x394495a3800d1504b5686d398836baefebd0c5b7',
+  mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464'
 };
