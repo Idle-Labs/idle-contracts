@@ -78,12 +78,6 @@ module.exports = async function(deployer, network, accounts) {
   await proxyAdminInstance.transferOwnership(timelock, {from: creator});
   console.log('proxy admin new owner', await idleWETH.owner());
 
-  const user = '0xe4E69ef860D3018B61A25134D60678be8628f780';
-  console.log('balance pre', (await idle.balanceOf(user)).toString());
-  await idleWETH.redeemIdleToken(BNify('0'), {from: user});
-  console.log('balance post', (await idle.balanceOf(user)).toString());
-
-
   console.log('this should fail because admin is timelock now')
   await proxyAdminInstance.changeProxyAdmin(idleWETHV4, proxyAdmin, {from: creator});
 };
