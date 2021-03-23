@@ -246,9 +246,13 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     }
     // set protocol token to gov token mapping
     for (uint256 i = 0; i < _protocolTokens.length; i++) {
+      if (i >= _newGovTokens.length) {
+        return;
+      }
+
       address newGov = _newGovTokens[i];
       if (newGov == IDLE) { continue; }
-      protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
+      protocolTokenToGov[_protocolTokens[i]] = newGov;
     }
   }
 

@@ -2810,4 +2810,21 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     (await this.tokenHelper.sellReceivedMinTokenOut(0)).should.be.bignumber.equal(BNify("20"));
     (await this.tokenHelper.sellReceivedMinTokenOut(1)).should.be.bignumber.equal(BNify("30"));
   });
+
+  it('sets gov tokens when _newGovTokens and _protocolTokens lengths are different', async function () {
+    // more protocols than govTokns
+    await this.token.setGovTokens(
+      [this.COMPMock.address], // govTokens
+      [this.cDAIMock.address, this.iDAIMock.address], // protocolTokens
+      {from: creator}
+    );
+
+    // more govTokns than protocols
+    this.COMPMock2 = await COMPMock.new({from: creator});
+    await this.token.setGovTokens(
+      [this.COMPMock.address, this.COMPMock2.address], // govTokens
+      [this.cDAIMock.address], // protocolTokens
+      {from: creator}
+    );
+  });
 });
