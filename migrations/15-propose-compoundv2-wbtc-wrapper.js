@@ -17,12 +17,13 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
-  await deployer.deploy(IdleCompoundV2, addresses.cWBTCV2.live, addresses.WBTC.live, {from: addresses.creator});
-  const compoundV2Wrapper = await IdleCompoundV2.deployed();
-  console.log("IdleCompoundV2 wbtc deployed at", compoundV2Wrapper.address);
-  await compoundV2Wrapper.setIdleToken(addresses.idleWBTCV4, {from: addresses.creator});
-  console.log('setIdleToken done');
-  console.log("************************************\n\n\n\n");
+  const compoundV2Wrapper = await IdleCompoundV2.at('0xe5cb51e2d6682ff6b4d0b37cea7e66227dd15c4e');
+  // await deployer.deploy(IdleCompoundV2, addresses.cWBTCV2.live, addresses.WBTC.live, {from: addresses.creator});
+  // const compoundV2Wrapper = await IdleCompoundV2.deployed();
+  // console.log("IdleCompoundV2 wbtc deployed at", compoundV2Wrapper.address);
+  // await compoundV2Wrapper.setIdleToken(addresses.idleWBTCV4, {from: addresses.creator});
+  // console.log('setIdleToken done');
+  // console.log("************************************\n\n\n\n");
 
   const cTokenV2Address = addresses.cWBTCV2.live;
   const underlyingTokenAddress = addresses.WBTC.live;
