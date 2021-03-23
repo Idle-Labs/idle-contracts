@@ -72,46 +72,6 @@ module.exports = async (deployer, network, accounts) => {
     calldatas.push(web3.eth.abi.encodeParameters(...params));
   }
 
-
-  // Add one action to withdraw 3500 Idle from ecosystem fund
-  const ONE = toBN('1e18');
-  console.log(ONE.toString())
-  targets.push(addresses.ecosystemFund);
-  values.push(toBN('0'));
-  signatures.push('transfer(address,address,uint256)');
-  calldatas.push(
-    web3.eth.abi.encodeParameters(
-      ['address', 'address', 'uint256'],
-      [addresses.IDLE, addresses.bountyAddressForEB, toBN('3500').times(ONE)]
-    )
-  );
-
-  // Add one action to support IDLE distribution to idleWETH
-  targets.push(addresses.idleController);
-  values.push(toBN('0'));
-  signatures.push('_supportMarkets(address[])');
-  calldatas.push(
-    web3.eth.abi.encodeParameters(
-      ['address[]'],
-      [
-        [addresses.idleWETHV4]
-      ]
-    )
-  );
-
-  // Add one action to activate IDLE distribution to idleWETH
-  targets.push(addresses.idleController);
-  values.push(toBN('0'));
-  signatures.push('_addIdleMarkets(address[])');
-  calldatas.push(
-    web3.eth.abi.encodeParameters(
-      ['address[]'],
-      [
-        [addresses.idleWETHV4]
-      ]
-    )
-  );
-
   let proposal = {
     targets: targets,
     values: values,
@@ -171,16 +131,6 @@ module.exports = async (deployer, network, accounts) => {
   for (const idleTokenName in idleTokens) {
     const user = addresses.mintRedeemTestUser;
     const attrs = idleTokens[idleTokenName];
-    // Test that idleWETH has a speed
-    const idleCtrl = await IdleController.at(addresses.idleController);
-    const idle = await IERC20.at(addresses.IDLE);
-    console.log('balance', (await idle.balanceOf(addresses.bountyAddressForEB, {from: user})).toString());
-    console.log('getAllMarkets', await idleCtrl.getAllMarkets({from: user}));
-    console.log('speed idleDAIV4', (await idleCtrl.idleSpeeds(addresses.idleDAIV4, {from: user})).toString());
-    console.log('speed idleUSDCV4', (await idleCtrl.idleSpeeds(addresses.idleUSDCV4, {from: user})).toString());
-    console.log('speed idleWBTCV4', (await idleCtrl.idleSpeeds(addresses.idleWBTCV4, {from: user})).toString());
-    console.log('speed idleWETHV4', (await idleCtrl.idleSpeeds(addresses.idleWETHV4, {from: user})).toString());
-
     console.log("\n\n********************************* testing", idleTokenName);
 
     const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);

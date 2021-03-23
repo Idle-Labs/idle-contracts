@@ -2,6 +2,7 @@ const rl = require("readline");
 const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
 const Idle = artifacts.require("Idle")
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance")
+const IdleController = artifacts.require("IdleController")
 const IERC20 = artifacts.require("IERC20Detailed.sol");
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
@@ -9,124 +10,88 @@ const addresses = require("./addresses");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
+const { createProposal } = require("./create-proposal");
 
 const toBN = v => new BigNumber(v.toString());
 const timelockDelay = 172800
-const TOKENS_HOLDER = "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98";
+const TOKENS_HOLDER = addresses.whale;
 const addr0 = '0x0000000000000000000000000000000000000000';
 
-const prompt = (question) => {
-  const r = rl.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false
-  });
-
-  return new Promise((resolve, error) => {
-    r.question(question, answer => {
-      r.close()
-      resolve(answer)
-    });
-  })
+// output from migration 12
+const idleTokens = {
+  idleDAIV4: {
+    idleTokenAddress: '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4',
+    aTokenAddress: '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+    underlyingTokenAddress: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    aaveV2WrapperAddress: '0x01A3688D7d01390677e85256406B3156aCd59C64'
+  },
+  idleUSDCV4: {
+    idleTokenAddress: '0x5274891bEC421B39D23760c04A6755eCB444797C',
+    aTokenAddress: '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+    underlyingTokenAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    aaveV2WrapperAddress: '0xC9f16B7496843A82e51457aA84002d55036d8aA2'
+  },
+  idleUSDTV4: {
+    idleTokenAddress: '0xF34842d05A1c888Ca02769A633DF37177415C2f8',
+    aTokenAddress: '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+    underlyingTokenAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    aaveV2WrapperAddress: '0x52E6CFE2f0dF1a76b4110a1F0BF79e7149eAd9db'
+  },
+  idleSUSDV4: {
+    idleTokenAddress: '0xF52CDcD458bf455aeD77751743180eC4A595Fd3F',
+    aTokenAddress: '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+    underlyingTokenAddress: '0x57ab1ec28d129707052df4df418d58a2d46d5f51',
+    aaveV2WrapperAddress: '0x8678ACE49f9F60F19994E6A1D6D5526D162C1172'
+  },
+  idleTUSDV4: {
+    idleTokenAddress: '0xc278041fDD8249FE4c1Aad1193876857EEa3D68c',
+    aTokenAddress: '0x101cc05f4A51C0319f570d5E146a8C625198e636',
+    underlyingTokenAddress: '0x0000000000085d4780B73119b644AE5ecd22b376',
+    aaveV2WrapperAddress: '0xE35c52F30Ba68C77E94c4ECED51551fEA6801B8e'
+  },
+  idleWBTCV4: {
+    idleTokenAddress: '0x8C81121B15197fA0eEaEE1DC75533419DcfD3151',
+    aTokenAddress: '0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656',
+    underlyingTokenAddress: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+    aaveV2WrapperAddress: '0x69435730D6Af2249265C4fF578D89Ec4c827C475'
+  },
+  // idleDAISafeV4: {
+  //   idleTokenAddress: '0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16',
+  //   aTokenAddress: '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
+  //   underlyingTokenAddress: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+  //   aaveV2WrapperAddress: '0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f'
+  // },
+  // idleUSDCSafeV4: {
+  //   idleTokenAddress: '0x3391bc034f2935ef0e1e41619445f998b2680d35',
+  //   aTokenAddress: '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+  //   underlyingTokenAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  //   aaveV2WrapperAddress: '0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD'
+  // },
+  // idleUSDTSafeV4: {
+  //   idleTokenAddress: '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5',
+  //   aTokenAddress: '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+  //   underlyingTokenAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+  //   aaveV2WrapperAddress: '0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271'
+  // }
 }
-
-const check = (a, b, message) => {
-  a = a.toString();
-  b = b.toString();
-  let [icon, symbol] = a.toString() === b ? ["✔️", "==="] : ["🚨🚨🚨", "!=="];
-  console.log(`${icon}  `, a, symbol, b, message ? message : "");
-}
-
-const checkIncreased = (a, b, message) => {
-  let [icon, symbol] = b.gt(a) ? ["✔️", ">"] : ["🚨🚨🚨", "<="];
-  console.log(`${icon}  `, a.toString(), symbol, b.toString(), message ? message : "");
-}
-
-const advanceBlocks = async n => {
-  for (var i = 0; i < n; i++) {
-    if (i === 0 || i % 100 === 0) {
-      process.stdout.clearLine();  // clear current text
-      process.stdout.cursorTo(0);
-      process.stdout.write(`waiting for ${n - i} blocks...`);
-    }
-
-    await time.advanceBlock();
-  }
-}
-
-// take output from migration 12
-const idleTokens = null;
 
 module.exports = async (deployer, network, accounts) => {
   if (network === 'test' || network == 'coverage') {
     return;
   }
 
-  if (!idleTokens) {
-    console.log("The idleTokens variable should be initialized with the output of migration 9.");
-    process.exit(1);
-  }
-
-  const getLatestPropsal = async (gov) => {
-    return gov.proposalCount.call()
-  }
-
-  const createProposal = async (gov, founder, {targets, values, signatures, calldatas, description, from}, log) => {
-    console.log(`Proposing: ${log}`);
-    await gov.propose(targets, values, signatures, calldatas, description,
-      {from}
-    );
-
-    console.log("proposal created");
-
-    if (network === 'live') {
-      return;
-    }
-
-    // need 1 block to pass before being able to vote but less than 10
-    await advanceBlocks(2);
-    const proposalId = await getLatestPropsal(gov);
-    await gov.castVote(proposalId, true, {from: founder});
-    console.log('voted');
-
-    // Need to advance 3d in blocs + 1
-    await advanceBlocks(17281);
-
-    await gov.queue(proposalId);
-    console.log('queued');
-
-    await time.increase(timelockDelay+100)
-    console.log("time increased")
-    await advanceBlocks(1)
-    console.log("advanced 1")
-
-    await gov.execute(proposalId);
-    console.log('executed');
-    await advanceBlocks(2);
-  };
-
-  let founder = "";
-
-  if (network !== 'live') {
-    founder = "0x3675D2A334f17bCD4689533b7Af263D48D96eC72";
-    const govInstance = await IGovernorAlpha.at('0x2256b25CFC8E35c3135664FD03E77595042fe31B')
-
-    const aTokenAddress = addresses.aDAIV2.live;
-    const underlyingTokenAddress = addresses.DAI.live;
-
-    const idleInstance = await Idle.at(addresses.IDLE)
-    const vesterFactory = await VesterFactory.at("0xbF875f2C6e4Cc1688dfe4ECf79583193B6089972")
-    const founderVesting = await vesterFactory.vestingContracts.call(founder);
-    const vesterFounder = await Vester.at(founderVesting);
-
-    await idleInstance.delegate(founder, {from: founder});
-    await vesterFounder.setDelegate(founder, {from: founder});
-  }
-
   const targets = [];
   const values = [];
   const signatures = [];
   const calldatas = [];
+  const pushAction = (target, value, signature, calldataPar, calldataValues) => {
+    targets.push(target);
+    values.push(value);
+    signatures.push(signature);
+    calldatas.push(
+      web3.eth.abi.encodeParameters(calldataPar, calldataValues)
+    );
+  };
 
   for (const idleTokenName in idleTokens) {
     console.log("preparing params for", idleTokenName);
@@ -146,37 +111,54 @@ module.exports = async (deployer, network, accounts) => {
     tokens = [...tokens, attrs.aTokenAddress];
     wrappers = [...wrappers, attrs.aaveV2WrapperAddress];
 
-    const params = [
+    pushAction(attrs.idleTokenAddress, toBN('0'),
+      'setAllAvailableTokensAndWrappers(address[],address[],uint256[],bool)',
       ['address[]', 'address[]', 'uint256[]', 'bool'],
       [tokens, wrappers, [20000, 20000, 10000, 50000], true]
-    ];
-
-    targets.push(attrs.idleTokenAddress);
-    values.push(toBN("0"));
-    signatures.push("setAllAvailableTokensAndWrappers(address[],address[],uint256[],bool)");
-    calldatas.push(web3.eth.abi.encodeParameters(...params));
+    );
   }
 
-  console.log("targets", targets)
-  console.log("signatures", signatures)
-  console.log("calldatas", calldatas)
+  // Add one action to withdraw 3500 Idle from ecosystem fund
+  pushAction(addresses.ecosystemFund, toBN('0'),
+    'transfer(address,address,uint256)', ['address', 'address', 'uint256'],
+    [addresses.IDLE, addresses.bountyAddressForEB, toBN('3500').times(toBN('1e18'))]
+  );
 
-  let propName = 'add aavev2 wrapper';
+  // Add one action to support IDLE distribution to idleWETH
+  pushAction(addresses.idleController, toBN('0'),
+    '_supportMarkets(address[])', ['address[]'], [[addresses.idleWETHV4]]
+  );
+
+  // Add one action to activate IDLE distribution to idleWETH
+  pushAction(addresses.idleController, toBN('0'),
+    '_addIdleMarkets(address[])', ['address[]'], [[addresses.idleWETHV4]]
+  );
+
   let proposal = {
     targets: targets,
     values: values,
     signatures: signatures,
     calldatas: calldatas,
-    description: propName,
-    from: founder
+    description: 'add aavev2 wrapper',
+    from: addresses.forkProposer
   }
 
-  await createProposal(govInstance, founder, proposal, propName);
+  await createProposal(network, proposal);
   if (network === 'live') {
     return;
   }
 
   await web3.eth.sendTransaction({ from: TOKENS_HOLDER, to: addresses.timelock, value: "1000000000000000000" });
+
+  // Test that idleWETH has a speed
+  const idleCtrl = await IdleController.at(addresses.idleController);
+  const idle = await IERC20.at(addresses.IDLE);
+  console.log('balance', (await idle.balanceOf(addresses.bountyAddressForEB, {from: user})).toString());
+  console.log('getAllMarkets', await idleCtrl.getAllMarkets({from: user}));
+  console.log('speed idleDAIV4', (await idleCtrl.idleSpeeds(addresses.idleDAIV4, {from: user})).toString());
+  console.log('speed idleUSDCV4', (await idleCtrl.idleSpeeds(addresses.idleUSDCV4, {from: user})).toString());
+  console.log('speed idleWBTCV4', (await idleCtrl.idleSpeeds(addresses.idleWBTCV4, {from: user})).toString());
+  console.log('speed idleWETHV4', (await idleCtrl.idleSpeeds(addresses.idleWETHV4, {from: user})).toString());
 
   const setAllocationsAndRebalance = async (idleToken, newWrapperAllocation) => {
     const tokens = (await idleToken.getAPRs()).addresses;
@@ -218,6 +200,7 @@ module.exports = async (deployer, network, accounts) => {
 
   for (const idleTokenName in idleTokens) {
     const attrs = idleTokens[idleTokenName];
+    const user = addresses.mintRedeemTestUser;
     console.log("\n\n********************************* testing", idleTokenName);
 
     const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
@@ -227,7 +210,6 @@ module.exports = async (deployer, network, accounts) => {
     await setAllocationsAndRebalance(idleToken, 0);
 
     // test mint and redeem
-    const user = '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464';
     const underlying = await idleToken.token();
     console.log('underlying', underlying);
     const underlyingContract = await IERC20.at(underlying);
