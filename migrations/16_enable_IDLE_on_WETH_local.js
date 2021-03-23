@@ -1,6 +1,7 @@
-var IdleTokenV3_1 = artifacts.require("./IdleTokenV3_1.sol");
+var IdleTokenGovernance = artifacts.require("./IdleTokenGovernance.sol");
 var IERC20 = artifacts.require("./IERC20.sol");
 var IProxyAdmin = artifacts.require("./IProxyAdmin.sol");
+var IAdminUpgradeabilityProxy = artifacts.require("./IAdminUpgradeabilityProxy.sol");
 var IdleController = artifacts.require("./IdleController.sol");
 
 const {
@@ -12,8 +13,9 @@ const {
   aSUSD, SUSD, idleSUSDV4,
   cWBTC, iWBTC, aWBTC, WBTC, idleWBTCV4, idleWETHV4,
   COMP, IDLE, idleController,
-  timelock, idleMultisig, proxyAdmin
+  timelock, idleMultisig, proxyAdmin, proxyAdminETH
 } = require('./addresses.js');
+const addresses = require('./addresses.js');
 
 const BigNumber = require('bignumber.js');
 const BNify = s => new BigNumber(String(s));
@@ -31,15 +33,16 @@ module.exports = async function(deployer, network, accounts) {
 
   const idle = await IERC20.at(IDLE);
   const idleCtrl = await IdleController.at(idleController);
-  const idleDAI = await IdleTokenV3_1.at(idleDAIV4);
-  const idleUSDC = await IdleTokenV3_1.at(idleUSDCV4);
-  const idleUSDT = await IdleTokenV3_1.at(idleUSDTV4);
-  const idleSUSD = await IdleTokenV3_1.at(idleSUSDV4);
-  const idleTUSD = await IdleTokenV3_1.at(idleTUSDV4);
-  const idleWBTC = await IdleTokenV3_1.at(idleWBTCV4);
-  const idleDAISafe = await IdleTokenV3_1.at(idleDAISafeV4);
-  const idleUSDCSafe = await IdleTokenV3_1.at(idleUSDCSafeV4);
-  const idleUSDTSafe = await IdleTokenV3_1.at(idleUSDTSafeV4);
+  const idleDAI = await IdleTokenGovernance.at(idleDAIV4);
+  const idleUSDC = await IdleTokenGovernance.at(idleUSDCV4);
+  const idleUSDT = await IdleTokenGovernance.at(idleUSDTV4);
+  const idleSUSD = await IdleTokenGovernance.at(idleSUSDV4);
+  const idleTUSD = await IdleTokenGovernance.at(idleTUSDV4);
+  const idleWBTC = await IdleTokenGovernance.at(idleWBTCV4);
+  const idleWETH = await IdleTokenGovernance.at(idleWETHV4);
+  const idleDAISafe = await IdleTokenGovernance.at(idleDAISafeV4);
+  const idleUSDCSafe = await IdleTokenGovernance.at(idleUSDCSafeV4);
+  const idleUSDTSafe = await IdleTokenGovernance.at(idleUSDTSafeV4);
 
   if (network === 'local') {
     await web3.eth.sendTransaction({from: accounts[0], to: timelock, value: BNify(one).times(BNify('10'))});
@@ -58,4 +61,23 @@ module.exports = async function(deployer, network, accounts) {
   console.log('speed idleUSDCV4', (await idleCtrl.idleSpeeds(idleUSDCV4, {from: timelock})).toString());
   console.log('speed idleWBTCV4', (await idleCtrl.idleSpeeds(idleWBTCV4, {from: timelock})).toString());
   console.log('speed idleWETHV4', (await idleCtrl.idleSpeeds(idleWETHV4, {from: timelock})).toString());
+
+  // ###########################################\
+  // Transfer proxy admin
+  await idleWETH.setGovTokens([COMP.live, IDLE], [addresses.cWETH[network], addresses.aWETH[network]], {from: creator});
+  console.log('idleWETH.setGovTokens')
+  await idleWETH.transferOwnership(timelock, {from: creator});
+  console.log('idleWETH.transferOwnership')
+
+  // Change proxyAdmin so to have the same one for all tokens
+  const proxyAdminInstance = await IProxyAdmin.at(proxyAdminETH);
+  await proxyAdminInstance.changeProxyAdmin(idleWETHV4, proxyAdmin, {from: creator});
+  console.log('proxyChanged')
+
+  console.log('proxy admin owner', await idleWETH.owner());
+  await proxyAdminInstance.transferOwnership(timelock, {from: creator});
+  console.log('proxy admin new owner', await idleWETH.owner());
+
+  console.log('this should fail because admin is timelock now')
+  await proxyAdminInstance.changeProxyAdmin(idleWETHV4, proxyAdmin, {from: creator});
 };
