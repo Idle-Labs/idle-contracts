@@ -162,11 +162,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       this.protocolTokens,
       [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
       [], true,
-      {from: creator}
-    );
-    await this.token.setGovTokens(
-      [this.COMPMock.address], // govTokens
-      [this.cDAIMock.address], // protocolTokens
+      [this.COMPMock.address], // _newGovTokens
+      [this.COMPMock.address, this.ETHAddr, this.ETHAddr, this.ETHAddr], // _newGovTokensEqualLen
       {from: creator}
     );
 
@@ -2813,17 +2810,23 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
   it('sets gov tokens when _newGovTokens and _protocolTokens lengths are different', async function () {
     // more protocols than govTokns
-    await this.token.setGovTokens(
-      [this.COMPMock.address], // govTokens
-      [this.cDAIMock.address, this.iDAIMock.address], // protocolTokens
+    await this.token.setAllAvailableTokensAndWrappers(
+      this.protocolTokens,
+      [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
+      [], true,
+      [this.COMPMock.address], // _newGovTokens
+      [this.COMPMock.address, this.ETHAddr, this.ETHAddr, this.ETHAddr], // _newGovTokensEqualLen
       {from: creator}
     );
 
     // more govTokns than protocols
     this.COMPMock2 = await COMPMock.new({from: creator});
-    await this.token.setGovTokens(
-      [this.COMPMock.address, this.COMPMock2.address], // govTokens
+    await this.token.setAllAvailableTokensAndWrappers(
       [this.cDAIMock.address], // protocolTokens
+      [this.cDAIWrapper.address], // wrappers
+      [], true,
+      [this.COMPMock.address, this.COMPMock2.address], // _newGovTokens
+      [this.COMPMock.address], // _newGovTokensEqualLen
       {from: creator}
     );
   });
