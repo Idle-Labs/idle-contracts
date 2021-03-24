@@ -136,19 +136,41 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @param wrappers : array of wrapper addresses (eg [IdleCompound, IdleFulcrum, ...])
    * @param allocations : array of allocations
    * @param keepAllocations : whether to update lastRebalancerAllocations or not
+   * @param _newGovTokens : array of governance token addresses
+   * @param _newGovTokensEqualLen : array of governance token addresses for each
+   *  protocolToken (addr0 should be used for protocols with no govToken)
    */
   function setAllAvailableTokensAndWrappers(
     address[] calldata protocolTokens,
     address[] calldata wrappers,
     uint256[] calldata allocations,
-    bool keepAllocations
+    bool keepAllocations,
+    address[] calldata _newGovTokens,
+    address[] calldata _newGovTokensEqualLen
   ) external onlyOwner {
     require(protocolTokens.length == wrappers.length && (allocations.length == wrappers.length || keepAllocations), "IDLE:LEN_DIFF");
+    require(_newGovTokensEqualLen.length >= protocolTokens.length, 'IDLE:!EQ');
 
-    for (uint256 i = 0; i < protocolTokens.length; i++) {
-      require(protocolTokens[i] != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
-      protocolWrappers[protocolTokens[i]] = wrappers[i];
+    govTokens = _newGovTokens;
+
+    // Reset protocolTokenToGov mapping
+    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
+      protocolTokenToGov[allAvailableTokens[i]] = address(0);
     }
+
+    address newGov;
+    address protToken;
+    for (uint256 i = 0; i < protocolTokens.length; i++) {
+      protToken = protocolTokens[i];
+      require(protToken != address(0) && wrappers[i] != address(0), "IDLE:IS_0");
+      protocolWrappers[protToken] = wrappers[i];
+
+      // set protocol token to gov token mapping
+      newGov = _newGovTokensEqualLen[i];
+      if (newGov == IDLE) { continue; }
+      protocolTokenToGov[protToken] = newGov;
+    }
+
     allAvailableTokens = protocolTokens;
 
     if (keepAllocations) {
@@ -158,31 +180,14 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   }
 
   /**
-   * It allows owner to set gov tokens array
-   * In case of any errors gov distribution can be paused by passing an empty array
+   * It allows owner to set the cToken address
    *
-   * @param _newGovTokens : array of governance token addresses
-   * @param _protocolTokens : array of interest bearing token addresses
+   * @param _cToken : new cToken address
    */
-  function setGovTokens(
-    address[] calldata _newGovTokens,
-    address[] calldata _protocolTokens
-  ) external onlyOwner {
-    govTokens = _newGovTokens;
-    // Reset protocolTokenToGov mapping
-    for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-      protocolTokenToGov[allAvailableTokens[i]] = address(0);
-    }
-    // set protocol token to gov token mapping
-    for (uint256 i = 0; i < _protocolTokens.length; i++) {
-      if (i >= _newGovTokens.length) {
-        return;
-      }
-
-      address newGov = _newGovTokens[i];
-      if (newGov == IDLE) { continue; }
-      protocolTokenToGov[_protocolTokens[i]] = newGov;
-    }
+  function setCToken(address _cToken)
+    external onlyOwner {
+      require(_cToken != address(0), "IDLE:IS_0");
+      cToken = _cToken;
   }
 
   /**
@@ -1173,6 +1178,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function _contractBalanceOf(address _token) private view returns (uint256) {
     return IERC20(_token).balanceOf(address(this));
   }
+
 
   /**
    * Get price of 1 protocol token in underlyings
