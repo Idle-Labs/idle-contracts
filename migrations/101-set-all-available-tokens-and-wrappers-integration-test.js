@@ -1,6 +1,6 @@
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance");
 const IdleCompoundV2 = artifacts.require("IdleCompoundV2.sol");
-const IERC20 = artifacts.require("IERC20.sol");
+const ISafeERC20 = artifacts.require("ISafeERC20.sol");
 const IProxyAdmin = artifacts.require("IProxyAdmin");
 const FlashLoanerMock = artifacts.require("FlashLoanerMock");
 const addresses = require("./addresses");
@@ -47,6 +47,8 @@ module.exports = async function(deployer, network) {
   await proxyAdmin.upgrade(idleTokenAddress, newImplementation.address, { from: addresses.timelock });
 
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
+  const underlying = await idleToken.token();
+  const underlyingContract = await ISafeERC20.at(underlying);
 
   const tokenHelper = await IdleTokenHelper.new({ from: addresses.timelock });
   await idleToken._init(tokenHelper.address, { from: addresses.timelock });
@@ -84,7 +86,7 @@ module.exports = async function(deployer, network) {
 
   // if I skip gov tokens redeem everyone has some more gov tokens
 
-  const comp = await IERC20.at(addresses.COMP.live);
+  const comp = await ISafeERC20.at(addresses.COMP.live);
 
   const calculateExpectedGovAmount = async (user) => {
     const FULL_ALLOC = toBN("100000");
@@ -100,13 +102,19 @@ module.exports = async function(deployer, network) {
     return finalAmount;
   };
 
-  user1 = "0x87806fa6481dee55438d90bac808919f35a027e0";
-  user2 = "0x1a32ee8ac16a7d5f45a81503fe06cdc665d218b1";
+  user1 = addresses.whale;
+  user2 = "0x4fe6c6cf239b23bcaeadc2811b62561097cd95b1";
+
+  await underlyingContract.safeApprove(idleToken.address, "1", { from: user1 });
+  await underlyingContract.safeApprove(idleToken.address, "1", { from: user2 });
+
+  await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user1 });
+  await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user2 });
 
   const user1ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user1));
   const user2ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user2));
 
-  await idleToken.redeemIdleTokenSkipGov("0", [true, true], { from: user2});
+  await idleToken.redeemIdleTokenSkipGov("0", [true, true], { from: user2 });
 
   const user1ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user1));
   const user2ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user2));
@@ -118,6 +126,9 @@ module.exports = async function(deployer, network) {
 
   const totalSupplyAfter = await idleToken.totalSupply();
   const tokenPriceAfter = await idleToken.tokenPrice();
+
+  await idleToken.redeemIdleToken(await idleToken.balanceOf(user1), { from: user1 });
+  await idleToken.redeemIdleToken(await idleToken.balanceOf(user2), { from: user2 });
 
   console.log("totalSupplyBefore", totalSupplyBefore.toString());
   console.log("tokenPriceBefore ", tokenPriceBefore.toString());
