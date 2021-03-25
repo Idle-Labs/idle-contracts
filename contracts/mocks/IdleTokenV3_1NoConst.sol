@@ -248,6 +248,17 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
+   * It allows owner to set the cToken address
+   *
+   * @param _cToken : new cToken address
+   */
+  function setCToken(address _cToken)
+    external onlyOwner {
+      require(_cToken != address(0), "IDLE:IS_0");
+      cToken = _cToken;
+  }
+
+  /**
    * It allows owner to set the IdleTokenHelper address
    *
    * @param _tokenHelper : new IdleTokenHelper address
