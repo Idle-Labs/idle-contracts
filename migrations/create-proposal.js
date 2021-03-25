@@ -82,7 +82,7 @@ module.exports = {
       // Need to advance 3d in blocs + 1
       await advanceBlocks(17281);
 
-      await gov.queue(proposalId);
+      await gov.queue(proposalId, {from: proposer});
       console.log('queued');
 
       await time.increase(timelockDelay+100)
@@ -90,7 +90,7 @@ module.exports = {
       await advanceBlocks(1)
       console.log("advanced 1")
 
-      await gov.execute(proposalId);
+      await gov.execute(proposalId, {from: proposer});
       console.log('executed');
       await advanceBlocks(2);
     };
