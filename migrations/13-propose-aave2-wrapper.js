@@ -153,6 +153,7 @@ module.exports = async (deployer, network, accounts) => {
   // Test that idleWETH has a speed
   const idleCtrl = await IdleController.at(addresses.idleController);
   const idle = await IERC20.at(addresses.IDLE);
+  const user = addresses.mintRedeemTestUser;
   console.log('balance', (await idle.balanceOf(addresses.bountyAddressForEB, {from: user})).toString());
   console.log('getAllMarkets', await idleCtrl.getAllMarkets({from: user}));
   console.log('speed idleDAIV4', (await idleCtrl.idleSpeeds(addresses.idleDAIV4, {from: user})).toString());
