@@ -1,6 +1,6 @@
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance");
 const IdleCompoundV2 = artifacts.require("IdleCompoundV2.sol");
-const ISafeERC20 = artifacts.require("ISafeERC20.sol");
+const IERC20 = artifacts.require("IERC20Detailed.sol");
 const IProxyAdmin = artifacts.require("IProxyAdmin");
 const FlashLoanerMock = artifacts.require("FlashLoanerMock");
 const addresses = require("./addresses");
@@ -9,13 +9,6 @@ const IdleTokenHelper = artifacts.require('IdleTokenHelper');
 
 const holder = "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98";
 const proxyAdminAddress = '0x7740792812A00510b50022D84e5c4AC390e01417';
-
-const toBN = v => new BigNumber(v.toString());
-const toBNString = v => new BigNumber(v.toString()).toString();
-const ONE_18 = toBN("10").pow(toBN("18"));
-const toUnit = v => v.div(ONE_18);
-const toUnitString = v => toUnit(toBN(v)).toString();
-const fromUnits = u => toBN(u).times(ONE_18);
 
 const check = (a, b, message) => {
   a = a.toString();
@@ -48,10 +41,20 @@ module.exports = async function(deployer, network) {
 
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
   const underlying = await idleToken.token();
-  const underlyingContract = await ISafeERC20.at(underlying);
+  const underlyingContract = await IERC20.at(underlying);
+  console.log("underlying", underlying);
 
   const tokenHelper = await IdleTokenHelper.new({ from: addresses.timelock });
   await idleToken._init(tokenHelper.address, { from: addresses.timelock });
+
+  const decimals = await underlyingContract.decimals();
+  const toBN = v => new BigNumber(v.toString());
+  const toBNString = v => new BigNumber(v.toString()).toString();
+  const ONE_18 = toBN("10").pow(toBN(decimals));
+  const toUnit = v => v.div(ONE_18);
+  const toUnitString = v => toUnit(toBN(v)).toString();
+  const fromUnits = u => toBN(u).times(ONE_18);
+
 
   const aprs = await idleToken.getAPRs();
   let tokens = aprs["0"].map(v => v.toString());
@@ -81,12 +84,9 @@ module.exports = async function(deployer, network) {
   await idleToken.setAllAvailableTokensAndWrappers(...params, { from: addresses.timelock });
   await idleToken.setCToken(addresses.cWBTCV2.live, { from: addresses.timelock })
 
-  const totalSupplyBefore = await idleToken.totalSupply();
-  const tokenPriceBefore = await idleToken.tokenPrice();
-
   // if I skip gov tokens redeem everyone has some more gov tokens
 
-  const comp = await ISafeERC20.at(addresses.COMP.live);
+  const comp = await IERC20.at(addresses.COMP.live);
 
   const calculateExpectedGovAmount = async (user) => {
     const FULL_ALLOC = toBN("100000");
@@ -103,16 +103,19 @@ module.exports = async function(deployer, network) {
   };
 
   user1 = addresses.whale;
-  user2 = "0x4fe6c6cf239b23bcaeadc2811b62561097cd95b1";
+  user2 = "0x70fbb965302d50d1783a2337cb115b30ae9c4638";
 
-  await underlyingContract.safeApprove(idleToken.address, "1", { from: user1 });
-  await underlyingContract.safeApprove(idleToken.address, "1", { from: user2 });
+  await underlyingContract.approve(idleToken.address, fromUnits("1"), { from: user1 });
+  await underlyingContract.approve(idleToken.address, fromUnits("1"), { from: user2 });
 
   await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user1 });
   await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user2 });
 
   const user1ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user1));
   const user2ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user2));
+
+  const totalSupplyBefore = await idleToken.totalSupply();
+  const tokenPriceBefore = await idleToken.tokenPrice();
 
   await idleToken.redeemIdleTokenSkipGov("0", [true, true], { from: user2 });
 
