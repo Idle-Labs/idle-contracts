@@ -710,10 +710,9 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @return The amount of `token` that can be borrowed.
    */
   function maxFlashLoan(address _token) external view returns (uint256) {
-    if (_token != token) {
-      return 0;
+    if (_token == token) {
+      return _tokenPrice().mul(totalSupply()).div(ONE_18);
     }
-    return _tokenPrice().mul(totalSupply()).div(ONE_18);
   }
 
   /**
