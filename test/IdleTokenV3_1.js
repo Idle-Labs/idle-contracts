@@ -161,7 +161,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       this.protocolTokens,
       [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
-      [], true,
       [this.COMPMock.address], // _newGovTokens
       [this.COMPMock.address, this.ETHAddr, this.ETHAddr, this.ETHAddr], // _newGovTokensEqualLen
       {from: creator}
@@ -334,21 +333,14 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
   //   await expectRevert.unspecified(this.token.initialize('a', 'b', this.someAddr, this.someAddr, this.someAddr, {from: creator}));
   // });
   it('setAllAvailableTokensAndWrappers', async function () {
-    await this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], true, {from: creator});
+    await this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], this.protocolTokens, {from: creator});
 
     for (var i = 0; i < this.protocolTokens.length; i++) {
       (await this.token.allAvailableTokens(i)).should.equal(this.protocolTokens[i]);
       (await this.token.protocolWrappers(this.protocolTokens[i])).should.equal(this.protocolWrappers[i]);
     }
 
-    await expectRevert.unspecified(this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], true, {from: nonOwner}));
-  });
-  it('setGovTokens', async function () {
-    await this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: creator});
-
-    (await this.token.govTokens(0)).should.equal(this.COMPMock.address);
-
-    await expectRevert.unspecified(this.token.setGovTokens([this.COMPMock.address], [this.cDAIMock.address], {from: nonOwner}));
+    await expectRevert.unspecified(this.token.setAllAvailableTokensAndWrappers(this.protocolTokens, this.protocolWrappers, [], this.protocolTokens, {from: nonOwner}));
   });
   // it('allows onlyOwner to setIToken', async function () {
   //   const val = this.someAddr;
@@ -690,38 +682,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // so 10 IdleDAI will be minted to nonOwner
     const resBalanceIdle = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
     resBalanceIdle.should.be.bignumber.equal(BNify('10').mul(this.one));
-
-    expectEvent(receipt, 'Referral', {
-      _amount: BNify('10').mul(this.one),
-      _ref: this.someAddr
-    });
-  });
-  it('mints idle tokens and rebalance if flag is passed', async function () {
-    await this.cDAIWrapper._setPriceInToken(BNify('200000000000000000000000000')); // 0.02
-    await this.iDAIWrapper._setPriceInToken(BNify('1100000000000000000')); // 1.1DAI
-
-    await this.cDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-    await this.iDAIWrapper._setAvailableLiquidity(BNify('1000000').mul(this.one)); // 1M
-
-    // First mint with tokenPrice = 1
-    // all funds will be sent to one protocol (Compound)
-    await this.token.setAllocations(
-      [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
-      {from: manager}
-    );
-    // Approve and Mint 10 DAI, all on Compound so 10 / 0.02 = 500 cDAI in idle pool
-    // tokenPrice is 1 here
-    const receipt = await this.mintIdleWithRebalance(BNify('10').mul(this.one), nonOwner);
-    // so 10 DAI will be transferred from nonOwner
-    const resBalanceDAI = await this.DAIMock.balanceOf.call(nonOwner, { from: nonOwner });
-    resBalanceDAI.should.be.bignumber.equal(BNify('0').mul(this.one));
-    // so 10 IdleDAI will be minted to nonOwner
-    const resBalanceIdle = await this.token.balanceOf.call(nonOwner, { from: nonOwner });
-    resBalanceIdle.should.be.bignumber.equal(BNify('10').mul(this.one));
-    const resBalanceDAIIdle = await this.DAIMock.balanceOf.call(this.token.address, { from: nonOwner });
-    resBalanceDAIIdle.should.be.bignumber.equal(BNify('10').mul(this.one).div(BNify('100')));
-    const resBalanceCDAIIdle = await this.cDAIMock.balanceOf.call(this.token.address, { from: nonOwner });
-    resBalanceCDAIIdle.should.be.bignumber.equal(BNify('495').mul(this.oneCToken));
 
     expectEvent(receipt, 'Referral', {
       _amount: BNify('10').mul(this.one),
@@ -1460,7 +1420,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await expectRevert(
       this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]),
-      'IDLE:NOT_IMPROV'
+      'APR'
     );
   });
   it('openRebalance reverts with newAllocations length != lastAllocations.length', async function () {
@@ -1484,7 +1444,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await expectRevert(
       this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
-      'IDLE:!EQ_LEN -- Reason given: IDLE:!EQ_LEN'
+      'LEN -- Reason given: LEN'
     );
   });
   // it('openRebalance reverts if it\'s risk adjusted instance', async function () {
@@ -1533,7 +1493,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
 
     await expectRevert(
       this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
-      'IDLE:!EQ_TOT -- Reason given: IDLE:!EQ_TOT'
+      'TOT -- Reason given: TOT'
     );
   });
   it('calculates fee correctly when minting / redeeming and no unlent', async function () {
@@ -2485,8 +2445,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       tokens,
       wrappers,
-      [BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000'), BNify('20000')],
-      true,
+      [],
+      tokens,
       {from: creator}
     );
 
@@ -2522,8 +2482,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       tokens,
       wrappers,
-      [BNify('60000'), BNify('20000'), BNify('20000')],
-      true,
+      [],
+      tokens,
       {from: creator}
     );
 
@@ -2813,7 +2773,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       this.protocolTokens,
       [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
-      [], true,
       [this.COMPMock.address], // _newGovTokens
       [this.COMPMock.address, this.ETHAddr, this.ETHAddr, this.ETHAddr], // _newGovTokensEqualLen
       {from: creator}
@@ -2824,7 +2783,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     await this.token.setAllAvailableTokensAndWrappers(
       [this.cDAIMock.address], // protocolTokens
       [this.cDAIWrapper.address], // wrappers
-      [], true,
       [this.COMPMock.address, this.COMPMock2.address], // _newGovTokens
       [this.COMPMock.address], // _newGovTokensEqualLen
       {from: creator}

@@ -6,7 +6,6 @@ const BigNumber = require('bignumber.js');
 const toBN = v => new BigNumber(v.toString());
 
 module.exports = async (deployer, network, accounts) => {
-  console.log("started");
   if (network === 'test' || network == 'coverage') {
     return;
   }
