@@ -2538,13 +2538,6 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     const res = await this.token.maxFlashLoan.call(this.DAIMock.address, {from: creator});
     res.should.be.bignumber.equal(BNify('10').mul(this.one));
   });
-  it('allows onlyOwner to setIdleTokenHelper', async function () {
-    const val = this.someAddr;
-    await this.token.setIdleTokenHelper(val, { from: creator });
-    (await this.token.tokenHelper()).should.be.equal(val);
-
-    await expectRevert.unspecified(this.token.setIdleTokenHelper(val, { from: nonOwner }));
-  });
   it('tokenPriceWithFee', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee 0%
