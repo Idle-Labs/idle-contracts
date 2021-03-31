@@ -248,16 +248,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * It allows owner to set the IdleTokenHelper address
-   *
-   * @param _tokenHelper : new IdleTokenHelper address
-   */
-  function setIdleTokenHelper(address _tokenHelper)
-    external onlyOwner {
-      require((tokenHelper = _tokenHelper) != address(0), "0");
-  }
-
-  /**
    * It allows owner to set the IdleRebalancerV3_1 address
    *
    * @param _rebalancer : new IdleRebalancerV3_1 address
@@ -1218,15 +1208,19 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @param _token : address of the token to read balance
    * @return total : balance of _token in this contract
    */
-  function _contractBalanceOf(address _token) internal view returns (uint256) {
-    return IERC20(_token).balanceOf(address(this));
-    // // 0x70a08231 -> selector for 'function balanceOf(address(this)) returns(uint256)'
-    // (bool success, bytes memory data) =
-    //     _token.staticcall(abi.encodeWithSelector(0x70a08231, address(this)));
-    // require(success);
-    // // require(success && data.length >= 32);
-    // return abi.decode(data, (uint256));
-  }
+   function _contractBalanceOf(address _token) private view returns (uint256) {
+     // Original implementation:
+     //
+     // return IERC20(_token).balanceOf(address(this));
+
+     // Optimized implementation inspired by uniswap https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/UniswapV3Pool.sol#L144
+     //
+     // 0x70a08231 -> selector for 'function balanceOf(address(this)) returns(uint256)'
+     (bool success, bytes memory data) =
+         _token.staticcall(abi.encodeWithSelector(0x70a08231, address(this)));
+     require(success);
+     return abi.decode(data, (uint256));
+   }
 
 
   /**
