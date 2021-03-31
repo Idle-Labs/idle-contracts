@@ -29,7 +29,7 @@ import "./interfaces/CERC20.sol";
 import "./interfaces/IdleController.sol";
 import "./interfaces/PriceOracle.sol";
 import "./interfaces/IUniswapV2Router02.sol";
-import "./IdleTokenHelper.sol";
+import "./interfaces/IIdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
 

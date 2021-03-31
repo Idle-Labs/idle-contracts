@@ -28,7 +28,7 @@ import "../interfaces/Comptroller.sol";
 import "../interfaces/CERC20.sol";
 import "../interfaces/IdleController.sol";
 import "../interfaces/PriceOracle.sol";
-import "../IdleTokenHelper.sol";
+import "../interfaces/IIdleTokenHelper.sol";
 
 import "../GST2ConsumerV2.sol";
 
@@ -396,7 +396,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function getAPRs()
     external view
     returns (address[] memory, uint256[] memory) {
-    return IdleTokenHelper(tokenHelper).getAPRs(address(this));
+    return IIdleTokenHelper(tokenHelper).getAPRs(address(this));
   }
 
   /**
@@ -407,7 +407,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function getAvgAPR()
     public view
     returns (uint256) {
-    return IdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
+    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
   }
 
   /**
@@ -795,15 +795,16 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @param _minTokenOut : minOutputAmount uniswap, 0 to skip swap for token
    */
   function sellGovTokens(uint256[] calldata _minTokenOut) external {
-    require(msg.sender == rebalancer || msg.sender == owner(), "!AUTH");
+    require(msg.sender == rebalancer || msg.sender == owner(), "IDLE:!AUTH");
     address[] memory _govTokens = govTokens;
-    for (uint256 i = 0; i < _govTokens.length; i++) {
-      address newGov = _govTokens[i];
+    for (uint256 i = 0; i < govTokens.length; i++) {
+      address newGov = govTokens[i];
       if (newGov != IDLE && _minTokenOut[i] != 0) {
+        govTokensLastBalances[newGov] = 0;
         _transferTokens(newGov, tokenHelper, _contractBalanceOf(newGov));
       }
     }
-    IdleTokenHelper(tokenHelper).sellGovTokens(address(this), _minTokenOut);
+    IIdleTokenHelper(tokenHelper).sellGovTokens(address(this), _minTokenOut);
   }
 
   // internal

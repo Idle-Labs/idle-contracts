@@ -22,7 +22,7 @@ const checkIncreased = (a, b, message) => {
   console.log(`${icon}  `, a.toString(), symbol, b.toString(), message ? message : "");
 }
 
-module.exports = async function(deployer, network) {
+module.exports = async function(deployer, network, [account1, account2, deployerAccount]) {
   if (network === 'test' || network == 'coverage') {
     return;
   }
@@ -42,9 +42,9 @@ module.exports = async function(deployer, network) {
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
   const underlying = await idleToken.token();
   const underlyingContract = await IERC20.at(underlying);
-  console.log("underlying", underlying);
 
   const tokenHelper = await IdleTokenHelper.new({ from: addresses.timelock });
+  await tokenHelper.initialize({ from: deployerAccount });
   await idleToken._init(tokenHelper.address, { from: addresses.timelock });
 
   const decimals = await underlyingContract.decimals();
@@ -81,6 +81,17 @@ module.exports = async function(deployer, network) {
       addresses.IDLE] // _newGovTokensEqualLen
   ];
 
+  const user1 = "0x87806fa6481dee55438d90bac808919f35a027e0";
+  const user2 = "0x70fbb965302d50d1783a2337cb115b30ae9c4638";
+  const user3 = account1;
+
+  await underlyingContract.transfer(user1, fromUnits("100"), { from: addresses.whale });
+  await underlyingContract.transfer(user2, fromUnits("200"), { from: addresses.whale });
+  await underlyingContract.transfer(user3, fromUnits("100"), { from: addresses.whale });
+
+  await underlyingContract.approve(idleToken.address, fromUnits("1000000"), { from: user2 });
+  await underlyingContract.approve(idleToken.address, fromUnits("1000000"), { from: user3 });
+
   await idleToken.setAllAvailableTokensAndWrappers(...params, { from: addresses.timelock });
   await idleToken.setCToken(addresses.cWBTCV2.live, { from: addresses.timelock })
 
@@ -102,14 +113,12 @@ module.exports = async function(deployer, network) {
     return finalAmount;
   };
 
-  user1 = addresses.whale;
-  user2 = "0x70fbb965302d50d1783a2337cb115b30ae9c4638";
+  await underlyingContract.approve(idleToken.address, fromUnits("1000"), { from: user1 });
+  await underlyingContract.approve(idleToken.address, fromUnits("1000"), { from: user2 });
 
-  await underlyingContract.approve(idleToken.address, fromUnits("1"), { from: user1 });
-  await underlyingContract.approve(idleToken.address, fromUnits("1"), { from: user2 });
-
-  await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user1 });
-  await idleToken.mintIdleToken(fromUnits("1"), true, addresses.addr0, { from: user2 });
+  console.log("balance user1", (await underlyingContract.balanceOf(user1)).toString())
+  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user1 });
+  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
 
   const user1ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user1));
   const user2ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user2));
@@ -141,5 +150,11 @@ module.exports = async function(deployer, network) {
   // sell gov tokens and everyone get something more
   check(totalSupplyBefore, totalSupplyAfter, "same supply should remain the same");
   checkIncreased(tokenPriceBefore, tokenPriceAfter, "token price should increase");
+
+  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
+  await idleToken.rebalance();
+  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
+  await idleToken.rebalance();
+  await idleToken.redeemIdleToken(fromUnits("10"), { from: user2 });
 }
 
