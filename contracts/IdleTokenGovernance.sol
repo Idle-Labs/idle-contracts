@@ -726,7 +726,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function sellGovTokens(uint256[] calldata _minTokenOut) external {
     require(msg.sender == rebalancer || msg.sender == owner(), "!AUTH");
     address[] memory _govTokens = govTokens;
-    for (uint256 i = 0; i < govTokens.length; i++) {
+    for (uint256 i = 0; i < _govTokens.length; i++) {
       address newGov = _govTokens[i];
       if (newGov != IDLE && _minTokenOut[i] != 0) {
         govTokensLastBalances[newGov] = 0;
