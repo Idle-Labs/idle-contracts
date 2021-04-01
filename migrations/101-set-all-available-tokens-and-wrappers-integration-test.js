@@ -71,8 +71,6 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   params = [
     tokens,
     wrappers,
-    [20000, 20000, 60000],
-    true,
     [addresses.COMP.live, addresses.IDLE], // _newGovTokens
     [
       "0x0000000000000000000000000000000000000000", // for cWBTC

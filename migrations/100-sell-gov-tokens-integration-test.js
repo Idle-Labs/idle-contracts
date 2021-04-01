@@ -52,9 +52,6 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   await tokenHelper.initialize({ from: deployerAccount });
   await idleToken._init(tokenHelper.address, { from: addresses.timelock });
 
-  const totalSupplyBefore = await idleToken.totalSupply();
-  const tokenPriceBefore = await idleToken.tokenPrice();
-
   // if I skip gov tokens redeem everyone has some more gov tokens
 
   const comp = await IERC20.at(addresses.COMP.live);
@@ -96,18 +93,25 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   await idleToken.redeemIdleToken(fromUnits("10"), { from: user2 });
   await idleToken.redeemIdleToken(fromUnits("10"), { from: user3 });
 
-  const user1ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user1));
-  const user2ExpectedGovTokensBefore = toBN(await calculateExpectedGovAmount(user2));
+  const totalSupplyBefore = await idleToken.totalSupply();
+  const tokenPriceBefore = await idleToken.tokenPrice();
+
+  const user1ExpectedGovTokensBeforeSkip = toBN(await calculateExpectedGovAmount(user1));
+  const user2ExpectedGovTokensBeforeSkip = toBN(await calculateExpectedGovAmount(user2));
 
   await idleToken.redeemIdleTokenSkipGov("0", [true, true], { from: user2});
 
-  const user1ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user1));
-  const user2ExpectedGovTokensAfter = toBN(await calculateExpectedGovAmount(user2));
+  const user1ExpectedGovTokensAfterSkip = toBN(await calculateExpectedGovAmount(user1));
+  const user2ExpectedGovTokensAfterSkip = toBN(await calculateExpectedGovAmount(user2));
 
-  check(user2ExpectedGovTokensAfter, toBN("0"));
-  checkIncreased(user1ExpectedGovTokensBefore, user1ExpectedGovTokensAfter);
+  check(user2ExpectedGovTokensAfterSkip, toBN("0"));
+  checkIncreased(user1ExpectedGovTokensBeforeSkip, user1ExpectedGovTokensAfterSkip);
 
+  // sell gov tokens
   await idleToken.sellGovTokens([toBN("1"), toBN("1")], { from: addresses.timelock });
+
+  const user1ExpectedGovTokensAfterSell = toBN(await calculateExpectedGovAmount(user1));
+  const user2ExpectedGovTokensAfterSell = toBN(await calculateExpectedGovAmount(user2));
 
   const totalSupplyAfter = await idleToken.totalSupply();
   const tokenPriceAfter = await idleToken.tokenPrice();
@@ -116,6 +120,20 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   console.log("tokenPriceBefore ", tokenPriceBefore.toString());
   console.log("totalSupplyAfter ", totalSupplyAfter.toString());
   console.log("tokenPriceAfter  ", tokenPriceAfter.toString());
+
+  console.log("expected before skip", user1ExpectedGovTokensBeforeSkip.toString())
+  console.log("expected after skip ", user1ExpectedGovTokensAfterSkip.toString())
+  console.log("expected after sell ", user1ExpectedGovTokensAfterSell.toString())
+
+  const user1GovTokensBalanceBefore = toBN(await comp.balanceOf(user1));
+  await idleToken.redeemIdleToken((await idleToken.balanceOf(user1)), { from: user1 });
+  const user1GovTokensBalanceAfter = toBN(await comp.balanceOf(user1));
+
+  console.log("before                         ", user1GovTokensBalanceBefore.toString())
+  console.log("expected total                 ", user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell).toString())
+  console.log("after                          ", user1GovTokensBalanceAfter.toString())
+  check(user1GovTokensBalanceAfter, user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell), "gov tokens redeemed");
+
 
   // sell gov tokens and everyone get something more
   check(totalSupplyBefore, totalSupplyAfter, "same supply should remain the same");
