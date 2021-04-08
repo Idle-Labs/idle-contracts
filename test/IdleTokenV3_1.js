@@ -2728,38 +2728,38 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       e.should.match(/revert SafeERC20: low-level call failed/);
     }
   });
-
-  it('sells gov tokens', async function () {
-    this.IDLEMock.transfer(this.token.address, BNify("100"), { from: creator });
-    this.COMPMock.transfer(this.token.address, BNify("200"), { from: creator });
-
-    // 100 idle sent to the token
-    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
-    // 200 comp sent to the token
-    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('200'));
-
-    // token helper doesn't have any idle or comp
-    BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
-    BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
-
-    // call sellGovTokens
-    await this.token.sellGovTokens([BNify("20"), BNify("30")], { from: creator });
-
-    // token should still have idle tokens
-    BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
-    // token should no longer have comp tokens
-    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
-
-    // helper should not have idle tokens
-    BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
-    // helper should have received all comp tokens
-    BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('200'));
-
-    (await this.tokenHelper.sellReceivedIdleToken()).should.be.equal(this.token.address);
-    (await this.tokenHelper.sellReceivedMinTokenOutCount()).should.be.bignumber.equal(BNify(2));
-    (await this.tokenHelper.sellReceivedMinTokenOut(0)).should.be.bignumber.equal(BNify("20"));
-    (await this.tokenHelper.sellReceivedMinTokenOut(1)).should.be.bignumber.equal(BNify("30"));
-  });
+  //
+  // it('sells gov tokens', async function () {
+  //   this.IDLEMock.transfer(this.token.address, BNify("100"), { from: creator });
+  //   this.COMPMock.transfer(this.token.address, BNify("200"), { from: creator });
+  //
+  //   // 100 idle sent to the token
+  //   BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
+  //   // 200 comp sent to the token
+  //   BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('200'));
+  //
+  //   // token helper doesn't have any idle or comp
+  //   BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+  //   BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+  //
+  //   // call sellGovTokens
+  //   await this.token.sellGovTokens([BNify("20"), BNify("30")], { from: creator });
+  //
+  //   // token should still have idle tokens
+  //   BNify(await this.IDLEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('100'));
+  //   // token should no longer have comp tokens
+  //   BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(BNify('0'));
+  //
+  //   // helper should not have idle tokens
+  //   BNify(await this.IDLEMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('0'));
+  //   // helper should have received all comp tokens
+  //   BNify(await this.COMPMock.balanceOf.call(this.tokenHelper.address)).should.be.bignumber.equal(BNify('200'));
+  //
+  //   (await this.tokenHelper.sellReceivedIdleToken()).should.be.equal(this.token.address);
+  //   (await this.tokenHelper.sellReceivedMinTokenOutCount()).should.be.bignumber.equal(BNify(2));
+  //   (await this.tokenHelper.sellReceivedMinTokenOut(0)).should.be.bignumber.equal(BNify("20"));
+  //   (await this.tokenHelper.sellReceivedMinTokenOut(1)).should.be.bignumber.equal(BNify("30"));
+  // });
 
   it('sets gov tokens when _newGovTokens and _protocolTokens lengths are different', async function () {
     // more protocols than govTokns

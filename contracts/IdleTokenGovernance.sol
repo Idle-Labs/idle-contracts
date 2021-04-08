@@ -718,24 +718,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     return true;
   }
 
-  /**
-   * Covert gov tokens in underlyings
-   *
-   * @param _minTokenOut : minOutputAmount uniswap, 0 to skip swap for token
-   */
-  function sellGovTokens(uint256[] calldata _minTokenOut) external {
-    require(msg.sender == rebalancer || msg.sender == owner(), "!AUTH");
-    address[] memory _govTokens = govTokens;
-    for (uint256 i = 0; i < _govTokens.length; i++) {
-      address newGov = _govTokens[i];
-      if (newGov != IDLE && _minTokenOut[i] != 0) {
-        govTokensLastBalances[newGov] = 0;
-        _transferTokens(newGov, tokenHelper, _contractBalanceOf(newGov));
-      }
-    }
-    IIdleTokenHelper(tokenHelper).sellGovTokens(address(this), _minTokenOut);
-  }
-
   // internal
   /**
    * Get current idleToken price based on net asset value and totalSupply

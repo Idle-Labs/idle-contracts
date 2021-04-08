@@ -789,24 +789,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     return true;
   }
 
-  /**
-   * Covert gov tokens in underlyings
-   *
-   * @param _minTokenOut : minOutputAmount uniswap, 0 to skip swap for token
-   */
-  function sellGovTokens(uint256[] calldata _minTokenOut) external {
-    require(msg.sender == rebalancer || msg.sender == owner(), "!AUTH");
-    address[] memory _govTokens = govTokens;
-    for (uint256 i = 0; i < _govTokens.length; i++) {
-      address newGov = _govTokens[i];
-      if (newGov != IDLE && _minTokenOut[i] != 0) {
-        govTokensLastBalances[newGov] = 0;
-        _transferTokens(newGov, tokenHelper, _contractBalanceOf(newGov));
-      }
-    }
-    IIdleTokenHelper(tokenHelper).sellGovTokens(address(this), _minTokenOut);
-  }
-
   // internal
   /**
    * Get current idleToken price based on net asset value and totalSupply
@@ -1209,19 +1191,19 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @param _token : address of the token to read balance
    * @return total : balance of _token in this contract
    */
-   function _contractBalanceOf(address _token) private view returns (uint256) {
-     // Original implementation:
-     //
-     // return IERC20(_token).balanceOf(address(this));
+  function _contractBalanceOf(address _token) private view returns (uint256) {
+    // Original implementation:
+    //
+    // return IERC20(_token).balanceOf(address(this));
 
-     // Optimized implementation inspired by uniswap https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/UniswapV3Pool.sol#L144
-     //
-     // 0x70a08231 -> selector for 'function balanceOf(address(this)) returns(uint256)'
-     (bool success, bytes memory data) =
-         _token.staticcall(abi.encodeWithSelector(0x70a08231, address(this)));
-     require(success);
-     return abi.decode(data, (uint256));
-   }
+    // Optimized implementation inspired by uniswap https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/UniswapV3Pool.sol#L144
+    //
+    // 0x70a08231 -> selector for 'function balanceOf(address(this)) returns(uint256)'
+    (bool success, bytes memory data) =
+        _token.staticcall(abi.encodeWithSelector(0x70a08231, address(this)));
+    require(success);
+    return abi.decode(data, (uint256));
+  }
 
 
   /**
