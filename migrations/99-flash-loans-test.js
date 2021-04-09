@@ -23,12 +23,12 @@ module.exports = async function(deployer, network) {
 
   const idleTokenAddress = addresses.idleDAIV4;
 
-  // await deployer.deploy(IdleTokenGovernance);
-  // const newImplementation = await IdleTokenGovernance.deployed();
-  // console.log("implementation deployed at", newImplementation.address)
-  //
-  // const proxyAdmin = await IProxyAdmin.at(proxyAdminAddress);
-  // await proxyAdmin.upgrade(idleTokenAddress, newImplementation.address, { from: addresses.timelock });
+  await deployer.deploy(IdleTokenGovernance);
+  const newImplementation = await IdleTokenGovernance.deployed();
+  console.log("implementation deployed at", newImplementation.address)
+
+  const proxyAdmin = await IProxyAdmin.at(proxyAdminAddress);
+  await proxyAdmin.upgrade(idleTokenAddress, newImplementation.address, { from: addresses.timelock });
 
   const dai = await IERC20.at(addresses.DAI.live);
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
@@ -77,12 +77,18 @@ module.exports = async function(deployer, network) {
     console.log("daiToSendBack", toUnitString(daiToSendBack));
   }
 
-  await executeFlashLoan("100");
-  console.log("***********************");
 
+  console.log("Successful flash loan:");
+  await flashLoaner.setRemoveFromFee("0");
+  await executeFlashLoan("100");
+
+
+  console.log("\n\nFailing flash loan:");
+  await flashLoaner.setRemoveFromFee("1");
   try {
     await executeFlashLoan("100");
+    console.log("\n\nFlash loan was expected to fail but hasn't.\n\n");
   } catch(err) {
-    throw("Error: ", err.toString());
+    console.log("Flash loan failed as expected.\n\nError:", err.toString());
   }
 };
