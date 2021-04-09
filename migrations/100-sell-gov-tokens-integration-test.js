@@ -85,21 +85,21 @@ module.exports = async function(deployer, network, [account1, account2, deployer
     });
   }
 
-  const printIdleTokenBal = async usr => {
-    let idx;
+  const getUserIdx = usr => {
     switch (usr.toLowerCase()) {
       case user1.toLowerCase():
-        idx = '♠️';
-        break;
+        return '♠️';
       case user2.toLowerCase():
-        idx = '♥️';
-        break;
+        return '♥️';
       case user3.toLowerCase():
-        idx = '🃏';
-        break;
+        return '🃏';
       default:
         throw 'error users'
     }
+  }
+  const toUnderlyingStr = val => toBN(val).div(ONE_18).toString();
+  const printIdleTokenBal = async usr => {
+    let idx = getUserIdx(usr);
     const res = (await Promise.all([
       underlyingContract.balanceOf(usr),
       idleToken.balanceOf(usr),
@@ -110,9 +110,7 @@ module.exports = async function(deployer, network, [account1, account2, deployer
       idleToken.usersGovTokensIndexes(comp.address, usr),
       idleToken.usersGovTokensIndexes(idle.address, usr),
     ])).map(e => toBN(e).toString());
-    const toUnderlyingStr = val => toBN(val).div(ONE_18).toString();
     console.log(`${idx} | ${toUnderlyingStr(res[0])} DAI, ${toUnderlyingStr(res[1])} idleDAI, ${toUnderlyingStr(res[2])} COMP, ${toUnderlyingStr(res[4])} IDLE ### +[${toUnderlyingStr(res[3])} COMP, ${toUnderlyingStr(res[5])} IDLE]`);
-    // console.log(res);
   }
 
   const printContractGov = async () => {
@@ -124,7 +122,6 @@ module.exports = async function(deployer, network, [account1, account2, deployer
       idleToken.govTokensLastBalances(comp.address),
       idleToken.govTokensLastBalances(idle.address),
     ])).map(e => toBN(e).toString());
-    const toUnderlyingStr = val => toBN(val).div(ONE_18).toString();
     console.log(`## CONTRACT | ${toUnderlyingStr(res[0])} COMP, ${toUnderlyingStr(res[1])} IDLE, [${toUnderlyingStr(res[2])} COMP glob, ${toUnderlyingStr(res[3])} IDLE glob] ## [${toUnderlyingStr(res[4])} COMP lastB, ${toUnderlyingStr(res[5])} IDLE lastB]`);
   };
 
@@ -143,31 +140,28 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   await printContractGov();
   console.log('##############')
 
-  console.log('mint new user...')
-  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user3 });
-  await printIdleTokenBal(user1);
-  await printIdleTokenBal(user3);
-  await printContractGov();
-  console.log('redeem old user...')
-  await idleToken.redeemIdleToken((await idleToken.balanceOf(user1)), { from: user1 });
-  await printIdleTokenBal(user1);
-  await printIdleTokenBal(user3);
-  await printContractGov();
+  const mint = async (amount, from, printBal = true, printGov = true) => {
+    let idx = getUserIdx(from);
+    console.log(`${idx} mint ${amount} DAI`);
+    if (printBal) await printIdleTokenBal(from);
+    await idleToken.mintIdleToken(fromUnits(amount), true, addresses.addr0, { from });
+    if (printBal) await printIdleTokenBal(from);
+    if (printGov) await printContractGov();
+  };
+  const redeem = async (amount, from, printBal = true, printGov = true) => {
+    let idx = getUserIdx(from);
+    console.log(`${idx} redeem ${amount} idleDAI`);
+    if (printBal) await printIdleTokenBal(from);
+    await idleToken.redeemIdleToken(
+      amount === '-1' ? toBN(await idleToken.balanceOf(from)) : fromUnits(amount),
+      { from }
+    );
+    if (printBal) await printIdleTokenBal(from);
+    if (printGov) await printContractGov();
+  };
 
-
-  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
-  await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user3 });
-  console.log('end mint 2 3')
-
-  await printIdleTokenBal(user2);
-  await printIdleTokenBal(user3);
-
-  await idleToken.redeemIdleToken(fromUnits("10"), { from: user2 });
-  await idleToken.redeemIdleToken(fromUnits("10"), { from: user3 });
-  console.log('end redeem 2 3')
-
-  await printIdleTokenBal(user2);
-  await printIdleTokenBal(user3);
+  await mint('100', user3);
+  await mint('10', user2);
 
   const totalSupplyBefore = await idleToken.totalSupply();
   const tokenPriceBefore = await idleToken.tokenPrice();
@@ -193,10 +187,6 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   checkIncreased(user1ExpectedGovTokensBeforeSkip, user1ExpectedGovTokensAfterSkip);
   checkIncreased(user3ExpectedGovTokensBeforeSkip, user3ExpectedGovTokensAfterSkip);
 
-  // sell gov tokens
-  // await idleToken.sellGovTokens([toBN("1"), toBN("1")], { from: addresses.timelock });
-  // console.log('end sellGov')
-
   // expected for user 1 seems wrong
   await printIdleTokenBal(user1);
   await printIdleTokenBal(user2);
@@ -209,50 +199,25 @@ module.exports = async function(deployer, network, [account1, account2, deployer
   const tokenPriceAfter = await idleToken.tokenPrice();
 
   checkIncreased(tokenPriceBefore, tokenPriceAfter);
-  // console.log("totalSupplyBefore", totalSupplyBefore.toString());
-  // console.log("tokenPriceBefore ", tokenPriceBefore.toString());
-  // console.log("totalSupplyAfter ", totalSupplyAfter.toString());
-  // console.log("tokenPriceAfter  ", tokenPriceAfter.toString());
-  //
-  // console.log("expected before skip", user1ExpectedGovTokensBeforeSkip.toString())
-  // console.log("expected after skip ", user1ExpectedGovTokensAfterSkip.toString())
-  // console.log("expected after sell ", user1ExpectedGovTokensAfterSell.toString())
 
-  const user1GovTokensBalanceBefore = toBN(await comp.balanceOf(user1));
-  await idleToken.redeemIdleToken((await idleToken.balanceOf(user1)), { from: user1 });
-  const user1GovTokensBalanceAfter = toBN(await comp.balanceOf(user1));
+  await redeem('-1', user1);
 
-  // WARNING too much IDLE for user 1
-  console.log('end redeem 1')
-
-  await printIdleTokenBal(user1);
   await printIdleTokenBal(user2);
   await printIdleTokenBal(user3);
 
-  console.log("before                         ", user1GovTokensBalanceBefore.toString())
-  console.log("expected total                 ", user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell).toString())
-  console.log("after                          ", user1GovTokensBalanceAfter.toString())
-  check(user1GovTokensBalanceAfter, user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell), "gov tokens redeemed");
-  //
-  //
-  // // sell gov tokens and everyone get something more
-  // check(totalSupplyBefore, totalSupplyAfter, "same supply should remain the same");
-  // checkIncreased(tokenPriceBefore, tokenPriceAfter, "token price should increase");
-  //
-  // await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
-  // console.log('end mint 2')
-  // await printIdleTokenBal(user2);
-  // await idleToken.rebalance();
-  // console.log('end rebalance')
-  // await idleToken.mintIdleToken(fromUnits("100"), true, addresses.addr0, { from: user2 });
-  // console.log('end mint 2')
-  // await printIdleTokenBal(user2);
-  // await idleToken.rebalance();
-  // console.log('end rebalance')
-  // await idleToken.redeemIdleToken(fromUnits("10"), { from: user2 });
-  // console.log('end redeem 2')
-  //
-  // await printIdleTokenBal(user1);
-  // await printIdleTokenBal(user2);
-  // await printIdleTokenBal(user3);
+  // console.log("before                         ", user1GovTokensBalanceBefore.toString())
+  // console.log("expected total                 ", user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell).toString())
+  // console.log("after                          ", user1GovTokensBalanceAfter.toString())
+  // check(user1GovTokensBalanceAfter, user1GovTokensBalanceBefore.plus(user1ExpectedGovTokensAfterSell), "gov tokens redeemed");
+
+  await mint('100', user2);
+  await idleToken.rebalance();
+  console.log('end rebalance')
+  await mint('100', user2);
+  await idleToken.rebalance();
+  console.log('end rebalance')
+  await redeem('10', user2);
+
+  await printIdleTokenBal(user1);
+  await printIdleTokenBal(user3);
 }
