@@ -2562,9 +2562,11 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     res.should.be.bignumber.equal(BNify('1').mul(this.one));
     res = await this.token.tokenPriceWithFee.call(foo, {from: creator});
     res.should.be.bignumber.equal(BNify('1').mul(this.one));
+    // 10 DAI deposit, 10 idleT, price 1, currValue 10, avg 1, withFee 1
 
     // Set prices in DAI => [0.04, ...]
     await this.setPrices(['400000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // 10 DAI deposit, 10 idleT, price 2,  currValue 20, avg 1, withFee (10 + (20-10)-10%) / 10= 1.9
 
     res = await this.token.tokenPrice.call({from: creator});
     res.should.be.bignumber.equal(BNify('2').mul(this.one));
@@ -2574,10 +2576,18 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Price 2
     await this.mintIdle(BNify('10').mul(this.one), foo);
     await this.token.rebalance();
+
+    // 20 DAI deposit, 15 idleT, price 2, currValue 30, avg (20/15)=1.33333, withFee (20 + (30-20)-10%) / 15
+    const avgP = await this.token.userAvgPrices.call(foo, {from: creator});
+    avgP.should.be.bignumber.equal(BNify('1333333333333333333'));
+    const avgPWithFee = await this.token.tokenPriceWithFee.call(foo, {from: creator});
+    avgPWithFee.should.be.bignumber.equal(BNify('1933333333333333333'));
+
     // Set prices in DAI => [0.08, ...]
     await this.setPrices(['800000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+    // 20 DAI deposit, 15 idleT, price 4, currValue 60, avg (20/15)=1.33333, withFee (20 + (60-20)-10%) / 15 = 3.7333
 
-
+    // Price 4
     res = await this.token.tokenPriceWithFee.call(foo, {from: creator});
     // 56 / 15 = 3.7333
     res.should.be.bignumber.equal(BNify('3733333333333333333'));
