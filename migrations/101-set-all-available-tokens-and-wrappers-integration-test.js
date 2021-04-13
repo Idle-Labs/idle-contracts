@@ -23,7 +23,7 @@ const checkIncreased = (a, b, message) => {
 }
 
 module.exports = async function(deployer, network, [account1, account2, deployerAccount]) {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
 

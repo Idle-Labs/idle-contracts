@@ -13,7 +13,7 @@ const toBN = v => new BigNumber(v.toString());
 const timelockDelay = 172800
 
 module.exports = async (deployer, network, accounts) => {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
 

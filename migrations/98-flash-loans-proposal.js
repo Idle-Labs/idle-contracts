@@ -24,7 +24,7 @@ const advanceBlocks = async n => {
 }
 
 module.exports = async (deployer, network, accounts) => {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
 

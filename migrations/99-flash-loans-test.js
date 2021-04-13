@@ -16,7 +16,7 @@ const toUnitString = v => toUnit(toBN(v)).toString();
 const fromUnits = u => toBN(u).times(ONE_18);
 
 module.exports = async function(deployer, network) {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
   await web3.eth.sendTransaction({ from: holder, to: addresses.timelock, value: "1000000000000000000" });

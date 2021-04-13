@@ -11,7 +11,7 @@ const AaveVariableDebtTokenMock = artifacts.require('AaveVariableDebtTokenMock')
 const aaveLendingPoolMockV2 = artifacts.require('aaveLendingPoolMockV2');
 const BNify = n => new BN(String(n));
 
-contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
+contract('IdleAaveV2', function ([_, creator, nonOwner, someone, foo]) {
   beforeEach(async function () {
     this.one = new BN('1000000000000000000');
     this.oneRay = new BN('1000000000000000000000000000');
@@ -42,12 +42,14 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     await this.aaveLendingPoolMock.setInterestRateStrategyAddress(this.aaveInterestRateStrategyMock.address);
     await this.aaveLendingPoolMock.setCurrentLiquidityRate(this.oneRay.div(BNify('100')).mul(BNify('2')));
 
-    this.aDAIWrapper = await IdleAaveV2.new(
+    this.aDAIWrapper = await IdleAaveV2.new({from: creator});
+
+    await this.aDAIWrapper.initialize(
       this.aDAIMock.address,
       this.aaveLendingPoolProviderMock.address,
       nonOwner,
       {from: creator}
-    );
+    )
   });
 
   it('constructor set a token address', async function () {
@@ -74,7 +76,7 @@ contract('IdleAave', function ([_, creator, nonOwner, someone, foo]) {
     res.should.be.bignumber.equal(this.one.mul(BNify('2')));
   });
 
-  it('mint returns 0 if no tokens are presenti in this contract', async function () {
+  it('mint returns 0 if no tokens are present in this contract', async function () {
     const res = await this.aDAIWrapper.mint.call({ from: nonOwner });
     res.should.be.bignumber.equal(BNify('0'));
   });
