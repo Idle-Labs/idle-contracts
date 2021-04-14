@@ -1144,7 +1144,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
 
     // Optimized implementation inspired by uniswap https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/UniswapV3Pool.sol#L144
     //
-    // 0x70a08231 -> selector for 'function balanceOf(address(this)) returns(uint256)'
+    // 0x70a08231 -> selector for 'function balanceOf(address) returns (uint256)'
     (bool success, bytes memory data) =
         _token.staticcall(abi.encodeWithSelector(0x70a08231, address(this)));
     require(success);
