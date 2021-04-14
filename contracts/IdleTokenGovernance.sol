@@ -123,7 +123,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function _init(address _tokenHelper) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
-    flashLoanFee = 90;
+    flashLoanFee = 80; // 0.08%
   }
 
   // onlyOwner
@@ -164,6 +164,16 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     }
 
     allAvailableTokens = protocolTokens;
+  }
+
+  /**
+   * It allows owner to set the flash loan fee
+   *
+   * @param _flashFee : new flash loan fee. Max is FULL_ALLOC
+   */
+  function setFlashLoanFee(uint256 _flashFee)
+    external onlyOwner {
+      require((flashLoanFee = _flashFee) < FULL_ALLOC, "<");
   }
 
   /**
@@ -618,7 +628,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @param _amount The amount of tokens lent.
    * @return The amount of `token` to be charged for the loan, on top of the returned principal.
    */
-  function flashFee(address _token, uint256 _amount) external view returns (uint256) {
+  function flashFee(address _token, uint256 _amount) public view returns (uint256) {
     require(_token == token, '!EQ');
     return _amount.mul(flashLoanFee).div(FULL_ALLOC);
   }
@@ -652,10 +662,11 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     require(_token == token, "!EQ");
     require(receiverAddr != address(0) && _amount > 0, "0");
 
+    // get current underlying unlent balance
     uint256 balance = _contractBalanceOf(token);
 
     if (_amount > balance) {
-      // some funds needs to be redeemed from underlying protocols
+      // Unlent is not enough, some funds needs to be redeemed from underlying protocols
       uint256 toRedeem = _amount.sub(balance);
       uint256 _toRedeemAux;
       address currToken;
@@ -667,28 +678,34 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       bool isEnough;
       bool haveWeInvestedEnough;
 
+      // We cycle through interest bearing tokens currently in use (eg [cDAI, aDAI])
+      // (ie we cycle each lending protocol where we have some funds currently deposited)
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         currToken = allAvailableTokens[i];
         protocol = ILendingProtocol(protocolWrappers[currToken]);
         protocolTokenPrice = protocol.getPriceInToken();
         availableLiquidity = protocol.availableLiquidity();
-
         currBalanceUnderlying = _contractBalanceOf(currToken).mul(protocolTokenPrice).div(ONE_18);
-
-        isEnough = availableLiquidity >= toRedeem;
+        // We need to check:
+        // 1. if Idle has invested enough in that protocol to cover the user request
         haveWeInvestedEnough = currBalanceUnderlying >= toRedeem;
-
+        // 2. if the current lending protocol has enough liquidity available (not borrowed) to cover the user requested amount
+        isEnough = availableLiquidity >= toRedeem;
+        // in order to calculate `_toRedeemAux` which is the amount of underlying (eg DAI)
+        // that we have to redeem from that lending protocol
         _toRedeemAux = haveWeInvestedEnough ?
+          // if we lent enough and that protocol has enough liquidity we redeem `toRedeem` and we are done, otherwise we redeem `availableLiquidity`
           (isEnough ? toRedeem : availableLiquidity) :
+          // if we did not lent enough and that liquidity is available then we redeem all what we deposited, otherwise we redeem `availableLiquidity`
           (currBalanceUnderlying <= availableLiquidity ? currBalanceUnderlying : availableLiquidity);
 
+        // do the actual redeem on the lending protocol
         redeemd = _redeemProtocolTokens(
           currToken,
           // convert amount from underlying to protocol token
           _toRedeemAux.mul(ONE_18).div(protocolTokenPrice)
         );
         // tokens are now in this contract
-
         if (haveWeInvestedEnough && isEnough) {
           break;
         }
@@ -701,7 +718,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     // transfer funds
     _transferTokens(token, receiverAddr, _amount);
     // calculate fee
-    uint256 _flashFee = _amount.mul(flashLoanFee).div(FULL_ALLOC); // 90 -> 0.09%
+    uint256 _flashFee = flashFee(token, _amount);
     // call _receiver `onFlashLoan`
     require(
       _receiver.onFlashLoan(msg.sender, token, _amount, _flashFee, _params) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
