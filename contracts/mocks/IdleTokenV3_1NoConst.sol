@@ -216,7 +216,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     address[] calldata _newGovTokensEqualLen
   ) external onlyOwner {
     require(protocolTokens.length == wrappers.length, "LEN");
-    require(_newGovTokensEqualLen.length >= protocolTokens.length, '!EQ');
+    require(_newGovTokensEqualLen.length >= protocolTokens.length, '!>=');
 
     govTokens = _newGovTokens;
 
