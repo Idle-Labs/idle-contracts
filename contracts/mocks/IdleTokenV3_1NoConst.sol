@@ -265,7 +265,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function setFee(uint256 _fee)
     external onlyOwner {
       // 100000 == 100% -> 10000 == 10%
-      require((fee = _fee) <= 10000, "HIGH");
+      require((fee = _fee) <= FULL_ALLOC / 10, "HIGH");
   }
 
   /**
@@ -718,7 +718,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     address _token,
     uint256 _amount,
     bytes calldata _params
-  ) external whenNotPaused returns (bool) {
+  ) external whenNotPaused nonReentrant returns (bool) {
     address receiverAddr = address(_receiver);
     require(_token == token, "!EQ");
     require(receiverAddr != address(0) && _amount > 0, "0");
@@ -926,10 +926,10 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     uint256 usrBal = balanceOf(_to);
     address govToken;
 
-    for (uint256 i = 0; i < _govTokens.length; i++) {
-      govToken = _govTokens[i];
+    if (supply > 0) {
+      for (uint256 i = 0; i < _govTokens.length; i++) {
+        govToken = _govTokens[i];
 
-      if (supply > 0) {
         _redeemGovTokensFromProtocol(govToken);
 
         // get current gov token balance
@@ -943,43 +943,42 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
           // update global var with current govToken balance
           govTokensLastBalances[govToken] = govBal;
         }
-      }
 
-      if (usrBal > 0) {
-        uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
-        // check if user has accrued something
-        uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
-        if (delta != 0) {
-          uint256 share = usrBal.mul(delta).div(ONE_18);
-          uint256 bal = _contractBalanceOf(govToken);
-          // To avoid rounding issue
-          if (share > bal) {
-            share = bal;
-          }
-          if (_skipGovTokenRedeem[i]) { // -> gift govTokens[i] accrued to the pool
-            // update global index with ratio of govTokens per idleToken
-            govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
-              // check how much gov tokens for each idleToken we gained since last update
-              share.mul(ONE_18).div(supply.sub(usrBal))
-            );
-          } else {
-            uint256 feeDue;
-            // no fee for IDLE governance token
-            if (feeAddress != address(0) && fee > 0 && govToken != IDLE) {
-              feeDue = share.mul(fee).div(FULL_ALLOC);
-              // Transfer gov token fee to feeAddress
-              _transferTokens(govToken, feeAddress, feeDue);
+        if (usrBal > 0) {
+          uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
+          // check if user has accrued something
+          uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
+          if (delta != 0) {
+            uint256 share = usrBal.mul(delta).div(ONE_18);
+            uint256 bal = _contractBalanceOf(govToken);
+            // To avoid rounding issue
+            if (share > bal) {
+              share = bal;
             }
-            // Transfer gov token to user
-            _transferTokens(govToken, _to, share.sub(feeDue));
-            // Update last balance
-            govTokensLastBalances[govToken] = _contractBalanceOf(govToken);
+            if (_skipGovTokenRedeem[i]) { // -> gift govTokens[i] accrued to the pool
+              // update global index with ratio of govTokens per idleToken
+              govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
+                // check how much gov tokens for each idleToken we gained since last update
+                share.mul(ONE_18).div(supply.sub(usrBal))
+              );
+            } else {
+              uint256 feeDue;
+              // no fee for IDLE governance token
+              if (feeAddress != address(0) && fee > 0 && govToken != IDLE) {
+                feeDue = share.mul(fee).div(FULL_ALLOC);
+                // Transfer gov token fee to feeAddress
+                _transferTokens(govToken, feeAddress, feeDue);
+              }
+              // Transfer gov token to user
+              _transferTokens(govToken, _to, share.sub(feeDue));
+              // Update last balance
+              govTokensLastBalances[govToken] = _contractBalanceOf(govToken);
+            }
           }
         }
+        // save current index for this gov token
+        usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
       }
-
-      // save current index for this gov token
-      usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
     }
   }
 
@@ -1023,7 +1022,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * Calculate fee and send them to feeAddress
+   * Calculate fee in underlyings and send them to feeAddress
    *
    * @param amount : in idleTokens
    * @param redeemed : in underlying
@@ -1035,9 +1034,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     if (currPrice < avgPrice) {
       return redeemed;
     }
-    // in underlyings
-    // uint256 elegibleGains = amount.mul(currPrice.sub(avgPrice)).div(ONE_18);
-    // uint256 feeDue = elegibleGains.mul(fee).div(FULL_ALLOC);
     // 10**23 -> ONE_18 * FULL_ALLOC
     uint256 feeDue = amount.mul(currPrice.sub(avgPrice)).mul(fee).div(10**23);
     _transferTokens(token, feeAddress, feeDue);
