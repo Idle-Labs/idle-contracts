@@ -57,7 +57,7 @@ module.exports = async function(deployer, network, accounts) {
 
   // #######################
 
-  const idleTokenAddress = '0x3c6734E4940366e564Dd2cB888efd2cd46eC3047';
+  const idleTokenAddress = '';
   const idleToken = await IdleTokenV3_1.at(idleTokenAddress);
   const proxyFactory = await MinimalInitializableProxyFactory.at(minimalInitializableProxyFactory);
 
