@@ -81,6 +81,7 @@ contract IdleCompoundLike is ILendingProtocol {
   function nextSupplyRate(uint256 _amount)
     external view
     returns (uint256) {
+      CERC20 cToken = CERC20(token);
       WhitePaperInterestRateModel white = WhitePaperInterestRateModel(CERC20(token).interestRateModel());
       uint256 ratePerBlock = white.getSupplyRate(
         cToken.getCash().add(_amount),
