@@ -1,5 +1,5 @@
 /**
- * @title: Idle Token (V3) main contract
+ * @title: Idle Token Governance main contract
  * @summary: ERC20 that holds pooled user funds together
  *           Each token rapresent a share of the underlying pools
  *           and with each token user have the right to redeem a portion of these pools
@@ -111,7 +111,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   * @param target The address of the flash loan receiver contract
   * @param initiator The address initiating the flash loan
   * @param amount The amount flash borrowed
-  * @param premium The fee flash borrowed
+  * @param premium The flash loan fee
   **/
   event FlashLoan(
     address indexed target,
@@ -672,7 +672,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       address currToken;
       uint256 currBalanceUnderlying;
       uint256 availableLiquidity;
-      uint256 redeemd;
+      uint256 redeemed;
       uint256 protocolTokenPrice;
       ILendingProtocol protocol;
       bool isEnough;
@@ -700,7 +700,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
           (currBalanceUnderlying <= availableLiquidity ? currBalanceUnderlying : availableLiquidity);
 
         // do the actual redeem on the lending protocol
-        redeemd = _redeemProtocolTokens(
+        redeemed = _redeemProtocolTokens(
           currToken,
           // convert amount from underlying to protocol token
           _toRedeemAux.mul(ONE_18).div(protocolTokenPrice)
@@ -710,7 +710,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
           break;
         }
 
-        toRedeem = toRedeem.sub(redeemd);
+        toRedeem = toRedeem.sub(redeemed);
       }
     }
 
@@ -942,6 +942,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       holders[0] = address(this);
 
       if (_govToken == IDLE) {
+        // For IDLE, the distribution is done only to IdleTokens, so `holders` and
+        // `tokens` parameters are the same and equal to address(this)
         IdleController(idleController).claimIdle(holders, holders);
         return;
       }

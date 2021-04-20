@@ -1,8 +1,6 @@
 /**
- * @title: Idle Token (V3) main contract
- * @summary: ERC20 that holds pooled user funds together
- *           Each token rapresent a share of the underlying pools
- *           and with each token user have the right to redeem a portion of these pools
+ * @title: Idle Token Helper contract
+ * @summary: Includes helper methods for IdleTokenGovernance
  * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
