@@ -442,6 +442,45 @@ const WETH = {
 
   'deploy': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // used for truffle Teams deploy, now kovan
 };
+const RAI = {
+  'live': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+  'proxy': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+  'live-fork': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919', // needed for truffle
+  'kovan': '0x76b06a2f6dF6f0514e7BEC52a9AfB3f603b477CD',
+  'kovan-fork': '0x76b06a2f6dF6f0514e7BEC52a9AfB3f603b477CD', // needed for truffle
+  'local': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+  'local-fork': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+  'test': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+  'coverage': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919',
+
+  'deploy': '0x03ab458634910aad20ef5f1c8ee96f1d6ac54919', // used for truffle Teams deploy, now kovan
+};
+const crRAI = {
+  'live': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'proxy': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'live-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
+  'kovan': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'kovan-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
+  'local': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'local-fork': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'test': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'coverage': '0xf8445C529D363cE114148662387eba5E62016e20',
+
+  'deploy': '0xf8445C529D363cE114148662387eba5E62016e20', // used for truffle Teams deploy, now kovan
+};
+const fuseRAI = {
+  'live': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'proxy': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'live-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
+  'kovan': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'kovan-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
+  'local': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'local-fork': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'test': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'coverage': '0xf8445C529D363cE114148662387eba5E62016e20',
+
+  'deploy': '0xf8445C529D363cE114148662387eba5E62016e20', // used for truffle Teams deploy, now kovan
+};
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 const idleUSDCV4 = '0x5274891bEC421B39D23760c04A6755eCB444797C';
@@ -528,6 +567,9 @@ module.exports = {
   aWETH: aWETH,
   cWETH: cWETH,
   WETH: WETH,
+  RAI: RAI,
+  crRAI: crRAI,
+  fuseRAI: fuseRAI,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
