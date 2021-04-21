@@ -659,31 +659,6 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   }
 
   /**
-   * Allow any users to set new allocations as long as the new allocation
-   * gives a better avg APR than before
-   * Allocations should be in the format [100000, 0, 0, 0, ...] where length is the same
-   * as lastAllocations variable and the sum of all value should be == 100000
-   *
-   * This method is not callble if this instance of IdleToken is a risk adjusted instance
-   * NOTE: this method can be paused
-   *
-   * @param _newAllocations : array with new allocations in percentage
-   * @return hasRebalanced : whether has rebalanced or not
-   * @return avgApr : the new avg apr after rebalance
-   */
-  function openRebalance(uint256[] calldata _newAllocations)
-    external whenNotPaused
-    returns (bool hasRebalanced, uint256 avgApr) {
-      require(!isRiskAdjusted, "RISK");
-      uint256 initialAPR = getAvgAPR();
-      // Validate and update rebalancer allocations
-      _setAllocations(_newAllocations);
-      hasRebalanced = _rebalance();
-      avgApr = getAvgAPR();
-      require(avgApr > initialAPR, "APR");
-  }
-
-  /**
    * @dev The fee to be charged for a given loan.
    * @param _token The loan currency.
    * @param _amount The amount of tokens lent.

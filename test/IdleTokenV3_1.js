@@ -1367,86 +1367,86 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Idle allocations now have been updated (ie all on dydx)
     await this.testIdleAllocations(['0', '0', '0', '100000']);
   });
-  it('openRebalance with allocations gives a better apr', async function () {
-    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-
-    // set available liquidity for providers
-    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-    // Set prices in DAI => [0.02, 1.25, 1, 2]
-    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-    // Give protocol Tokens to IdleToken contract
-    // in dai [5, 5, 10, 10]
-    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-    await this.setAPRs(['10', '5', '11', '5']);
-    // Give underlying Tokens to protocols wrappers for redeem
-    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-    // Set equal allocations
-    // Set idle allocations
-    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-    // Set rebalancer allocations
-    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-
-    const res = await this.token.openRebalance.call([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
-    await this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
-    res[0].should.equal(true);
-    res[1].should.be.bignumber.equal(BNify('11').mul(this.one));
-
-    // Check that no DAI are in the contract at the end
-    const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
-    BNify(DAIbalance).should.be.bignumber.equal(BNify('0').mul(this.one));
-
-    await this.testIdleBalance(['0', '0', '30', '0']);
-    await this.testIdleAllocations(['0', '0', '100000', '0']);
-  });
-  it('openRebalance reverts with allocations that give a worse apr', async function () {
-    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-    // set available liquidity for providers
-    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-    // Set prices in DAI => [0.02, 1.25, 1, 2]
-    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-    // Give protocol Tokens to IdleToken contract
-    // in dai [5, 5, 10, 10]
-    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-    await this.setAPRs(['10', '5', '4', '5']);
-    // Give underlying Tokens to protocols wrappers for redeem
-    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-    // Set equal allocations
-    // Set idle allocations
-    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-    // Set rebalancer allocations
-    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-
-    await expectRevert(
-      this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]),
-      'APR'
-    );
-  });
-  it('openRebalance reverts with newAllocations length != lastAllocations.length', async function () {
-    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-    // set available liquidity for providers
-    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-    // Set prices in DAI => [0.02, 1.25, 1, 2]
-    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-    // Give protocol Tokens to IdleToken contract
-    // in dai [5, 5, 10, 10]
-    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-    await this.setAPRs(['10', '5', '4', '5']);
-    // Give underlying Tokens to protocols wrappers for redeem
-    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-    // Set equal allocations
-    // Set idle allocations
-    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-    // Set rebalancer allocations
-    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-
-    await expectRevert(
-      this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
-      'LEN -- Reason given: LEN'
-    );
-  });
+  // it('openRebalance with allocations gives a better apr', async function () {
+  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+  //
+  //   // set available liquidity for providers
+  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
+  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+  //   // Give protocol Tokens to IdleToken contract
+  //   // in dai [5, 5, 10, 10]
+  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+  //   await this.setAPRs(['10', '5', '11', '5']);
+  //   // Give underlying Tokens to protocols wrappers for redeem
+  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+  //   // Set equal allocations
+  //   // Set idle allocations
+  //   await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+  //   // Set rebalancer allocations
+  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+  //
+  //   const res = await this.token.openRebalance.call([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+  //   await this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]);
+  //   res[0].should.equal(true);
+  //   res[1].should.be.bignumber.equal(BNify('11').mul(this.one));
+  //
+  //   // Check that no DAI are in the contract at the end
+  //   const DAIbalance = await this.DAIMock.balanceOf.call(this.token.address);
+  //   BNify(DAIbalance).should.be.bignumber.equal(BNify('0').mul(this.one));
+  //
+  //   await this.testIdleBalance(['0', '0', '30', '0']);
+  //   await this.testIdleAllocations(['0', '0', '100000', '0']);
+  // });
+  // it('openRebalance reverts with allocations that give a worse apr', async function () {
+  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+  //   // set available liquidity for providers
+  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
+  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+  //   // Give protocol Tokens to IdleToken contract
+  //   // in dai [5, 5, 10, 10]
+  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+  //   await this.setAPRs(['10', '5', '4', '5']);
+  //   // Give underlying Tokens to protocols wrappers for redeem
+  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+  //   // Set equal allocations
+  //   // Set idle allocations
+  //   await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+  //   // Set rebalancer allocations
+  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+  //
+  //   await expectRevert(
+  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000'), BNify('0')]),
+  //     'APR'
+  //   );
+  // });
+  // it('openRebalance reverts with newAllocations length != lastAllocations.length', async function () {
+  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+  //   // set available liquidity for providers
+  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
+  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+  //   // Give protocol Tokens to IdleToken contract
+  //   // in dai [5, 5, 10, 10]
+  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+  //   await this.setAPRs(['10', '5', '4', '5']);
+  //   // Give underlying Tokens to protocols wrappers for redeem
+  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+  //   // Set equal allocations
+  //   // Set idle allocations
+  //   await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+  //   // Set rebalancer allocations
+  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+  //
+  //   await expectRevert(
+  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('100000')]),
+  //     'LEN -- Reason given: LEN'
+  //   );
+  // });
   // it('openRebalance reverts if it\'s risk adjusted instance', async function () {
   //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
   //   // set available liquidity for providers
@@ -1472,30 +1472,30 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
   //     'IDLE:NOT_ALLOWED'
   //   );
   // });
-  it('openRebalance reverts when not allocating 100%', async function () {
-    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
-    // set available liquidity for providers
-    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
-    // Set prices in DAI => [0.02, 1.25, 1, 2]
-    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
-    // Give protocol Tokens to IdleToken contract
-    // in dai [5, 5, 10, 10]
-    await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
-    await this.setAPRs(['10', '5', '4', '5']);
-    // Give underlying Tokens to protocols wrappers for redeem
-    const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
-    await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
-    // Set equal allocations
-    // Set idle allocations
-    await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
-    // Set rebalancer allocations
-    await this.setRebAllocations(['30000', '30000', '20000', '20000']);
-
-    await expectRevert(
-      this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
-      'TOT -- Reason given: TOT'
-    );
-  });
+  // it('openRebalance reverts when not allocating 100%', async function () {
+  //   await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+  //   // set available liquidity for providers
+  //   await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+  //   // Set prices in DAI => [0.02, 1.25, 1, 2]
+  //   await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+  //   // Give protocol Tokens to IdleToken contract
+  //   // in dai [5, 5, 10, 10]
+  //   await this.sendProtocolTokensToIdle(['250', '4', '10', '5']); // [cToken, iToken, aToken, yxToken]
+  //   await this.setAPRs(['10', '5', '4', '5']);
+  //   // Give underlying Tokens to protocols wrappers for redeem
+  //   const tokens = [this.cDAIMock.address, this.iDAIMock.address, this.aDAIMock.address, this.yxDAIMock.address];
+  //   await this.daiMultiTransfer(tokens, ['5', '5', '0', '10']);
+  //   // Set equal allocations
+  //   // Set idle allocations
+  //   await this.token.setLastAllocations([BNify('30000'), BNify('30000'), BNify('20000'), BNify('20000')]);
+  //   // Set rebalancer allocations
+  //   await this.setRebAllocations(['30000', '30000', '20000', '20000']);
+  //
+  //   await expectRevert(
+  //     this.token.openRebalance([BNify('0'), BNify('0'), BNify('50000'), BNify('0')]),
+  //     'TOT -- Reason given: TOT'
+  //   );
+  // });
   it('calculates fee correctly when minting / redeeming and no unlent', async function () {
     await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
     // Set fee, 10% on gain
