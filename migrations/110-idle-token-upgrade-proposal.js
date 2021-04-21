@@ -12,6 +12,7 @@ const {
   advanceBlocks,
   toBN,
   askToContinue,
+  Proposal,
 } = require("./utils");
 
 module.exports = async (deployer, network, accounts) => {
@@ -43,52 +44,35 @@ module.exports = async (deployer, network, accounts) => {
     addresses.idleWETHV4,
   ]
 
-  const propName = '#Update IdleToken implementation to update gov tokens management';
+  const description = '#Update IdleToken implementation to update gov tokens management';
+  const proposal = new Proposal(description, addresses.forkProposer);
 
   // call upgradeAndCall on proxyAdmin
-  let targets = allIdleTokens.map(a => addresses.proxyAdmin);
-  let values = allIdleTokens.map(a => toBN("0"));
-  let signatures = allIdleTokens.map(a => "upgradeAndCall(address,address,bytes)");
-  const initMethodToCall = web3.eth.abi.encodeFunctionCall({
-    name: "_init(address)",
-    type: "function",
-    inputs: [
-    {
-      type: "address",
-      name: "_tokenHelper"
-    }
-    ]
-  }, [idleTokenHelperAddress]);
-  const callDatas = allIdleTokens.map(addr =>
-    web3.eth.abi.encodeParameters(
-      ["address", "address", "bytes"],
-      [addr, idleTokenImplementationAddress, initMethodToCall]
-    )
-  );
+  allIdleTokens.forEach(idleTokenAddress => {
+    const initMethodToCall = web3.eth.abi.encodeFunctionCall({
+      name: "_init(address)",
+      type: "function",
+      inputs: [{ type: "address", name: "_tokenHelper" }]
+    }, [idleTokenHelperAddress]);
+
+    proposal.addAction({
+      target: addresses.proxyAdmin,
+      value: toBN("0"),
+      signature: "upgradeAndCall(address,address,bytes)",
+      calldataParams: ["address", "address", "bytes"],
+      calldataValues: [idleTokenAddress, idleTokenImplementationAddress, initMethodToCall]
+    });
+  });
 
   // call setCToken in idleWBTCV4
-  targets.push(addresses.idleWBTCV4);
-  values.push(toBN("0"));
-  signatures.push("setCToken(address)");
-  callDatas.push(
-    web3.eth.abi.encodeParameters(["address"], [addresses.cWBTCV2[network]])
-  );
-
-  console.log("targets", targets);
-  console.log("values", values);
-  console.log("signatures", signatures);
-  console.log("initMethodToCall", initMethodToCall);
-  console.log("callDatas", callDatas);
-
-  const proposal = {
-    targets: targets.map(t => addresses.proxyAdmin),
-    values: values,
-    signatures: signatures,
-    calldatas: callDatas,
-    description: propName,
-    from: addresses.forkProposer,
-  };
+  proposal.addAction({
+    target: addresses.idleWBTCV4,
+    value: toBN("0"),
+    signature: "setCToken(address)",
+    calldataParams: ["address"],
+    calldataValues: [addresses.cWBTCV2[network]],
+  });
 
   await askToContinue("continue?");
-  await createProposal(network, proposal);
+  await createProposal(network, proposal.toObject());
 }

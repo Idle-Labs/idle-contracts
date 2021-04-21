@@ -118,6 +118,39 @@ const createProposal = async (network, proposal) => {
   await createProposal(govInstance, proposal);
 }
 
+class Proposal {
+  constructor(description, from) {
+    this.description = description;
+    this.from = from;
+
+    this.targets = [];
+    this.values = [];
+    this.signatures = [];
+    this.calldatas = [];
+  }
+
+  addAction({target, value, signature, calldataParams, calldataValues}) {
+    this.targets.push(target);
+    this.values.push(value);
+    this.signatures.push(signature);
+    this.calldatas.push(
+      web3.eth.abi.encodeParameters(calldataParams, calldataValues)
+    );
+  }
+
+  toObject() {
+    return {
+      description: this.description,
+      from: this.from,
+      targets: this.targets,
+      values: this.values,
+      signatures: this.signatures,
+      calldatas: this.calldatas,
+    }
+  }
+}
+
+
 module.exports = {
   prompt,
   check,
@@ -127,4 +160,5 @@ module.exports = {
   createProposal,
   advanceBlocks,
   askToContinue,
+  Proposal,
 };
