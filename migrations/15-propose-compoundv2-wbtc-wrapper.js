@@ -5,7 +5,7 @@ const IdleTokenGovernance = artifacts.require("IdleTokenGovernance")
 const IdleController = artifacts.require("IdleController")
 const IERC20 = artifacts.require("IERC20Detailed.sol");
 const addresses = require("./addresses");
-const { createProposal } = require("./create-proposal");
+const { createProposal } = require("./utils");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
 
