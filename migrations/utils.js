@@ -119,7 +119,8 @@ const createProposal = async (network, proposal) => {
 }
 
 class Proposal {
-  constructor(description, from) {
+  constructor(web3, description, from) {
+    this.web3 = web3;
     this.description = description;
     this.from = from;
 
@@ -134,7 +135,7 @@ class Proposal {
     this.values.push(value);
     this.signatures.push(signature);
     this.calldatas.push(
-      web3.eth.abi.encodeParameters(calldataParams, calldataValues)
+      this.web3.eth.abi.encodeParameters(calldataParams, calldataValues)
     );
   }
 
