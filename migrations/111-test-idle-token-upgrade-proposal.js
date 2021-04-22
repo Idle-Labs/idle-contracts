@@ -73,10 +73,11 @@ module.exports = async (deployer, network, accounts) => {
 
   for (let i = 0; i < idleTokens.length; i++) {
     const idleTokenAddress = idleTokens[i];
-    const user = addresses.mintRedeemTestUser;
-    console.log("\n\n********************************* testing", idleTokenAddress);
-
     const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
+
+    const user = addresses.mintRedeemTestUser;
+    console.log("\n\n********************************* testing", await idleToken.name());
+
     console.log("--------------- 50000")
     await setAllocationsAndRebalance(idleToken, 50000);
     console.log("--------------- 0")
@@ -94,6 +95,7 @@ module.exports = async (deployer, network, accounts) => {
     await underlyingContract.transfer(user, amount, {from: addresses.whale}); // whale
     console.log('transfer complete');
 
+    await underlyingContract.approve(idleToken.address, toBN(0), {from: user});
     await underlyingContract.approve(idleToken.address, amount, {from: user});
     console.log('##### balance token user pre: ', toBN(await underlyingContract.balanceOf(user)).div(oneToken).toString());
     console.log('##### balance idleToken user pre: ', toBN(await idleToken.balanceOf(user)).div(oneIdleToken).toString());
