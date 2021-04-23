@@ -469,17 +469,17 @@ const crRAI = {
   'deploy': '0xf8445C529D363cE114148662387eba5E62016e20', // used for truffle Teams deploy, now kovan
 };
 const fuseRAI = {
-  'live': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'proxy': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'live-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
-  'kovan': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'kovan-fork': '0xf8445C529D363cE114148662387eba5E62016e20', // needed for truffle
-  'local': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'local-fork': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'test': '0xf8445C529D363cE114148662387eba5E62016e20',
-  'coverage': '0xf8445C529D363cE114148662387eba5E62016e20',
+  'live': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'proxy': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'live-fork': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE', // needed for truffle
+  'kovan': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'kovan-fork': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE', // needed for truffle
+  'local': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'local-fork': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'test': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
+  'coverage': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE',
 
-  'deploy': '0xf8445C529D363cE114148662387eba5E62016e20', // used for truffle Teams deploy, now kovan
+  'deploy': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE', // used for truffle Teams deploy, now kovan
 };
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
