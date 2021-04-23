@@ -1,5 +1,5 @@
 const IdleTokenGovernance = artifacts.require("IdleTokenGovernance");
-
+const IERC20 = artifacts.require("IERC20");
 const IdleTokenHelper = artifacts.require("IdleTokenHelper");
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
@@ -13,6 +13,8 @@ const {
   toBN,
   askToContinue,
   Proposal,
+  check,
+  checkIncreased,
 } = require("./utils");
 
 module.exports = async (deployer, network, accounts) => {
@@ -108,6 +110,40 @@ module.exports = async (deployer, network, accounts) => {
     ],
   });
 
-  await askToContinue("continue?");
+  // await askToContinue("continue?");
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
+  }
+
   await createProposal(network, proposal.toObject());
+
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
+  }
+}
+
+const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
+  await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
+  const amount = toBN("1");
+  const idleToken = await IdleTokenGovernance.at(addresses.idleWBTCV4);
+  await idleToken.setAllocations([toBN("20000"), toBN("20000"), toBN("60000")], { from: addresses.timelock });
+
+  const comp = await IERC20.at(addresses.COMP[network]);
+  const wbtc = await IdleTokenGovernance.at(addresses.WBTC[network]);
+
+  // whale sends amount to user
+  await wbtc.transfer(user, amount, { from: addresses.whale });
+
+  await idleToken.rebalance({ from: addresses.whale })
+
+  const govTokensBalanceBefore = toBN(await comp.balanceOf(user));
+
+  await wbtc.approve(idleToken.address, amount, {from: user});
+  await idleToken.mintIdleToken(amount, true, addresses.addr0, {from: user});
+  await advanceBlocks(10);
+  await idleToken.redeemIdleToken(await idleToken.balanceOf(user), {from: user});
+
+  const govTokensBalanceAfter = toBN(await comp.balanceOf(user));
+
+  checkFunc(govTokensBalanceBefore, govTokensBalanceAfter, testMessage);
 }

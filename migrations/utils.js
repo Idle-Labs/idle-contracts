@@ -1,17 +1,11 @@
 const rl = require("readline");
-const IdleAaveV2 = artifacts.require("IdleAaveV2.sol");
-const IdleCompoundV2 = artifacts.require("IdleCompoundV2.sol");
 const Idle = artifacts.require("Idle")
-const IdleTokenGovernance = artifacts.require("IdleTokenGovernance")
-const IERC20 = artifacts.require("IERC20Detailed.sol");
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
 const addresses = require("./addresses");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
-const TOKENS_HOLDER = addresses.whale;
-
 
 const toBN = v => new BigNumber(v.toString());
 const timelockDelay = 172800
@@ -155,9 +149,9 @@ class Proposal {
 module.exports = {
   prompt,
   check,
+  checkIncreased,
   toBN,
   timelockDelay,
-  checkIncreased,
   createProposal,
   advanceBlocks,
   askToContinue,
