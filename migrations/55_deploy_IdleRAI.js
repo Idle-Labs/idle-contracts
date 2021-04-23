@@ -68,9 +68,11 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(IdleCompoundLike, {from: creator}).then(instance => idleCompoundLikeInstance = instance)
 
   // deploy wrapper proxies
+  // cream
   const creamWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("creamWrapperAddress", creamWrapperAddress);
-  const fuseWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
+  // fuse
+  const fuseWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("fuseWrapperAddress", fuseWrapperAddress);
 
   const creamRAIInstance = await IdleCompoundLike.at(creamWrapperAddress);
