@@ -201,7 +201,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function _init(address _tokenHelper, address _aToken) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
-    flashLoanFee = 90; // 0.08%
+    flashLoanFee = 90;
     aToken = _aToken;
   }
 
