@@ -18,7 +18,7 @@ const BigNumber = require('bignumber.js');
 const BNify = s => new BigNumber(String(s));
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
   if (!IDLE && network === 'live') {

@@ -26,36 +26,20 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
     string memory _name, // eg. IdleDAI
     string memory _symbol, // eg. IDLEDAI
     address _token,
-    address _iToken,
-    address _cToken,
-    address _rebalancer,
     address _idle,
     address _comp
     ) public {
-      // Old initialize method
-      // Initialize inherited contracts
-      ERC20Detailed.initialize(_name, _symbol, 18);
-      Ownable.initialize(msg.sender);
-      Pausable.initialize(msg.sender);
-      ReentrancyGuard.initialize();
-      GST2ConsumerV2.initialize();
-      // Initialize storage variables
-      maxUnlentPerc = 1000;
-      token = _token;
-      tokenDecimals = ERC20Detailed(_token).decimals();
-      iToken = _iToken;
-      cToken = _cToken;
-      rebalancer = _rebalancer;
-      // end old initialize method
       IDLE = _idle;
       COMP = _comp;
+
+      _initV1(_name, _symbol, _token);
   }
   function amountsFromAllocations(uint256[] calldata allocations, uint256 total)
     external pure returns (uint256[] memory foo) {
       return _amountsFromAllocations(allocations, total);
   }
-  function mintWithAmounts(address[] calldata tokenAddresses, uint256[] calldata protocolAmounts) external {
-    _mintWithAmounts(tokenAddresses, protocolAmounts);
+  function mintWithAmounts(uint256[] calldata allocation, uint256 total) external {
+    _mintWithAmounts(allocation, total);
   }
   function setLastAllocations(uint256[] calldata allocs) external {
     lastAllocations = allocs;
@@ -78,7 +62,6 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
     gst2 = GasTokenMock(_gst);
   }
   function redeemAllNeeded(
-    address[] calldata tokenAddresses,
     uint256[] calldata amounts,
     uint256[] calldata newAmounts
     ) external returns (
@@ -86,6 +69,6 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
       uint256 totalToMint,
       bool lowLiquidity
     ) {
-      return _redeemAllNeeded(tokenAddresses, amounts, newAmounts);
+      return _redeemAllNeeded(amounts, newAmounts);
   }
 }

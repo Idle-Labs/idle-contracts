@@ -28,4 +28,8 @@ contract IdleControllerMock is IdleController {
   function idleSpeeds(address _idleToken) external view returns (uint256) {
 
   }
+
+  function getAllMarkets() external view returns (address[] memory) {}
+  function _addIdleMarkets(address[] calldata) external {}
+  function _supportMarkets(address[] calldata) external {}
 }

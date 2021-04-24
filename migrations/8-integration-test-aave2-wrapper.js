@@ -98,7 +98,7 @@ const test = async (deployer, token, underlying, decimals) => {
 };
 
 module.exports = async (deployer, network) => {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
 

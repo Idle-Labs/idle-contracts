@@ -31,7 +31,7 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.oldIdle.transfer(manager, this.one.mul(BNify('100')), {from: creator});
     await this.newIdle.setAmountToMint(this.one.mul(BNify('200')));
 
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: manager});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: manager});
     await this.converter.deposit({from: manager});
     await expectRevert(
       this.converter.withdraw(BNify('0'), {from: manager}),
@@ -46,7 +46,7 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.oldIdle.transfer(manager, this.one.mul(BNify('100')), {from: creator});
     await this.newIdle.setAmountToMint(this.one.mul(BNify('200')));
 
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: manager});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: manager});
     await this.converter.deposit({from: manager});
     await this.converter.migrateFromToIdle(true, {from: creator});
     await this.converter.withdraw(BNify('0'), {from: manager});
@@ -59,8 +59,8 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.oldIdle.transfer(someone, this.one.mul(BNify('200')), {from: creator});
     await this.newIdle.setAmountToMint(this.one.mul(BNify('600')));
 
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: manager});
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: someone});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: manager});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: someone});
 
     await this.converter.deposit({from: manager});
     await this.converter.deposit({from: someone});
@@ -79,10 +79,10 @@ contract('IdleBatchConverter', function ([_, creator, manager, nonOwner, someone
     await this.oldIdle.transfer(foo, this.one.mul(BNify('200')), {from: creator});
     await this.oldIdle.transfer(nonOwner, this.one.mul(BNify('400')), {from: creator});
 
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: manager});
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: someone});
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: foo});
-    await this.oldIdle.approve(this.converter.address, BNify('-1'), {from: nonOwner});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: manager});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: someone});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: foo});
+    await this.oldIdle.approve(this.converter.address, BNify('100000000').mul(this.one), {from: nonOwner});
 
     await this.converter.deposit({from: manager});
     await this.converter.deposit({from: someone});

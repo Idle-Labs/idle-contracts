@@ -36,7 +36,7 @@ const advanceBlocks = async n => {
 const getLatestPropsal = async gov => gov.proposalCount.call()
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test' || network == 'coverage') {
+  if (network === 'test' || network == 'soliditycoverage') {
     return;
   }
   if (!IDLE && network === 'live') {

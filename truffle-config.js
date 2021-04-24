@@ -27,7 +27,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 1
+          runs: 560
         }
       }
     }
@@ -88,7 +88,7 @@ module.exports = {
       gasPrice: 1000000000,
       gasPrice: 0x01      // <-- Use this low gas price
     },
-    coverage: {
+    soliditycoverage: {
       host: "localhost",
       network_id: "*",
       port: 8555,         // <-- If you change this, also set the port option in .solcover.js.
