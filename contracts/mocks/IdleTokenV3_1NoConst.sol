@@ -123,7 +123,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   );
 
   // Addresses for stkAAVE distribution from Aave
-  address public constant stkAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
+  address public stkAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
   address internal aToken;
   // ########## End IdleToken V5 updates
 

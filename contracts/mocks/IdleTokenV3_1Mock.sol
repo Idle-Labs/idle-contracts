@@ -27,10 +27,12 @@ contract IdleTokenV3_1Mock is IdleTokenV3_1NoConst {
     string memory _symbol, // eg. IDLEDAI
     address _token,
     address _idle,
-    address _comp
+    address _comp,
+    address _aave
     ) public {
       IDLE = _idle;
       COMP = _comp;
+      stkAAVE = _aave;
 
       _initV1(_name, _symbol, _token);
   }

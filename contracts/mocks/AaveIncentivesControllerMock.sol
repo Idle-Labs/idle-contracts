@@ -21,6 +21,7 @@ contract AaveIncentivesControllerMock is IAaveIncentivesController {
     uint256 amount,
     address to
   ) external returns (uint256) {
+    require(amount == rewards, 'Rewards are different');
     IERC20(aaveMock).transfer(to, amount);
     return amount;
   }
