@@ -11,6 +11,7 @@ const cDAIMock = artifacts.require('cDAIMock');
 const iDAIMock = artifacts.require('iDAIMock');
 const cDAIWrapperMock = artifacts.require('cDAIWrapperMock');
 const iDAIWrapperMock = artifacts.require('iDAIWrapperMock');
+const ERC20Mock = artifacts.require('ERC20Mock');
 const DAIMock = artifacts.require('DAIMock');
 const ComptrollerMock = artifacts.require('ComptrollerMock');
 const IdleControllerMock = artifacts.require('IdleControllerMock');
@@ -29,6 +30,7 @@ const aaveLendingPoolProviderMock = artifacts.require('aaveLendingPoolProviderMo
 const aaveLendingPoolCoreMock = artifacts.require('aaveLendingPoolCoreMock');
 const aaveInterestRateStrategyMock = artifacts.require('aaveInterestRateStrategyMock');
 const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
+const AaveIncentivesControllerMock = artifacts.require('AaveIncentivesControllerMock');
 const FlashLoanerMock = artifacts.require("FlashLoanerMock");
 
 const BNify = n => new BN(String(n));
@@ -51,6 +53,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     this.WhitePaperMock = await WhitePaperMock.new({from: creator});
     // 100.000 cDAI are given to creator in cDAIMock constructor
     this.cDAIMock = await cDAIMock.new(this.DAIMock.address, creator, this.WhitePaperMock.address, {from: creator});
+    this.AAVEMock = await ERC20Mock.new('AAVEMock', 'AAVEMock', this.one.mul(BNify('10000')), {from: creator});
+    this.AaveIncentivesControllerMock = await AaveIncentivesControllerMock.new(this.AAVEMock.address, {from: creator});
     this.ComptrollerMock = await ComptrollerMock.new(this.COMPMock.address, this.cDAIMock.address, {from: creator});
     await this.cDAIMock._setComptroller(this.ComptrollerMock.address, {from: creator});
 
@@ -74,6 +78,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Aave
     // 100.000 aDAI to creator
     this.aDAIMock = await aDAIMock.new(this.DAIMock.address, creator, {from: creator});
+    await this.aDAIMock.setController(this.AaveIncentivesControllerMock.address, {from: creator});
+
     this.aaveLendingPoolProviderMock = await aaveLendingPoolProviderMock.new();
     this.aaveLendingPoolCoreMock = await aaveLendingPoolCoreMock.new();
     this.aaveInterestRateStrategyMock = await aaveInterestRateStrategyMock.new();
@@ -189,7 +195,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       this.cDAIMock.address,
       {from: creator}
     );
-    await this.token._init(this.tokenHelper.address);
+    await this.token._init(this.tokenHelper.address, this.aDAIMock.address);
     await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
     await this.token.setOracleAddress(this.PriceOracleMock.address, {from: creator});
     await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});

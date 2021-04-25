@@ -8,6 +8,7 @@ import "../interfaces/AToken.sol";
 
 contract aDAIMock is AToken, ERC20, ERC20Detailed {
   address public dai;
+  address public controller;
   uint256 public price = 10**18;
 
   constructor(address _dai, address tokenOwner)
@@ -28,9 +29,15 @@ contract aDAIMock is AToken, ERC20, ERC20Detailed {
   function setPriceForTest(uint256 _price) external {
     price = _price;
   }
+  function setController(address _controller) external {
+    controller = _controller;
+  }
 
   function burn(address user, address receiverOfUnderlying, uint256 amount, uint256 index) external {
     _burn(user, amount);
     require(IERC20(dai).transfer(receiverOfUnderlying, amount), "Error during transfer");
+  }
+  function getIncentivesController() external returns (address) {
+    return controller;
   }
 }
