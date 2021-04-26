@@ -2,6 +2,7 @@ var IdleTokenV3_1 = artifacts.require("./IdleTokenV3_1.sol");
 var IdleTokenGovernance = artifacts.require("./IdleTokenGovernance.sol");
 // var IdleRebalancerHelperOthersAaveV2 = artifacts.require("./IdleRebalancerHelperOthersAaveV2.sol");
 var IdleCompoundLike = artifacts.require("./IdleCompoundLike.sol");
+var IdleFuse = artifacts.require("./IdleFuse.sol");
 var IdleFulcrumV2 = artifacts.require("./IdleFulcrumV2.sol");
 var IdleAaveV2 = artifacts.require("./IdleAaveV2.sol");
 var IdleDyDx = artifacts.require("./IdleDyDx.sol");
@@ -67,15 +68,23 @@ module.exports = async function(deployer, network, accounts) {
   let idleCompoundLikeInstance;
   console.log("deploying IdleCompoundLike instance");
   await deployer.deploy(IdleCompoundLike, {from: creator}).then(instance => idleCompoundLikeInstance = instance)
+  console.log("IdleCompoundLike instance deployed ", idleCompoundLikeInstance.address);
 
   // deploy wrapper proxies
   // cream
   console.log("deploying cream wrapper via proxy factory");
   const creamWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("creamWrapperAddress", creamWrapperAddress);
+
+  // deploy IdleFuse implementation
+  let idleFuseInstance;
+  console.log("deploying IdleFuse instance");
+  await deployer.deploy(IdleFuse, {from: creator}).then(instance => idleFuseInstance = instance)
+  console.log("IdleFuse instance deployed ", idleFuseInstance.address);
+
   // fuse
   console.log("deploying cream wrapper via proxy factory");
-  const fuseWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
+  const fuseWrapperAddress = await deployWrapperProxy(idleFuseInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("fuseWrapperAddress", fuseWrapperAddress);
 
   const creamRAIInstance = await IdleCompoundLike.at(creamWrapperAddress);
