@@ -28,11 +28,11 @@ const {
 
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test' || network == 'live' || network === 'soliditycoverage') {
+  if (network === 'test' || network === 'soliditycoverage') {
     return;
   }
 
-  const idleTokenAddress = '';
+  const idleTokenAddress = '0x5C960a3DCC01BE8a0f49c02A8ceBCAcf5D07fABe';
 
   console.log('Network', network);
   console.log('idleTokenAddress: ', idleTokenAddress);

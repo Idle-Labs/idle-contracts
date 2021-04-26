@@ -29,7 +29,7 @@ const {
 
 
 module.exports = async function(deployer, network, accounts) {
-  if (network === 'test' || network == 'live' || network === 'soliditycoverage') {
+  if (network === 'test' ||  network === 'soliditycoverage') {
     return;
   }
 
@@ -58,7 +58,7 @@ module.exports = async function(deployer, network, accounts) {
 
   // #######################
 
-  const idleTokenAddress = '';
+  const idleTokenAddress = '0x5C960a3DCC01BE8a0f49c02A8ceBCAcf5D07fABe';
   const idleToken = await IdleTokenV3_1.at(idleTokenAddress);
   const proxyFactory = await MinimalInitializableProxyFactory.at(minimalInitializableProxyFactory);
 
@@ -83,7 +83,7 @@ module.exports = async function(deployer, network, accounts) {
   console.log("IdleFuse instance deployed ", idleFuseInstance.address);
 
   // fuse
-  console.log("deploying cream wrapper via proxy factory");
+  console.log("deploying fuse wrapper via proxy factory");
   const fuseWrapperAddress = await deployWrapperProxy(idleFuseInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("fuseWrapperAddress", fuseWrapperAddress);
 
