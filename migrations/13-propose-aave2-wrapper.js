@@ -10,7 +10,7 @@ const addresses = require("./addresses");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
 const IGovernorAlpha = artifacts.require("IGovernorAlpha");
-const { createProposal } = require("./create-proposal");
+const { createProposal } = require("./utils");
 
 const toBN = v => new BigNumber(v.toString());
 const timelockDelay = 172800
