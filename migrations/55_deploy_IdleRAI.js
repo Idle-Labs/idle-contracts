@@ -65,13 +65,16 @@ module.exports = async function(deployer, network, accounts) {
 
   // deploy IdleCompoundLike implementation
   let idleCompoundLikeInstance;
+  console.log("deploying IdleCompoundLike instance");
   await deployer.deploy(IdleCompoundLike, {from: creator}).then(instance => idleCompoundLikeInstance = instance)
 
   // deploy wrapper proxies
   // cream
+  console.log("deploying cream wrapper via proxy factory");
   const creamWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("creamWrapperAddress", creamWrapperAddress);
   // fuse
+  console.log("deploying cream wrapper via proxy factory");
   const fuseWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("fuseWrapperAddress", fuseWrapperAddress);
 
@@ -83,6 +86,7 @@ module.exports = async function(deployer, network, accounts) {
   const idleFuseApr = await fuseRAIInstance.getAPR.call();
   console.log('idleFuseApr', BNify(idleFuseApr).div(one).toString());
 
+  console.log("calling idleToken.manualInitialize");
   await idleToken.manualInitialize(
     [], // govTokens, no IDLE initially
     [crRAI[network], fuseRAI[network]],

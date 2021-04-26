@@ -9,7 +9,7 @@ var yxToken = artifacts.require("./yxToken.sol");
 var IdleTokenHelper = artifacts.require("./IdleTokenHelper.sol");
 var IERC20 = artifacts.require("./IERC20.sol");
 const MinimalInitializableProxyFactory = artifacts.require("MinimalInitializableProxyFactory");
-
+const addresses = require('./addresses.js');
 const BigNumber = require('bignumber.js');
 const BNify = s => new BigNumber(String(s));
 
@@ -40,12 +40,14 @@ module.exports = async function(deployer, network, accounts) {
   const idleToken = await IdleTokenGovernance.at(idleTokenAddress);
 
   let idleTokenHelper;
+  console.log("deploying idle token helper")
   await deployer.deploy(IdleTokenHelper, {from: creator}).then(instance => idleTokenHelper = instance);
+  console.log("idleTokenHelper:", idleTokenHelper.address);
 
-  console.log('idleTokenHelper: ', idleTokenHelper.address);
-
+  console.log("calling idleToken._init")
   await idleToken._init(
     idleTokenHelper.address,
+    addresses.addr0,
     {from: creator}
   );
 
