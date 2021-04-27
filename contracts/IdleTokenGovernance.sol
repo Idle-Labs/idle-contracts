@@ -127,11 +127,12 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   address private aToken;
   // ########## End IdleToken V5 updates
 
-  function _init(address _tokenHelper, address _aToken) external {
+  function _init(address _tokenHelper, address _aToken, address _newOracle) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
     flashLoanFee = 80; // 0.08%
     aToken = _aToken;
+    oracle = _newOracle;
   }
 
   // onlyOwner
@@ -364,7 +365,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function getAvgAPR()
     public view
     returns (uint256) {
-    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
+    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken, aToken);
   }
 
   /**

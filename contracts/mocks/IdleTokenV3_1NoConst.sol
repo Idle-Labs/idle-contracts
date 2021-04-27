@@ -198,11 +198,12 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   // ################# INIT METHODS #####################
   // ####################################################
 
-  function _init(address _tokenHelper, address _aToken) external {
+  function _init(address _tokenHelper, address _aToken, address _newOracle) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
     flashLoanFee = 90;
     aToken = _aToken;
+    oracle = _newOracle;
   }
 
   // onlyOwner
@@ -435,7 +436,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function getAvgAPR()
     public view
     returns (uint256) {
-    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
+    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken, aToken);
   }
 
   /**
