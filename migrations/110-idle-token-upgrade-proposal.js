@@ -22,19 +22,13 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
-  let idleTokenImplementationAddress = '';
+  let idleTokenImplementationAddress = '0x32fA6d59DA7132b6591eafbfe1E4Dc1527FdaD17';
+  const idleTokenHelperAddress = '0x49be976220048174Cc7551dfb0be371746d5784e';
+  const idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
+  const idleTokenImplementation = await IdleTokenGovernance.deployed(idleTokenImplementationAddress);
 
-  await deployer.deploy(IdleTokenHelper);
-  const idleTokenHelper = await IdleTokenHelper.deployed();
-  const idleTokenHelperAddress = idleTokenHelper.address;
   console.log("idle token helper deployed at", idleTokenHelperAddress);
-
-  if (network === "local") {
-    await deployer.deploy(IdleTokenGovernance);
-    const idleTokenImplementation = await IdleTokenGovernance.deployed();
-    idleTokenImplementationAddress = idleTokenImplementation.address;
-    console.log("implementation deployed at", idleTokenImplementationAddress)
-  }
+  console.log("implementation deployed at", idleTokenImplementationAddress)
 
   const allIdleTokens = [
     {
