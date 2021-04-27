@@ -21,8 +21,11 @@ module.exports = async (deployer, network, accounts) => {
   if (network === 'test' || network == 'coverage') {
     return;
   }
+
+  // TODO update addresses
   let idleTokenImplementationAddress = '0xd7fc6d0fb425e450d08220fed5cfa0ec1ddbaf2b';
   const idleTokenHelperAddress = addresses.idleTokenHelper;
+
   const idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
   const idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
 
@@ -30,34 +33,34 @@ module.exports = async (deployer, network, accounts) => {
   console.log("implementation deployed at", idleTokenImplementationAddress)
 
   const allIdleTokens = [
-    // {
-    //   idleTokenAddress: addresses.idleDAIV4,
-    //   aTokenAddress: addresses.aDAIV2[network],
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleUSDCV4,
-    //   aTokenAddress: addresses.aUSDCV2[network],
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleUSDTV4,
-    //   aTokenAddress: addresses.aUSDTV2[network],
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleSUSDV4,
-    //   aTokenAddress: addresses.addr0,
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleTUSDV4,
-    //   aTokenAddress: addresses.addr0,
-    // },
+    {
+      idleTokenAddress: addresses.idleDAIV4,
+      aTokenAddress: addresses.aDAIV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleUSDCV4,
+      aTokenAddress: addresses.aUSDCV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleUSDTV4,
+      aTokenAddress: addresses.aUSDTV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleSUSDV4,
+      aTokenAddress: addresses.addr0,
+    },
+    {
+      idleTokenAddress: addresses.idleTUSDV4,
+      aTokenAddress: addresses.addr0,
+    },
     {
       idleTokenAddress: addresses.idleWBTCV4,
       aTokenAddress: addresses.aWBTCV2[network],
     },
-    // {
-    //   idleTokenAddress: addresses.idleWETHV4,
-    //   aTokenAddress: addresses.aWETH[network],
-    // },
+    {
+      idleTokenAddress: addresses.idleWETHV4,
+      aTokenAddress: addresses.aWETH[network],
+    },
   ]
 
   const description = '#Update IdleToken implementation to update gov tokens management';
@@ -131,21 +134,21 @@ module.exports = async (deployer, network, accounts) => {
       ]
     ],
   });
-  //
-  // await askToContinue("continue?");
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
-  // }
-  //
-  // if (network === "live") {
-  //   await askToContinue("continue?");
-  // }
-  //
+
+  await askToContinue("continue?");
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
+  }
+
+  if (network === "live") {
+    await askToContinue("continue?");
+  }
+
   await createProposal(network, proposal.toObject());
-  //
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
-  // }
+
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
+  }
 }
 
 const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
