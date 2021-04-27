@@ -23,9 +23,11 @@ import "../interfaces/ILendingProtocol.sol";
 import "../interfaces/IGovToken.sol";
 import "../interfaces/IIdleTokenV3_1.sol";
 import "../interfaces/IERC3156FlashBorrower.sol";
+import "../interfaces/IAaveIncentivesController.sol";
 
 import "../interfaces/Comptroller.sol";
 import "../interfaces/CERC20.sol";
+import "../interfaces/AToken.sol";
 import "../interfaces/IdleController.sol";
 import "../interfaces/PriceOracle.sol";
 import "../interfaces/IIdleTokenHelper.sol";
@@ -120,6 +122,11 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     uint256 premium
   );
 
+  // Addresses for stkAAVE distribution from Aave
+  address public stkAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
+  address internal aToken;
+  // ########## End IdleToken V5 updates
+
   // ####################################################
   // ################# INIT METHODS #####################
   // ####################################################
@@ -191,10 +198,11 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   // ################# INIT METHODS #####################
   // ####################################################
 
-  function _init(address _tokenHelper) external {
+  function _init(address _tokenHelper, address _aToken) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
-    flashLoanFee = 80; // 0.08%
+    flashLoanFee = 90; // 0.08%
+    aToken = _aToken;
   }
 
   // onlyOwner
@@ -255,6 +263,16 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function setCToken(address _cToken)
     external onlyOwner {
       require((cToken = _cToken) != address(0), "0");
+  }
+
+  /**
+   * It allows owner to set the aToken address
+   *
+   * @param _aToken : new aToken address
+   */
+  function setAToken(address _aToken)
+    external onlyOwner {
+      require((aToken = _aToken) != address(0), "0");
   }
 
   /**
@@ -981,9 +999,8 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    */
   function _redeemGovTokensFromProtocol(address _govToken) internal {
     // In case new Gov tokens will be supported this should be updated
-    if (_govToken == COMP || _govToken == IDLE) {
+    if (_govToken == COMP || _govToken == IDLE || _govToken == stkAAVE) {
       address[] memory holders = new address[](1);
-      address[] memory tokens = new address[](1);
       holders[0] = address(this);
 
       if (_govToken == IDLE) {
@@ -992,9 +1009,17 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
         IdleController(idleController).claimIdle(holders, holders);
         return;
       }
+
+      address[] memory tokens = new address[](1);
+      if (_govToken == stkAAVE && aToken != address(0)) {
+        tokens[0] = aToken;
+        IAaveIncentivesController _ctrl = IAaveIncentivesController(AToken(tokens[0]).getIncentivesController());
+        _ctrl.claimRewards(tokens, _ctrl.getUserUnclaimedRewards(address(this)), address(this));
+        return;
+      }
       if (cToken != address(0)) {
         tokens[0] = cToken;
-        Comptroller(CERC20(cToken).comptroller()).claimComp(holders, tokens, false, true);
+        Comptroller(CERC20(tokens[0]).comptroller()).claimComp(holders, tokens, false, true);
       }
     }
   }
@@ -1181,7 +1206,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @param _token : address of the token to read balance
    * @return total : balance of _token in this contract
    */
-  function _contractBalanceOf(address _token) private view returns (uint256) {
+  function _contractBalanceOf(address _token) internal view returns (uint256) {
     // Original implementation:
     //
     // return IERC20(_token).balanceOf(address(this));
@@ -1210,7 +1235,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * Check that no mint has been made in the same block from the same EOA
    */
   function _checkMintRedeemSameTx() internal view {
-    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "REENTR");
+    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "REE");
   }
 
   // ILendingProtocols calls

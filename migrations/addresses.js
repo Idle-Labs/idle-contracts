@@ -105,6 +105,18 @@ const COMP = {
   'coverage': '0xc00e94cb662c3520282e6f5717214004a7f26888',
   'deploy': '0xc00e94cb662c3520282e6f5717214004a7f26888', // used for truffle Teams deploy, now kovan
 }
+const stkAAVE = {
+  'live': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'proxy': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'live-fork': '0x4da27a545c0c5B758a6BA100e3a049001de870f5', // needed for truffle
+  'kovan': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'kovan-fork': '0x4da27a545c0c5B758a6BA100e3a049001de870f5', // needed for truffle
+  'local': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'local-fork': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'test': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'coverage': '0x4da27a545c0c5B758a6BA100e3a049001de870f5',
+  'deploy': '0x4da27a545c0c5B758a6BA100e3a049001de870f5', // used for truffle Teams deploy, now kovan
+}
 
 const cUSDC = {
   'live': '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
@@ -489,6 +501,7 @@ module.exports = {
   DAI: DAI,
   yxDAI: yxDAI,
   COMP: COMP,
+  stkAAVE: stkAAVE,
   cUSDC: cUSDC,
   iUSDC: iUSDC,
   aUSDC: aUSDC,

@@ -37,25 +37,53 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   const allIdleTokens = [
-    addresses.idleDAIV4,
-    addresses.idleUSDCV4,
-    addresses.idleUSDTV4,
-    addresses.idleSUSDV4,
-    addresses.idleTUSDV4,
-    addresses.idleWBTCV4,
-    addresses.idleWETHV4,
+    {
+      idleTokenAddress: addresses.idleDAIV4,
+      aTokenAddress: addresses.aDAIV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleUSDCV4,
+      aTokenAddress: addresses.aUSDCV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleUSDTV4,
+      aTokenAddress: addresses.aUSDTV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleSUSDV4,
+      aTokenAddress: addresses.addr0,
+    },
+    {
+      idleTokenAddress: addresses.idleTUSDV4,
+      aTokenAddress: addresses.addr0,
+    },
+    {
+      idleTokenAddress: addresses.idleWBTCV4,
+      aTokenAddress: addresses.aWBTCV2[network],
+    },
+    {
+      idleTokenAddress: addresses.idleWETHV4,
+      aTokenAddress: addresses.aWETH[network],
+    },
   ]
 
   const description = '#Update IdleToken implementation to update gov tokens management';
   const proposal = new Proposal(web3, description, addresses.forkProposer);
 
   // call upgradeAndCall on proxyAdmin
-  allIdleTokens.forEach(idleTokenAddress => {
+  allIdleTokens.forEach(({idleTokenAddress, aTokenAddress}) => {
     const initMethodToCall = web3.eth.abi.encodeFunctionCall({
-      name: "_init(address)",
+      name: "_init(address,address)",
       type: "function",
-      inputs: [{ type: "address", name: "_tokenHelper" }]
-    }, [idleTokenHelperAddress]);
+      inputs: [
+        { type: "address", name: "_tokenHelper" },
+        { type: "address", name: "_aToken" },
+      ]
+    }, [idleTokenHelperAddress, aTokenAddress]);
+
+    console.log("_init params:")
+    console.log("idleTokenAddress:", idleTokenAddress)
+    console.log("aTokenAddress:", aTokenAddress, "\n\n")
 
     proposal.addAction({
       target: addresses.proxyAdmin,
@@ -98,13 +126,14 @@ module.exports = async (deployer, network, accounts) => {
       // _newGovTokens
       [
         addresses.COMP[network],
+        addresses.stkAAVE[network],
         addresses.IDLE,
       ],
       // _newGovTokensEqualLen
       [
         addresses.COMP[network], // for cWBTCV2
         "0x0000000000000000000000000000000000000000", // for aWBTC
-        "0x0000000000000000000000000000000000000000", // for aWBTCV2
+        addresses.stkAAVE[network], // for aWBTCV2
         addresses.IDLE,
       ]
     ],

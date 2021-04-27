@@ -11,6 +11,7 @@ const cDAIMock = artifacts.require('cDAIMock');
 const iDAIMock = artifacts.require('iDAIMock');
 const cDAIWrapperMock = artifacts.require('cDAIWrapperMock');
 const iDAIWrapperMock = artifacts.require('iDAIWrapperMock');
+const ERC20Mock = artifacts.require('ERC20Mock');
 const DAIMock = artifacts.require('DAIMock');
 const ComptrollerMock = artifacts.require('ComptrollerMock');
 const IdleControllerMock = artifacts.require('IdleControllerMock');
@@ -29,6 +30,7 @@ const aaveLendingPoolProviderMock = artifacts.require('aaveLendingPoolProviderMo
 const aaveLendingPoolCoreMock = artifacts.require('aaveLendingPoolCoreMock');
 const aaveInterestRateStrategyMock = artifacts.require('aaveInterestRateStrategyMock');
 const aaveLendingPoolMock = artifacts.require('aaveLendingPoolMock');
+const AaveIncentivesControllerMock = artifacts.require('AaveIncentivesControllerMock');
 const FlashLoanerMock = artifacts.require("FlashLoanerMock");
 
 const BNify = n => new BN(String(n));
@@ -51,6 +53,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     this.WhitePaperMock = await WhitePaperMock.new({from: creator});
     // 100.000 cDAI are given to creator in cDAIMock constructor
     this.cDAIMock = await cDAIMock.new(this.DAIMock.address, creator, this.WhitePaperMock.address, {from: creator});
+    this.AAVEMock = await ERC20Mock.new('AAVEMock', 'AAVEMock', this.one.mul(BNify('10000')), {from: creator});
+    this.AaveIncentivesControllerMock = await AaveIncentivesControllerMock.new(this.AAVEMock.address, {from: creator});
     this.ComptrollerMock = await ComptrollerMock.new(this.COMPMock.address, this.cDAIMock.address, {from: creator});
     await this.cDAIMock._setComptroller(this.ComptrollerMock.address, {from: creator});
 
@@ -74,6 +78,8 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     // Aave
     // 100.000 aDAI to creator
     this.aDAIMock = await aDAIMock.new(this.DAIMock.address, creator, {from: creator});
+    await this.aDAIMock.setController(this.AaveIncentivesControllerMock.address, {from: creator});
+
     this.aaveLendingPoolProviderMock = await aaveLendingPoolProviderMock.new();
     this.aaveLendingPoolCoreMock = await aaveLendingPoolCoreMock.new();
     this.aaveInterestRateStrategyMock = await aaveInterestRateStrategyMock.new();
@@ -141,6 +147,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       this.DAIMock.address,
       this.IDLEMock.address,
       this.COMPMock.address,
+      this.AAVEMock.address,
       { from: creator }
     );
     this.idleTokenAddr = this.token.address;
@@ -189,7 +196,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       this.cDAIMock.address,
       {from: creator}
     );
-    await this.token._init(this.tokenHelper.address);
+    await this.token._init(this.tokenHelper.address, this.aDAIMock.address);
     await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
     await this.token.setOracleAddress(this.PriceOracleMock.address, {from: creator});
     await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});
@@ -2790,5 +2797,107 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       [this.COMPMock.address], // _newGovTokensEqualLen
       {from: creator}
     );
+  });
+
+  it('redeemGovTokens with stkAAVE', async function () {
+    // Add this.AAVEMock.address as govToken
+    await this.token.setAllAvailableTokensAndWrappers(
+      this.protocolTokens,
+      [this.cDAIWrapper.address, this.iDAIWrapper.address, this.aDAIWrapper.address, this.yxDAIWrapper.address],
+      [this.COMPMock.address, this.AAVEMock.address], // _newGovTokens
+      [this.COMPMock.address, this.ETHAddr, this.AAVEMock.address, this.ETHAddr], // _newGovTokensEqualLen
+      {from: creator}
+    );
+
+    await this.token.setMaxUnlentPerc(BNify('0'), {from: creator});
+    // Set fee, 10% on gain
+    await this.token.setFee(BNify('0'), {from: creator});
+    // Set fee address
+    await this.token.setFeeAddress(feeReceiver, {from: creator});
+    // set available liquidity for providers
+    await this.setLiquidity(['1000000', '1000000', '1000000', '1000000']); // 1M each
+    // Set prices in DAI => [0.02, 1.25, 1, 2]
+    await this.setPrices(['200000000000000000000000000', '1250000000000000000', this.one, '2000000000000000000']);
+
+    // Give comptrollerMock some COMP tokens
+    await this.COMPMock.transfer(this.ComptrollerMock.address, BNify('10').mul(this.one), {from: creator});
+    await this.AAVEMock.transfer(this.AaveIncentivesControllerMock.address, BNify('10').mul(this.one), {from: creator});
+
+    // Simulate a prev mint
+    await this.mintIdle(BNify('1').mul(this.one), someone);
+    // Set rebalancer allocations
+    await this.setRebAllocations(['50000', '0', '50000', '0']);
+    await this.token.rebalance();
+
+    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.AaveIncentivesControllerMock._setRewards(BNify('1').mul(this.one));
+
+    // token 1
+    await this.AAVEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    // token 2
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+
+    BNify(await this.COMPMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('2')));
+    BNify(await this.AAVEMock.balanceOf.call(this.token.address)).should.be.bignumber.equal(this.one.mul(BNify('2')));
+
+    // token 3
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.AAVEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    // token 4
+    await this.mintIdle(BNify('8').mul(this.one), someone);
+
+    // 1 new COMP redeemed so tot 4, 3 for someone and 1 for foo
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(this.one.mul(BNify('3')));
+    BNify(await this.AAVEMock.balanceOf.call(someone)).should.be.bignumber.equal(this.one.mul(BNify('3')));
+
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(this.one);
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('0'));
+
+    await this.token.redeemIdleToken(this.one, {from: foo});
+    // 1 redeemd, someone has 9 idleTOken and foo only one so 0.9 to someone and 0.1 to foo
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1100000000000000000'));
+    BNify(await this.AAVEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('1100000000000000000'));
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.AaveIncentivesControllerMock._setRewards(BNify('0').mul(this.one));
+
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('3900000000000000000'));
+    BNify(await this.AAVEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('3900000000000000000'));
+
+    await this.ComptrollerMock.setAmount(BNify('1').mul(this.one));
+    await this.AaveIncentivesControllerMock._setRewards(BNify('1').mul(this.one));
+    // someone has 9 idleToken
+    await this.COMPMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.AAVEMock.transfer(this.token.address, BNify('1').mul(this.one), {from: creator});
+    await this.mintIdle(BNify('1').mul(this.one), foo);
+
+    // someone is entitled to 1
+    await this.COMPMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
+    await this.AAVEMock.transfer(this.token.address, BNify('10').mul(this.one), {from: creator});
+    //
+    // BNify(await this.token.govTokensIndexes.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
+    // BNify(await this.token.govTokensLastBalances.call(this.COMPMock.address), {from: foo}).should.be.bignumber.equal(BNify('1000000000000000006'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, foo), {from: foo}).should.be.bignumber.equal(BNify('1711111111111111111'));
+    // BNify(await this.token.usersGovTokensIndexes.call(this.COMPMock.address, someone), {from: someone}).should.be.bignumber.equal(BNify('1600000000000000000'));
+
+    await this.ComptrollerMock.setAmount(BNify('0').mul(this.one));
+    await this.AaveIncentivesControllerMock._setRewards(BNify('0').mul(this.one));
+    await this.token.redeemIdleToken(BNify('0'), {from: someone});
+    await this.token.redeemIdleToken(BNify('0'), {from: foo});
+    // someone is entitled to 1 + 10 * 0.9 = 10 (+ 2.4 of before)
+    BNify(await this.COMPMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('14899999999999999998'));
+    BNify(await this.AAVEMock.balanceOf.call(someone)).should.be.bignumber.equal(BNify('14899999999999999998'));
+    // foo is entitled to 10 * 0.1 = 1 (+ 0.6 of before)
+    BNify(await this.COMPMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('2100000000000000000'));
+    BNify(await this.AAVEMock.balanceOf.call(foo)).should.be.bignumber.equal(BNify('2100000000000000000'));
   });
 });

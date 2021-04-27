@@ -23,9 +23,11 @@ import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IGovToken.sol";
 import "./interfaces/IIdleTokenV3_1.sol";
 import "./interfaces/IERC3156FlashBorrower.sol";
+import "./interfaces/IAaveIncentivesController.sol";
 
 import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
+import "./interfaces/AToken.sol";
 import "./interfaces/IdleController.sol";
 import "./interfaces/PriceOracle.sol";
 import "./interfaces/IIdleTokenHelper.sol";
@@ -120,10 +122,16 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     uint256 premium
   );
 
-  function _init(address _tokenHelper) external {
+  // Addresses for stkAAVE distribution from Aave
+  address public constant stkAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
+  address private aToken;
+  // ########## End IdleToken V5 updates
+
+  function _init(address _tokenHelper, address _aToken) external {
     require(tokenHelper == address(0), 'DONE');
     tokenHelper = _tokenHelper;
     flashLoanFee = 80; // 0.08%
+    aToken = _aToken;
   }
 
   // onlyOwner
@@ -184,6 +192,16 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function setCToken(address _cToken)
     external onlyOwner {
       require((cToken = _cToken) != address(0), "0");
+  }
+
+  /**
+   * It allows owner to set the aToken address
+   *
+   * @param _aToken : new aToken address
+   */
+  function setAToken(address _aToken)
+    external onlyOwner {
+      require((aToken = _aToken) != address(0), "0");
   }
 
   /**
@@ -910,9 +928,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function _redeemGovTokensFromProtocol(address _govToken) internal {
     // In case new Gov tokens will be supported this should be updated
-    if (_govToken == COMP || _govToken == IDLE) {
+    if (_govToken == COMP || _govToken == IDLE || _govToken == stkAAVE) {
       address[] memory holders = new address[](1);
-      address[] memory tokens = new address[](1);
       holders[0] = address(this);
 
       if (_govToken == IDLE) {
@@ -921,9 +938,17 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
         IdleController(idleController).claimIdle(holders, holders);
         return;
       }
+
+      address[] memory tokens = new address[](1);
+      if (_govToken == stkAAVE && aToken != address(0)) {
+        tokens[0] = aToken;
+        IAaveIncentivesController _ctrl = IAaveIncentivesController(AToken(tokens[0]).getIncentivesController());
+        _ctrl.claimRewards(tokens, _ctrl.getUserUnclaimedRewards(address(this)), address(this));
+        return;
+      }
       if (cToken != address(0)) {
         tokens[0] = cToken;
-        Comptroller(CERC20(cToken).comptroller()).claimComp(holders, tokens, false, true);
+        Comptroller(CERC20(tokens[0]).comptroller()).claimComp(holders, tokens, false, true);
       }
     }
   }
@@ -1139,7 +1164,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * Check that no mint has been made in the same block from the same EOA
    */
   function _checkMintRedeemSameTx() private view {
-    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "REENTR");
+    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "REE");
   }
 
   // ILendingProtocols calls
