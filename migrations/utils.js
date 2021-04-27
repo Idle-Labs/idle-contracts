@@ -60,7 +60,7 @@ const advanceBlocks = async n => {
 
 const createProposal = async (network, proposal) => {
   const getLatestPropsal = async gov => gov.proposalCount.call()
-  const createProposal = async (gov, {targets, values, signatures, calldatas, description, from}) => {
+  const _createProposal = async (gov, {targets, values, signatures, calldatas, description, from}) => {
     let proposer = proposal.from;
     console.log(`Proposing: ${description}`);
     console.log("targets", targets);
@@ -110,7 +110,7 @@ const createProposal = async (network, proposal) => {
     await vesterFounder.setDelegate(proposal.from, {from: proposal.from});
   }
 
-  await createProposal(govInstance, proposal);
+  await _createProposal(govInstance, proposal);
 }
 
 class Proposal {
