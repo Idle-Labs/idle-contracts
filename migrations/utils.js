@@ -58,7 +58,41 @@ const advanceBlocks = async n => {
   }
 }
 
-const createProposal = async (network, proposal) => {
+const executeProposalDirectly = async (network, proposal) => {
+  await proposal.web3.eth.sendTransaction({from: addresses.whale, to: addresses.timelock, value: "1000000000000000000"});
+  for (var i = 0; i < proposal.targets.length; i++) {
+    console.log(`executing proposal action ${i+1} of ${proposal.targets.length}`);
+    const target = proposal.targets[i];
+    const value = proposal.values[i];
+    const signature = proposal.signatures[i];
+    const calldataParams = proposal.calldataParams[i];
+    const calldataValues = proposal.calldataValues[i];
+
+    const inputs = calldataParams.map((type, index) => ({
+      type: type,
+      name: `p${index}`
+    }))
+    console.log("inputs", inputs)
+
+    const data = proposal.web3.eth.abi.encodeFunctionCall({
+      name: signature,
+      type: "function",
+      inputs: inputs,
+    }, calldataValues);
+
+    const tx = {
+      from: addresses.timelock,
+      to: target,
+      data: data,
+    }
+
+    console.log("tx:", tx)
+    await proposal.web3.eth.sendTransaction(tx)
+    console.log("done\n\n\n\n");
+  };
+}
+
+const createProposal = async (network, proposal, executeDirectly) => {
   const getLatestPropsal = async gov => gov.proposalCount.call()
   const _createProposal = async (gov, {targets, values, signatures, calldatas, description, from}) => {
     let proposer = proposal.from;
@@ -98,19 +132,23 @@ const createProposal = async (network, proposal) => {
     await advanceBlocks(2);
   };
 
-  const govInstance = await IGovernorAlpha.at(addresses.governorAlpha);
-  let proposer = proposal.from;
-  if (network != 'live') {
-    proposal.from = addresses.forkProposer;
-    const idleInstance = await Idle.at(addresses.IDLE)
-    const vesterFactory = await VesterFactory.at(addresses.vesterFactory);
-    const proposerVesting = await vesterFactory.vestingContracts.call(proposal.from);
-    const vesterFounder = await Vester.at(proposerVesting);
-    await idleInstance.delegate(proposal.from, {from: proposal.from});
-    await vesterFounder.setDelegate(proposal.from, {from: proposal.from});
-  }
+  if (executeDirectly) {
+    await executeProposalDirectly(network, proposal);
+  } else {
+    const govInstance = await IGovernorAlpha.at(addresses.governorAlpha);
+    let proposer = proposal.from;
+    if (network != 'live') {
+      proposal.from = addresses.forkProposer;
+      const idleInstance = await Idle.at(addresses.IDLE)
+      const vesterFactory = await VesterFactory.at(addresses.vesterFactory);
+      const proposerVesting = await vesterFactory.vestingContracts.call(proposal.from);
+      const vesterFounder = await Vester.at(proposerVesting);
+      await idleInstance.delegate(proposal.from, {from: proposal.from});
+      await vesterFounder.setDelegate(proposal.from, {from: proposal.from});
+    }
 
-  await _createProposal(govInstance, proposal);
+    await _createProposal(govInstance, proposal.toObject());
+  }
 }
 
 class Proposal {
@@ -122,6 +160,8 @@ class Proposal {
     this.targets = [];
     this.values = [];
     this.signatures = [];
+    this.calldataParams = [];
+    this.calldataValues = [];
     this.calldatas = [];
   }
 
@@ -129,6 +169,8 @@ class Proposal {
     this.targets.push(target);
     this.values.push(value);
     this.signatures.push(signature);
+    this.calldataParams.push(calldataParams);
+    this.calldataValues.push(calldataValues);
     this.calldatas.push(
       this.web3.eth.abi.encodeParameters(calldataParams, calldataValues)
     );
