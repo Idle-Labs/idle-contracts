@@ -47,12 +47,6 @@ module.exports = async (deployer, network, accounts) => {
         addresses.yxDAI[network],
         addresses.aDAIV2[network],
       ],
-      wrappers: [
-        "0x7466c91238d6E9c16801B4B885cfc3155AF3FCe3", // cDAI
-        "0x0Bc3bBa4EF3D1355A76E69900F98a59d30Ef54F3", // aDAI
-        "0xe9B1391334B2727ff23206255873D8A7C4C403Cb", // yxDAI
-        "0x01A3688D7d01390677e85256406B3156aCd59C64", // aDAIV2
-      ],
       newGovTokens: [
         addresses.COMP[network],
         addresses.stkAAVE[network],
@@ -75,12 +69,6 @@ module.exports = async (deployer, network, accounts) => {
         addresses.yxUSDC[network],
         addresses.aUSDCV2[network],
       ],
-      wrappers: [
-        "0xE8981Aa72d495AA71681c41159c1Ec8746eE3fbD", // cUSDC
-        "0x695085c4eAE4c0416E26DE99059Db71d8183b783", // aUSDC
-        "0xc5b580114c19E1490cf4573c59db6A2Fb2F402BD", // yxUSDC
-        "0xC9f16B7496843A82e51457aA84002d55036d8aA2", // aUSDCV2
-      ],
       newGovTokens: [
         addresses.COMP[network],
         addresses.stkAAVE[network],
@@ -101,11 +89,6 @@ module.exports = async (deployer, network, accounts) => {
         addresses.cUSDT[network],
         addresses.aUSDT[network],
         addresses.aUSDTV2[network],
-      ],
-      wrappers: [
-        "0x3751b4466a238Db35C39B578D4889cFB6847A46B", // cUSDT
-        "0x0F4B416A651f57358C2aA86dA285100fbE5bc7C9", // aUSDT
-        "0x52E6CFE2f0dF1a76b4110a1F0BF79e7149eAd9db", // aUSDTV2
       ],
       newGovTokens: [
         addresses.COMP[network],
@@ -150,25 +133,15 @@ module.exports = async (deployer, network, accounts) => {
     },
   ]
 
-  // for (let i = 0; i < allIdleTokens.length; i++) {
-  //   let it = await IdleTokenGovernance.at(allIdleTokens[i].idleTokenAddress);
-  //   console.log(await it.name(), it.address);
-  //   const pts = (await it.getAPRs())['0'];
-  //   console.log("protocol tokens:")
-  //   for (let j = 0; j < pts.length; j++) {
-  //     const pt = await IERC20Detailed.at(pts[j]);
-  //     console.log(pts[j], "-", await pt.name(), "- wrapper", await it.protocolWrappers(pts[j]))
-  //   };
-  //   console.log("--------------------\n\n")
-  // };
-
   const description = '#Update IdleToken implementation to update gov tokens management';
   const proposal = new Proposal(web3, description, addresses.forkProposer);
 
   // call upgradeAndCall on proxyAdmin
-  allIdleTokens.forEach(async attrs => {
+  for (var i = 0; i < allIdleTokens.length; i++) {
+    const attrs = allIdleTokens[i];
     const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
-    console.log("creating actions for", (await idleToken.name()), idleToken.address);
+    const idleTokenName = await idleToken.name();
+    console.log("creating actions for", idleTokenName, idleToken.address);
     const initMethodToCall = web3.eth.abi.encodeFunctionCall({
       name: "_init(address,address,address)",
       type: "function",
@@ -194,33 +167,45 @@ module.exports = async (deployer, network, accounts) => {
 
     if (attrs.protocolTokens !== undefined) {
       // setAllAvailableTokensAndWrappers
-      console.log("adding action setAllAvailableTokensAndWrappers");
+      const wrappers = attrs.wrappers || [];
+      if (wrappers.length === 0) {
+        for (var ptIndex = 0; ptIndex < attrs.protocolTokens.length; ptIndex++) {
+          const pt = attrs.protocolTokens[ptIndex];
+          const wrapper = await idleToken.protocolWrappers(pt);
+          console.log("wrapper for", pt, "is", wrapper)
+          wrappers.push(wrapper);
+        };
+      }
+
+      const calldataValues = [
+        attrs.protocolTokens,
+        wrappers,
+        attrs.newGovTokens,
+        attrs.newGovTokensEqualLen,
+      ];
+
+      console.log("adding action setAllAvailableTokensAndWrappers", idleTokenName, calldataValues);
       proposal.addAction({
         target: attrs.idleTokenAddress,
         value: toBN("0"),
         signature: "setAllAvailableTokensAndWrappers(address[],address[],address[],address[])",
         calldataParams: ["address[]", "address[]", "address[]", "address[]"],
-        calldataValues: [
-          attrs.protocolTokens,
-          attrs.wrappers,
-          attrs.newGovTokens,
-          attrs.newGovTokensEqualLen,
-        ],
+        calldataValues: calldataValues,
       });
     }
 
     console.log("-------------------\n\n");
-  });
+  }
 
   // call setCToken in idleWBTCV4
-  // console.log("adding action setCToken for idleWBTCV4");
-  // proposal.addAction({
-  //   target: addresses.idleWBTCV4,
-  //   value: toBN("0"),
-  //   signature: "setCToken(address)",
-  //   calldataParams: ["address"],
-  //   calldataValues: [addresses.cWBTCV2[network]],
-  // });
+  console.log("adding action setCToken for idleWBTCV4");
+  proposal.addAction({
+    target: addresses.idleWBTCV4,
+    value: toBN("0"),
+    signature: "setCToken(address)",
+    calldataParams: ["address"],
+    calldataValues: [addresses.cWBTCV2[network]],
+  });
 
   // if (network === "local") {
   //   await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
