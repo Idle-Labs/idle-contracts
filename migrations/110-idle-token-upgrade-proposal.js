@@ -47,11 +47,11 @@ module.exports = async (deployer, network, accounts) => {
     },
     {
       idleTokenAddress: addresses.idleSUSDV4,
-      aTokenAddress: addresses.addr0,
+      aTokenAddress: addresses.aSUSDV2[network],
     },
     {
       idleTokenAddress: addresses.idleTUSDV4,
-      aTokenAddress: addresses.addr0,
+      aTokenAddress: addresses.aTUSDV2[network],
     },
     {
       idleTokenAddress: addresses.idleWBTCV4,
@@ -135,7 +135,6 @@ module.exports = async (deployer, network, accounts) => {
     ],
   });
 
-  await askToContinue("continue?");
   if (network === "local") {
     await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
   }
@@ -144,7 +143,7 @@ module.exports = async (deployer, network, accounts) => {
     await askToContinue("continue?");
   }
 
-  await createProposal(network, proposal.toObject());
+  await createProposal(network, proposal);
 
   if (network === "local") {
     await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
