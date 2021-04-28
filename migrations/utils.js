@@ -96,7 +96,7 @@ const createProposal = async (network, proposal, executeDirectly) => {
   const getLatestPropsal = async gov => gov.proposalCount.call()
   const _createProposal = async (gov, {targets, values, signatures, calldatas, description, from}) => {
     let proposer = proposal.from;
-    console.log(`Proposing: ${description}`);
+    console.log(`Proposing: ${description} (${targets.length} actions)`);
     console.log("targets", targets);
     console.log("signatures", signatures);
     console.log("calldatas", calldatas);
