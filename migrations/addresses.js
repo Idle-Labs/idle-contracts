@@ -612,4 +612,5 @@ module.exports = {
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: idleTokenHelper,
+  priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5'
 };

@@ -22,6 +22,7 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
+  const newOracle = addresses.priceOracleV2;
   // TODO update addresses
   let idleTokenImplementationAddress = '0xd7fc6d0fb425e450d08220fed5cfa0ec1ddbaf2b';
   const idleTokenHelperAddress = addresses.idleTokenHelper;
