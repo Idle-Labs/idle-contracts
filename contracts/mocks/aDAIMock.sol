@@ -37,7 +37,7 @@ contract aDAIMock is AToken, ERC20, ERC20Detailed {
     _burn(user, amount);
     require(IERC20(dai).transfer(receiverOfUnderlying, amount), "Error during transfer");
   }
-  function getIncentivesController() external returns (address) {
+  function getIncentivesController() external view returns (address) {
     return controller;
   }
 }
