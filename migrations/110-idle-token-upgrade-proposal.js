@@ -207,22 +207,30 @@ module.exports = async (deployer, network, accounts) => {
     calldataValues: [addresses.cWBTCV2[network]],
   });
 
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
-  // }
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
+  }
 
   if (network === "live") {
     await askToContinue("continue?");
   }
 
-  await createProposal(network, proposal);
+  await createProposal(network, proposal, {
+    skipTimelock: false,
+    deployer: deployer,
+    ownedContracts: [
+      ...allIdleTokens.map(attrs => attrs.idleTokenAddress),
+      addresses.proxyAdmin,
+    ],
+  });
 
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
-  // }
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
+  }
 }
 
 const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
+  console.log("testing COMP gov tokens")
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
   const amount = toBN("1");
   const idleToken = await IdleTokenGovernance.at(addresses.idleWBTCV4);
@@ -240,7 +248,7 @@ const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
 
   await wbtc.approve(idleToken.address, amount, {from: user});
   await idleToken.mintIdleToken(amount, true, addresses.addr0, {from: user});
-  await advanceBlocks(10);
+  await advanceBlocks(1);
   await idleToken.redeemIdleToken(await idleToken.balanceOf(user), {from: user});
 
   const govTokensBalanceAfter = toBN(await comp.balanceOf(user));

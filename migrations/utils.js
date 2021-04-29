@@ -3,6 +3,9 @@ const Idle = artifacts.require("Idle")
 const IERC20 = artifacts.require("IERC20Detailed.sol");
 const VesterFactory = artifacts.require("VesterFactory.sol");
 const Vester = artifacts.require("Vester");
+const IOwnable = artifacts.require("IOwnable");
+const IdleTokenGovernance = artifacts.require("IdleTokenGovernance");
+const FakeTimelock = artifacts.require("FakeTimelock");
 const addresses = require("./addresses");
 const { time } = require('@openzeppelin/test-helpers');
 const BigNumber = require('bignumber.js');
@@ -58,42 +61,42 @@ const advanceBlocks = async n => {
   }
 }
 
-const executeProposalDirectly = async (network, proposal) => {
+const executeProposalDirectly = async (ownedContracts, deployer, network, proposal) => {
   await proposal.web3.eth.sendTransaction({from: addresses.whale, to: addresses.timelock, value: "1000000000000000000"});
+
+  await deployer.deploy(FakeTimelock);
+  const fakeTimelock = await FakeTimelock.deployed();
+
+  for (var i = 0; i < ownedContracts.length; i++) {
+    const c = await IOwnable.at(ownedContracts[i]);
+    await c.transferOwnership(fakeTimelock.address, { from: addresses.timelock });
+  };
+
   for (var i = 0; i < proposal.targets.length; i++) {
-    console.log(`executing proposal action ${i+1} of ${proposal.targets.length}`);
+    console.log(`skipping timelock and executing directly proposal action ${i+1} of ${proposal.targets.length}`);
     const target = proposal.targets[i];
     const value = proposal.values[i];
     const signature = proposal.signatures[i];
-    const calldataParams = proposal.calldataParams[i];
-    const calldataValues = proposal.calldataValues[i];
+    const calldata = proposal.calldatas[i];
 
-    const inputs = calldataParams.map((type, index) => ({
-      type: type,
-      name: `p${index}`
-    }))
-    console.log("inputs", inputs)
+    await fakeTimelock.executeTransaction(target, value, signature, calldata, { from: addresses.timelock });
+    console.log("done.");
+  };
 
-    const data = proposal.web3.eth.abi.encodeFunctionCall({
-      name: signature,
-      type: "function",
-      inputs: inputs,
-    }, calldataValues);
-
-    const tx = {
-      from: addresses.timelock,
-      to: target,
-      data: data,
-    }
-
-    console.log("tx:", tx)
-    await proposal.web3.eth.sendTransaction(tx)
-    console.log("done\n\n\n\n");
+  for (var i = 0; i < ownedContracts.length; i++) {
+    await fakeTimelock.transferOwnership(ownedContracts[i], addresses.timelock);
   };
 }
 
-const createProposal = async (network, proposal, executeDirectly) => {
-  const getLatestPropsal = async gov => gov.proposalCount.call()
+const createProposal = async (network, proposal, options) => {
+  options = options || {
+    skipTimelock: false,
+    deployer: null,
+    ownedContracts: [],
+  };
+
+  const getLatestPropsal = async gov => gov.proposalCount.call();
+
   const _createProposal = async (gov, {targets, values, signatures, calldatas, description, from}) => {
     let proposer = proposal.from;
     console.log(`Proposing: ${description} (${targets.length} actions)`);
@@ -132,8 +135,8 @@ const createProposal = async (network, proposal, executeDirectly) => {
     await advanceBlocks(2);
   };
 
-  if (executeDirectly) {
-    await executeProposalDirectly(network, proposal);
+  if (options.skipTimelock === true) {
+    await executeProposalDirectly(options.ownedContracts, options.deployer, network, proposal);
   } else {
     const govInstance = await IGovernorAlpha.at(addresses.governorAlpha);
     let proposer = proposal.from;
