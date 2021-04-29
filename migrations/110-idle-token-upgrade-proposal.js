@@ -77,77 +77,77 @@ module.exports = async (deployer, network, accounts) => {
         addresses.IDLE,
       ]
     },
-    // {
-    //   idleTokenAddress: addresses.idleUSDCV4,
-    //   aTokenAddress: addresses.aUSDCV2[network],
-    //   protocolTokens: [
-    //     addresses.cUSDC[network],
-    //     addresses.aUSDC[network],
-    //     addresses.yxUSDC[network],
-    //     addresses.aUSDCV2[network],
-    //   ],
-    //   newGovTokens: [
-    //     addresses.COMP[network],
-    //     addresses.stkAAVE[network],
-    //     addresses.IDLE,
-    //   ],
-    //   newGovTokensEqualLen: [
-    //     addresses.COMP[network], // for cUSDC
-    //     "0x0000000000000000000000000000000000000000", // for aUSDC
-    //     "0x0000000000000000000000000000000000000000", // for yxUSDC
-    //     addresses.stkAAVE[network], // for aUSDCV2
-    //     addresses.IDLE,
-    //   ]
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleUSDTV4,
-    //   aTokenAddress: addresses.aUSDTV2[network],
-    //   protocolTokens: [
-    //     addresses.cUSDT[network],
-    //     addresses.aUSDT[network],
-    //     addresses.aUSDTV2[network],
-    //   ],
-    //   newGovTokens: [
-    //     addresses.COMP[network],
-    //     addresses.stkAAVE[network],
-    //     addresses.IDLE,
-    //   ],
-    //   newGovTokensEqualLen: [
-    //     addresses.COMP[network], // for cUSDT
-    //     "0x0000000000000000000000000000000000000000", // for aUSDT
-    //     addresses.stkAAVE[network], // for aUSDTV2
-    //     addresses.IDLE,
-    //   ]
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleWBTCV4,
-    //   aTokenAddress: addresses.aWBTCV2[network],
-    //   protocolTokens: [
-    //     addresses.cWBTCV2[network],
-    //     addresses.aWBTC[network],
-    //     addresses.aWBTCV2[network]
-    //   ],
-    //   wrappers: [
-    //     "0xe5cb51e2d6682ff6b4d0b37cea7e66227dd15c4e", // cWBTC
-    //     "0xA91cF5B36A691bDA39640156B081CB71C3e9992E", // aWBTC v1
-    //     "0x69435730D6Af2249265C4fF578D89Ec4c827C475", // aWBTC v2
-    //   ],
-    //   newGovTokens: [
-    //     addresses.COMP[network],
-    //     addresses.stkAAVE[network],
-    //     addresses.IDLE,
-    //   ],
-    //   newGovTokensEqualLen: [
-    //     addresses.COMP[network], // for cWBTC
-    //     "0x0000000000000000000000000000000000000000", // for aWBTC
-    //     addresses.stkAAVE[network], // for aWBTCV2
-    //     addresses.IDLE,
-    //   ]
-    // },
-    // {
-    //   idleTokenAddress: addresses.idleWETHV4,
-    //   aTokenAddress: addresses.aWETH[network],
-    // },
+    {
+      idleTokenAddress: addresses.idleUSDCV4,
+      aTokenAddress: addresses.aUSDCV2[network],
+      protocolTokens: [
+        addresses.cUSDC[network],
+        addresses.aUSDC[network],
+        addresses.yxUSDC[network],
+        addresses.aUSDCV2[network],
+      ],
+      newGovTokens: [
+        addresses.COMP[network],
+        addresses.stkAAVE[network],
+        addresses.IDLE,
+      ],
+      newGovTokensEqualLen: [
+        addresses.COMP[network], // for cUSDC
+        "0x0000000000000000000000000000000000000000", // for aUSDC
+        "0x0000000000000000000000000000000000000000", // for yxUSDC
+        addresses.stkAAVE[network], // for aUSDCV2
+        addresses.IDLE,
+      ]
+    },
+    {
+      idleTokenAddress: addresses.idleUSDTV4,
+      aTokenAddress: addresses.aUSDTV2[network],
+      protocolTokens: [
+        addresses.cUSDT[network],
+        addresses.aUSDT[network],
+        addresses.aUSDTV2[network],
+      ],
+      newGovTokens: [
+        addresses.COMP[network],
+        addresses.stkAAVE[network],
+        addresses.IDLE,
+      ],
+      newGovTokensEqualLen: [
+        addresses.COMP[network], // for cUSDT
+        "0x0000000000000000000000000000000000000000", // for aUSDT
+        addresses.stkAAVE[network], // for aUSDTV2
+        addresses.IDLE,
+      ]
+    },
+    {
+      idleTokenAddress: addresses.idleWBTCV4,
+      aTokenAddress: addresses.aWBTCV2[network],
+      protocolTokens: [
+        addresses.cWBTCV2[network],
+        addresses.aWBTC[network],
+        addresses.aWBTCV2[network]
+      ],
+      wrappers: [
+        "0xe5cb51e2d6682ff6b4d0b37cea7e66227dd15c4e", // cWBTC
+        "0xA91cF5B36A691bDA39640156B081CB71C3e9992E", // aWBTC v1
+        "0x69435730D6Af2249265C4fF578D89Ec4c827C475", // aWBTC v2
+      ],
+      newGovTokens: [
+        addresses.COMP[network],
+        addresses.stkAAVE[network],
+        addresses.IDLE,
+      ],
+      newGovTokensEqualLen: [
+        addresses.COMP[network], // for cWBTC
+        "0x0000000000000000000000000000000000000000", // for aWBTC
+        addresses.stkAAVE[network], // for aWBTCV2
+        addresses.IDLE,
+      ]
+    },
+    {
+      idleTokenAddress: addresses.idleWETHV4,
+      aTokenAddress: addresses.aWETH[network],
+    },
   ]
 
   const description = '#Update IdleToken implementation to update gov tokens management';
@@ -246,7 +246,12 @@ module.exports = async (deployer, network, accounts) => {
   // }
 
   if (network === "local") {
-    await testStkAAVEGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's stkAAVE balance should increase");
+    for (var i = 0; i < allIdleTokens.length; i++) {
+      const attrs = allIdleTokens[i];
+      if (attrs.protocolTokens && attrs.protocolTokens.length > 0) {
+        await testStkAAVEGovTokens(network, accounts[1], checkIncreased, allIdleTokens[i], "after the proposal, user's stkAAVE balance should increase");
+      }
+    };
   }
 }
 
@@ -275,31 +280,57 @@ const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
   const govTokensBalanceAfter = toBN(await comp.balanceOf(user));
 
   checkFunc(govTokensBalanceBefore, govTokensBalanceAfter, testMessage);
+  console.log("---------------------------------");
 }
 
-const testStkAAVEGovTokens = async (network, user, checkFunc, testMessage) => {
-  console.log("testing stkAAVE gov tokens")
+const testStkAAVEGovTokens = async (network, user, checkFunc, attrs, testMessage) => {
+  const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
+  const idleTokenName = await idleToken.name();
+  console.log("testing stkAAVE gov tokens for ", idleTokenName);
+
+  let aTokenIndex = -1;
+  for (var i = 0; i < attrs.protocolTokens.length; i++) {
+    if (attrs.protocolTokens[i] === attrs.aTokenAddress) {
+      aTokenIndex = i;
+      break;
+    }
+  };
+
+  if (aTokenIndex < 0) {
+    throw("aToken not found");
+  }
+
+  console.log("aToken index", aTokenIndex);
+  const allocations = new Array(attrs.protocolTokens.length).fill(toBN("0"));
+  allocations[aTokenIndex] = toBN("100000");
+  console.log("allocations", allocations.map(a => a.toString()));
+
+  const underlying = await IERC20Detailed.at(await idleToken.token());
+
+  const decimals = toBN(await underlying.decimals());
+  const ONE = toBN("10").pow(toBN(decimals));
+  const fromUnits = u => toBN(u).times(ONE);
+
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
-  const amount = toBN("1000000");
-  const idleToken = await IdleTokenGovernance.at(addresses.idleDAIV4);
-  await idleToken.setAllocations([toBN("20000"), toBN("20000"), toBN("20000"), toBN("40000")], { from: addresses.timelock });
+  const amount = fromUnits("1");
+  await idleToken.setAllocations(allocations, { from: addresses.timelock });
 
   const stkAAVE = await IERC20.at(addresses.stkAAVE[network]);
-  const dai = await IdleTokenGovernance.at(addresses.DAI[network]);
 
   // whale sends amount to user
-  await dai.transfer(user, amount, { from: addresses.whale });
+  await underlying.transfer(user, amount, { from: addresses.whale });
 
   await idleToken.rebalance({ from: addresses.whale })
 
   const govTokensBalanceBefore = toBN(await stkAAVE.balanceOf(user));
 
-  await dai.approve(idleToken.address, amount, {from: user});
+  await underlying.approve(idleToken.address, amount, {from: user});
   await idleToken.mintIdleToken(amount, true, addresses.addr0, {from: user});
-  await advanceBlocks(1);
+  await advanceBlocks(10);
   await idleToken.redeemIdleToken(await idleToken.balanceOf(user), {from: user});
 
   const govTokensBalanceAfter = toBN(await stkAAVE.balanceOf(user));
 
   checkFunc(govTokensBalanceBefore, govTokensBalanceAfter, testMessage);
+  console.log("---------------------------------");
 }
