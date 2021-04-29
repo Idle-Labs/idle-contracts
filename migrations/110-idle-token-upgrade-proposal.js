@@ -24,18 +24,32 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   const newOracle = addresses.priceOracleV2;
-  // TODO update addresses
-  let idleTokenImplementationAddress = '0xd7fc6d0fb425e450d08220fed5cfa0ec1ddbaf2b';
-  let idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
+  // TODO update addresses and redeploy IdleTokenGovernance + IdleTokenHelper before prod
+  let idleTokenHelperAddress = addresses.idleTokenHelper;
+  let idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
 
-  if (network === "local") {
-    await deployer.deploy(IdleTokenGovernance);
-    idleTokenImplementation = await IdleTokenGovernance.deployed();
-    idleTokenImplementationAddress = idleTokenImplementation.address;
+  if (network == 'live' && (!idleTokenImplementationAddress || !idleTokenHelperAddress)) {
+    console.log('Deploy new IdleTokenGovernance and IdleTokenHelper');
+    return;
   }
 
-  const idleTokenHelperAddress = addresses.idleTokenHelper;
-  const idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
+  let idleTokenHelper;
+  let idleTokenImplementation;
+
+  if (network === "local") {
+    console.log('local network')
+    await deployer.deploy(IdleTokenGovernance);
+    idleTokenImplementation = await IdleTokenGovernance.deployed();
+    await deployer.deploy(IdleTokenHelper);
+    idleTokenHelper = await IdleTokenHelper.deployed();
+    idleTokenHelperAddress = idleTokenHelper.address;
+    idleTokenImplementationAddress = idleTokenImplementation.address;
+  } else {
+    console.log('Using IdleTokenHelper at ', idleTokenHelperAddress)
+    idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
+    console.log('Using IdleTokenGovernance at ', idleTokenImplementationAddress)
+    idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
+  }
 
   console.log("idle token helper deployed at", idleTokenHelperAddress);
   console.log("implementation deployed at", idleTokenImplementationAddress)
@@ -266,7 +280,7 @@ const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
 const testStkAAVEGovTokens = async (network, user, checkFunc, testMessage) => {
   console.log("testing stkAAVE gov tokens")
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
-  const amount = toBN("1");
+  const amount = toBN("1000000");
   const idleToken = await IdleTokenGovernance.at(addresses.idleDAIV4);
   await idleToken.setAllocations([toBN("20000"), toBN("20000"), toBN("20000"), toBN("40000")], { from: addresses.timelock });
 
@@ -278,7 +292,7 @@ const testStkAAVEGovTokens = async (network, user, checkFunc, testMessage) => {
 
   await idleToken.rebalance({ from: addresses.whale })
 
-  const govTokensBalanceBefore = toBN(await dai.balanceOf(user));
+  const govTokensBalanceBefore = toBN(await stkAAVE.balanceOf(user));
 
   await dai.approve(idleToken.address, amount, {from: user});
   await idleToken.mintIdleToken(amount, true, addresses.addr0, {from: user});
