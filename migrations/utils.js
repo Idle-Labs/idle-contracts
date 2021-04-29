@@ -61,12 +61,22 @@ const advanceBlocks = async n => {
   }
 }
 
-const executeProposalDirectly = async (ownedContracts, deployer, network, proposal) => {
+const executeProposalDirectly = async (network, ownedContracts, deployer, proposal) => {
+  console.log("\n\n**********************************************");
+  console.log("Executing proposal directly skipping timelock");
+  console.log("**********************************************\n\n");
+  if (network !== "local") {
+    throw("you can execute proposal directly only in local network");
+  }
+
   await proposal.web3.eth.sendTransaction({from: addresses.whale, to: addresses.timelock, value: "1000000000000000000"});
 
   await deployer.deploy(FakeTimelock);
   const fakeTimelock = await FakeTimelock.deployed();
 
+  console.log("\n\n********************************************************");
+  console.log("Changing owner of ownedContracts to fakeTimelock");
+  console.log("********************************************************\n\n");
   for (var i = 0; i < ownedContracts.length; i++) {
     const c = await IOwnable.at(ownedContracts[i]);
     await c.transferOwnership(fakeTimelock.address, { from: addresses.timelock });
@@ -83,6 +93,9 @@ const executeProposalDirectly = async (ownedContracts, deployer, network, propos
     console.log("done.");
   };
 
+  console.log("\n\n********************************************************");
+  console.log("Changing owner of ownedContracts back to real timelock");
+  console.log("********************************************************\n\n");
   for (var i = 0; i < ownedContracts.length; i++) {
     await fakeTimelock.transferOwnership(ownedContracts[i], addresses.timelock);
   };
@@ -94,6 +107,10 @@ const createProposal = async (network, proposal, options) => {
     deployer: null,
     ownedContracts: [],
   };
+
+  if (network !== "local" && options.skipTimelock === true) {
+    throw("you can skip timelock only in local network");
+  }
 
   const getLatestPropsal = async gov => gov.proposalCount.call();
 
@@ -136,7 +153,7 @@ const createProposal = async (network, proposal, options) => {
   };
 
   if (options.skipTimelock === true) {
-    await executeProposalDirectly(options.ownedContracts, options.deployer, network, proposal);
+    await executeProposalDirectly(network, options.ownedContracts, options.deployer, proposal);
   } else {
     const govInstance = await IGovernorAlpha.at(addresses.governorAlpha);
     let proposer = proposal.from;
