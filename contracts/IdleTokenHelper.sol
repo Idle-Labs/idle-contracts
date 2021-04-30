@@ -63,7 +63,7 @@ contract IdleTokenHelper {
       return PriceOracle(idleToken.oracle()).getCompApr(_cToken, idleToken.token());
     }
     if (_govToken == stkAAVE && _aToken != address(0)) {
-      return PriceOracle(idleToken.oracle()).getStkAaveApr(_cToken, idleToken.token());
+      return PriceOracle(idleToken.oracle()).getStkAaveApr(_aToken, idleToken.token());
     }
   }
 
