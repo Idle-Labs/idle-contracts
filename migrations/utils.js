@@ -46,7 +46,7 @@ const check = (a, b, message) => {
 
 const checkIncreased = (a, b, message) => {
   let [icon, symbol] = b.gt(a) ? ["✔️", ">"] : ["🚨🚨🚨", "<="];
-  console.log(`${icon}  `, a.toString(), symbol, b.toString(), message ? message : "");
+  console.log(`${icon}  `, b.toString(), symbol, a.toString(), message ? message : "");
 }
 
 const advanceBlocks = async n => {
