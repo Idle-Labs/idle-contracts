@@ -224,7 +224,7 @@ module.exports = async (deployer, network, accounts) => {
     calldataValues: [addresses.cWBTCV2[network]],
   });
 
-  COMP
+  // COMP
   if (network === "local") {
     await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
   }
@@ -286,7 +286,7 @@ module.exports = async (deployer, network, accounts) => {
 const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
   console.log("testing COMP gov tokens")
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
-  const amount = toBN("1");
+  const amount = toBN("100000000");
   const idleToken = await IdleTokenGovernance.at(addresses.idleWBTCV4);
   await idleToken.setAllocations([toBN("20000"), toBN("20000"), toBN("60000")], { from: addresses.timelock });
 
