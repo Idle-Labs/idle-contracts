@@ -8,4 +8,5 @@ interface PriceOracle {
   function WETH() external view returns (address);
 
   function getCompApr(address cToken, address token) external view returns (uint256);
+  function getStkAaveApr(address aToken, address token) external view returns (uint256);
 }

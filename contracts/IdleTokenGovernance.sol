@@ -127,11 +127,24 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   address private aToken;
   // ########## End IdleToken V5 updates
 
-  function _init(address _tokenHelper, address _aToken) external {
-    require(tokenHelper == address(0), 'DONE');
+  // ERROR MESSAGES:
+  // 0 = is 0
+  // 1 = already initialized
+  // 2 = length is different
+  // 3 = Not greater then
+  // 4 = lt
+  // 5 = too high
+  // 6 = not authorized
+  // 7 = not equal
+  // 8 = error on flash loan execution
+  // 9 = Reentrancy
+
+  function _init(address _tokenHelper, address _aToken, address _newOracle) external {
+    require(tokenHelper == address(0), '1');
     tokenHelper = _tokenHelper;
     flashLoanFee = 80; // 0.08%
     aToken = _aToken;
+    oracle = _newOracle;
   }
 
   // onlyOwner
@@ -152,8 +165,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     address[] calldata _newGovTokens,
     address[] calldata _newGovTokensEqualLen
   ) external onlyOwner {
-    require(protocolTokens.length == wrappers.length, "LEN");
-    require(_newGovTokensEqualLen.length >= protocolTokens.length, '!>=');
+    require(protocolTokens.length == wrappers.length, "2");
+    require(_newGovTokensEqualLen.length >= protocolTokens.length, '3');
 
     govTokens = _newGovTokens;
 
@@ -181,7 +194,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function setFlashLoanFee(uint256 _flashFee)
     external onlyOwner {
-      require((flashLoanFee = _flashFee) < FULL_ALLOC, "<");
+      require((flashLoanFee = _flashFee) < FULL_ALLOC, "4");
   }
 
   /**
@@ -222,7 +235,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function setFee(uint256 _fee)
     external onlyOwner {
       // 100000 == 100% -> 10000 == 10%
-      require((fee = _fee) <= FULL_ALLOC / 10, "HIGH");
+      require((fee = _fee) <= FULL_ALLOC / 10, "5");
   }
 
   /**
@@ -252,7 +265,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    */
   function setMaxUnlentPerc(uint256 _perc)
     external onlyOwner {
-      require((maxUnlentPerc = _perc) <= 100000, "HIGH");
+      require((maxUnlentPerc = _perc) <= 100000, "5");
   }
 
   /**
@@ -261,7 +274,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @param _allocations : array with allocations in percentages (100% => 100000)
    */
   function setAllocations(uint256[] calldata _allocations) external {
-    require(msg.sender == rebalancer || msg.sender == owner(), "!AUTH");
+    require(msg.sender == rebalancer || msg.sender == owner(), "6");
     _setAllocations(_allocations);
   }
 
@@ -271,13 +284,13 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @param _allocations : array with allocations in percentages (100% => 100000)
    */
   function _setAllocations(uint256[] memory _allocations) internal {
-    require(_allocations.length == allAvailableTokens.length, "LEN");
+    require(_allocations.length == allAvailableTokens.length, "2");
     uint256 total;
     for (uint256 i = 0; i < _allocations.length; i++) {
       total = total.add(_allocations[i]);
     }
     lastRebalancerAllocations = _allocations;
-    require(total == FULL_ALLOC, "TOT");
+    require(total == FULL_ALLOC, "7");
   }
 
   // view
@@ -364,7 +377,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function getAvgAPR()
     public view
     returns (uint256) {
-    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken);
+    return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken, aToken);
   }
 
   /**
@@ -622,7 +635,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @return The amount of `token` to be charged for the loan, on top of the returned principal.
    */
   function flashFee(address _token, uint256 _amount) public view returns (uint256) {
-    require(_token == token, '!EQ');
+    require(_token == token, '7');
     return _amount.mul(flashLoanFee).div(FULL_ALLOC);
   }
 
@@ -652,7 +665,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     bytes calldata _params
   ) external whenNotPaused nonReentrant returns (bool) {
     address receiverAddr = address(_receiver);
-    require(_token == token, "!EQ");
+    require(_token == token, "7");
     require(receiverAddr != address(0) && _amount > 0, "0");
 
     // get current underlying unlent balance
@@ -707,7 +720,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
     }
 
-    require(_contractBalanceOf(token) >= _amount, "LOW");
+    require(_contractBalanceOf(token) >= _amount, "3");
     // transfer funds
     _transferTokens(token, receiverAddr, _amount);
     // calculate fee
@@ -715,7 +728,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     // call _receiver `onFlashLoan`
     require(
       _receiver.onFlashLoan(msg.sender, token, _amount, _flashFee, _params) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
-      "EXEC"
+      "8"
     );
     // transfer _amount + _flashFee from _receiver
     IERC20(token).safeTransferFrom(receiverAddr, address(this), _amount.add(_flashFee));
@@ -1164,7 +1177,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * Check that no mint has been made in the same block from the same EOA
    */
   function _checkMintRedeemSameTx() private view {
-    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "REE");
+    require(keccak256(abi.encodePacked(tx.origin, block.number)) != _minterBlock, "9");
   }
 
   // ILendingProtocols calls

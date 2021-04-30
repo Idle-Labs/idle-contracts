@@ -526,8 +526,6 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 
-const idleTokenHelper = "0x49be976220048174Cc7551dfb0be371746d5784e";
-
 module.exports = {
   creator: process.env.CREATOR,
   rebalancerManager: process.env.REBALANCE_MANAGER,
@@ -611,5 +609,7 @@ module.exports = {
   bountyAddressForEB: '0x394495a3800d1504b5686d398836baefebd0c5b7',
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
-  idleTokenHelper: idleTokenHelper,
+  idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
+  lastIdleTokenImplementation: '0x2854a270fe9c839ffe453e9178d1cfef109d6b8e',
+  priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5'
 };

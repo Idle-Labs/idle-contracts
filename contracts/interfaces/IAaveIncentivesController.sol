@@ -19,4 +19,5 @@ interface IAaveIncentivesController {
    * @return the unclaimed user rewards
    */
   function getUserUnclaimedRewards(address user) external view returns (uint256);
+  function getAssetData(address asset) external view returns (uint256, uint256, uint256);
 }
