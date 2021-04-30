@@ -215,23 +215,38 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   // call setCToken in idleWBTCV4
-  // console.log("adding action setCToken for idleWBTCV4");
-  // proposal.addAction({
-  //   target: addresses.idleWBTCV4,
-  //   value: toBN("0"),
-  //   signature: "setCToken(address)",
-  //   calldataParams: ["address"],
-  //   calldataValues: [addresses.cWBTCV2[network]],
-  // });
+  console.log("adding action setCToken for idleWBTCV4");
+  proposal.addAction({
+    target: addresses.idleWBTCV4,
+    value: toBN("0"),
+    signature: "setCToken(address)",
+    calldataParams: ["address"],
+    calldataValues: [addresses.cWBTCV2[network]],
+  });
 
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
-  // }
+  COMP
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
+  }
 
   if (network === "live") {
     await askToContinue("continue?");
   }
 
+  const aprsBefore = {};
+
+  // APR
+  if (network === "local") {
+    for (var i = 0; i < allIdleTokens.length; i++) {
+      const attrs = allIdleTokens[i];
+      const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
+      const idleTokenName = await idleToken.name();
+      const apr = toBN(await idleToken.getAvgAPR());
+      aprsBefore[attrs.idleTokenAddress] = apr;
+    };
+  }
+
+  // CREATE PROPOSAL
   await createProposal(network, proposal, {
     skipTimelock: false,
     deployer: deployer,
@@ -241,10 +256,23 @@ module.exports = async (deployer, network, accounts) => {
     ],
   });
 
-  // if (network === "local") {
-  //   await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
-  // }
+  // COMP
+  if (network === "local") {
+    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
+  }
 
+  // APR
+  if (network === "local") {
+    for (var i = 0; i < allIdleTokens.length; i++) {
+      const attrs = allIdleTokens[i];
+      const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
+      const idleTokenName = await idleToken.name();
+      const apr = toBN(await idleToken.getAvgAPR());
+      checkIncreased(aprsBefore[attrs.idleTokenAddress], apr, `apr for ${idleTokenName} should increase after the proposal.`);
+    };
+  }
+
+  // stkAAVE
   if (network === "local") {
     for (var i = 0; i < allIdleTokens.length; i++) {
       const attrs = allIdleTokens[i];
@@ -312,7 +340,7 @@ const testStkAAVEGovTokens = async (network, user, checkFunc, attrs, testMessage
   const fromUnits = u => toBN(u).times(ONE);
 
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
-  const amount = fromUnits("1");
+  const amount = fromUnits("10");
   await idleToken.setAllocations(allocations, { from: addresses.timelock });
 
   const stkAAVE = await IERC20.at(addresses.stkAAVE[network]);
