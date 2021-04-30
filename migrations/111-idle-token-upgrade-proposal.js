@@ -24,35 +24,15 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   const newOracle = addresses.priceOracleV2;
-  // TODO update addresses and redeploy IdleTokenGovernance + IdleTokenHelper before prod
-  let idleTokenHelperAddress = addresses.idleTokenHelper;
-  let idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
 
-  if (network == 'live' && (!idleTokenImplementationAddress || !idleTokenHelperAddress)) {
-    console.log('Deploy new IdleTokenGovernance and IdleTokenHelper');
-    return;
-  }
+  const idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
+  const idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
+  console.log('Using IdleTokenGovernance at ', idleTokenImplementationAddress)
 
-  let idleTokenHelper;
-  let idleTokenImplementation;
 
-  if (network === "local") {
-    console.log('local network')
-    await deployer.deploy(IdleTokenGovernance);
-    idleTokenImplementation = await IdleTokenGovernance.deployed();
-    await deployer.deploy(IdleTokenHelper);
-    idleTokenHelper = await IdleTokenHelper.deployed();
-    idleTokenHelperAddress = idleTokenHelper.address;
-    idleTokenImplementationAddress = idleTokenImplementation.address;
-  } else {
-    console.log('Using IdleTokenHelper at ', idleTokenHelperAddress)
-    idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
-    console.log('Using IdleTokenGovernance at ', idleTokenImplementationAddress)
-    idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
-  }
-
-  console.log("idle token helper deployed at", idleTokenHelperAddress);
-  console.log("implementation deployed at", idleTokenImplementationAddress)
+  const idleTokenHelperAddress = addresses.idleTokenHelper;
+  const idleTokenHelper = await IdleTokenHelper.at(idleTokenHelperAddress);
+  console.log('Using IdleTokenHelper at ', idleTokenHelperAddress)
 
   const allIdleTokens = [
     {
