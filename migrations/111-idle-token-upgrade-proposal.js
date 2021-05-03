@@ -23,6 +23,11 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
+  const proposer = network === 'live' ?
+    addresses.mainnetProposer : addresses.forkProposer;
+
+  console.log('Proposer: ', proposer);
+
   const newOracle = addresses.priceOracleV2;
 
   const idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
@@ -130,8 +135,8 @@ module.exports = async (deployer, network, accounts) => {
     },
   ]
 
-  const description = '#Update IdleToken implementation to update gov tokens management';
-  const proposal = new Proposal(web3, description, addresses.forkProposer);
+  const description = '#IIP-7 [Part 1] Update IdleToken implementation to DAI, USDC, USDT, WBTC, WETH';
+  const proposal = new Proposal(web3, description, proposer);
 
   // call upgradeAndCall on proxyAdmin
   for (var i = 0; i < allIdleTokens.length; i++) {
@@ -196,6 +201,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // call setCToken in idleWBTCV4
   console.log("adding action setCToken for idleWBTCV4");
+  console.log('CToken', addresses.cWBTCV2[network]);
   proposal.addAction({
     target: addresses.idleWBTCV4,
     value: toBN("0"),

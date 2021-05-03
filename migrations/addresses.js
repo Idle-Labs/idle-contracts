@@ -611,5 +611,6 @@ module.exports = {
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
   lastIdleTokenImplementation: '0x2854a270fe9c839ffe453e9178d1cfef109d6b8e',
-  priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5'
+  priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
+  mainnetProposer: '',
 };
