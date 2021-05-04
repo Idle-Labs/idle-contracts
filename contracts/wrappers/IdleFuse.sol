@@ -17,6 +17,8 @@ import "./IdleCompoundLike.sol";
 
 // This contract should be deployed with a minimal proxy factory
 contract IdleFuse is IdleCompoundLike {
+  using SafeMath for uint256;
+
   /**
    * Calculate next supply rate for Fuse, given an `_amount` supplied
    *
@@ -31,8 +33,8 @@ contract IdleFuse is IdleCompoundLike {
       uint256 ratePerBlock = white.getSupplyRate(
         cToken.getCash().add(_amount),
         cToken.totalBorrows(),
-        cToken.totalReserves() + cToken.totalFuseFees() + cToken.totalAdminFees(),
-        cToken.reserveFactorMantissa() + cToken.fuseFeeMantissa() + cToken.adminFeeMantissa()
+        cToken.totalReserves().add(cToken.totalFuseFees()).add(cToken.totalAdminFees()),
+        cToken.reserveFactorMantissa().add(cToken.fuseFeeMantissa()).add(cToken.adminFeeMantissa())
       );
       return ratePerBlock.mul(blocksPerYear).mul(100);
   }

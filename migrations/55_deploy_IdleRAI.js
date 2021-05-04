@@ -33,7 +33,7 @@ module.exports = async function(deployer, network, accounts) {
     return;
   }
 
-  const deployWrapperProxy = async (implementationAddress, tokenAddress, idleTokenAddress, ownerAddress, from) => {
+  const deployWrapperProxy = async (proxyFactory, implementationAddress, tokenAddress, idleTokenAddress, ownerAddress, from) => {
     const initSig = "initialize(address,address,address)";
     const initData = web3.eth.abi.encodeParameters(
       ["address", "address", "address"],
@@ -60,6 +60,7 @@ module.exports = async function(deployer, network, accounts) {
 
   const idleTokenAddress = '0x5C960a3DCC01BE8a0f49c02A8ceBCAcf5D07fABe';
   const idleToken = await IdleTokenV3_1.at(idleTokenAddress);
+
   const proxyFactory = await MinimalInitializableProxyFactory.at(minimalInitializableProxyFactory);
 
   console.log('idleTokenAddress', idleTokenAddress);
@@ -73,7 +74,7 @@ module.exports = async function(deployer, network, accounts) {
   // deploy wrapper proxies
   // cream
   console.log("deploying cream wrapper via proxy factory");
-  const creamWrapperAddress = await deployWrapperProxy(idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
+  const creamWrapperAddress = await deployWrapperProxy(proxyFactory, idleCompoundLikeInstance.address, crRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("creamWrapperAddress", creamWrapperAddress);
 
   // deploy IdleFuse implementation
@@ -84,7 +85,7 @@ module.exports = async function(deployer, network, accounts) {
 
   // fuse
   console.log("deploying fuse wrapper via proxy factory");
-  const fuseWrapperAddress = await deployWrapperProxy(idleFuseInstance.address, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
+  const fuseWrapperAddress = await deployWrapperProxy(proxyFactory, idleFuseInstanceAddress, fuseRAI[network], idleTokenAddress, idleTokenAddress, creator);
   console.log("fuseWrapperAddress", fuseWrapperAddress);
 
   const creamRAIInstance = await IdleCompoundLike.at(creamWrapperAddress);
