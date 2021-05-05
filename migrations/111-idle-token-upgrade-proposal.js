@@ -212,7 +212,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // COMP
   if (network === "local") {
-    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0");
+    await testCompGovTokens(network, accounts[0], check, "before the proposal, user's COMP balance should stay at 0", [toBN("0"), toBN("40000"), toBN("60000")]);
   }
 
   if (network === "live") {
@@ -244,7 +244,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // COMP
   if (network === "local") {
-    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase");
+    await testCompGovTokens(network, accounts[1], checkIncreased, "after the proposal, user's COMP balance should increase", [toBN("20000"), toBN("20000"), toBN("60000")]);
   }
 
   // APR
@@ -269,12 +269,12 @@ module.exports = async (deployer, network, accounts) => {
   }
 }
 
-const testCompGovTokens = async (network, user, checkFunc, testMessage) => {
+const testCompGovTokens = async (network, user, checkFunc, testMessage, allocations) => {
   console.log("testing COMP gov tokens")
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });
   const amount = toBN("100000000");
   const idleToken = await IdleTokenGovernance.at(addresses.idleWBTCV4);
-  await idleToken.setAllocations([toBN("20000"), toBN("20000"), toBN("60000")], { from: addresses.timelock });
+  await idleToken.setAllocations(allocations, { from: addresses.timelock });
 
   const comp = await IERC20.at(addresses.COMP[network]);
   const wbtc = await IdleTokenGovernance.at(addresses.WBTC[network]);
