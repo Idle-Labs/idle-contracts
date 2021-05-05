@@ -181,7 +181,7 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     token = _token;
     tokenDecimals = ERC20Detailed(_token).decimals();
     // end of old initialize method
-    oracle = address(0x972A64d108e250dF98dbeac8170678501f5EF181);
+    oracle = address(0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
     feeAddress = address(0xBecC659Bfc6EDcA552fa1A67451cC6b38a0108E4);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
     fee = 10000;
