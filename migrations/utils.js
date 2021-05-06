@@ -120,6 +120,7 @@ const createProposal = async (network, proposal, options) => {
     console.log("targets", targets);
     console.log("signatures", signatures);
     console.log("calldatas", calldatas);
+    console.log("calling gov.propose");
     await gov.propose(targets, values, signatures, calldatas, description,
       {from}
     );
@@ -147,6 +148,7 @@ const createProposal = async (network, proposal, options) => {
     await advanceBlocks(1)
     console.log("advanced 1")
 
+    console.log("calling gov.execute");
     await gov.execute(proposalId);
     console.log('executed');
     await advanceBlocks(2);

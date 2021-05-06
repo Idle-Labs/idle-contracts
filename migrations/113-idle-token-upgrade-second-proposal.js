@@ -131,6 +131,14 @@ module.exports = async (deployer, network, accounts) => {
     console.log("-------------------\n\n");
   }
 
+  proposal.addAction({
+    target: addresses.idleController,
+    value: toBN("0"),
+    signature: "_setPriceOracle(address)",
+    calldataParams: ["address"],
+    calldataValues: [addresses.priceOracleV2],
+  });
+
   if (network === "live") {
     await askToContinue("continue?");
   }
@@ -152,7 +160,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // CREATE PROPOSAL
   await createProposal(network, proposal, {
-    skipTimelock: true,
+    skipTimelock: false,
     deployer: deployer,
     ownedContracts: [
       ...allIdleTokens.map(attrs => attrs.idleTokenAddress),
