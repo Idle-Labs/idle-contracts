@@ -36,6 +36,7 @@ module.exports = async (deployer, network, accounts) => {
 
   const allIdleTokens = [
     {
+      upgrade: false,
       idleTokenAddress: addresses.idleWETHV4,
       aTokenAddress: addresses.aWETH[network],
       protocolTokens: [
@@ -58,10 +59,12 @@ module.exports = async (deployer, network, accounts) => {
       ]
     },
     {
+      upgrade: true,
       idleTokenAddress: addresses.idleSUSDV4,
       aTokenAddress: addresses.aSUSDV2[network],
     },
     {
+      upgrade: true,
       idleTokenAddress: addresses.idleTUSDV4,
       aTokenAddress: addresses.aTUSDV2[network],
     },
@@ -76,28 +79,31 @@ module.exports = async (deployer, network, accounts) => {
     const idleToken = await IdleTokenGovernance.at(attrs.idleTokenAddress);
     const idleTokenName = await idleToken.name();
     console.log("creating actions for", idleTokenName, idleToken.address);
-    const initMethodToCall = web3.eth.abi.encodeFunctionCall({
-      name: "_init(address,address,address)",
-      type: "function",
-      inputs: [
-        { type: "address", name: "_tokenHelper" },
-        { type: "address", name: "_aToken" },
-        { type: "address", name: "_newOracle" },
-      ]
-    }, [idleTokenHelperAddress, attrs.aTokenAddress, addresses.priceOracleV2]);
 
-    console.log("_init params:")
-    console.log("idleTokenAddress:", attrs.idleTokenAddress)
-    console.log("aTokenAddress:", attrs.aTokenAddress)
+    if (attrs.upgrade) {
+      const initMethodToCall = web3.eth.abi.encodeFunctionCall({
+        name: "_init(address,address,address)",
+        type: "function",
+        inputs: [
+          { type: "address", name: "_tokenHelper" },
+          { type: "address", name: "_aToken" },
+          { type: "address", name: "_newOracle" },
+        ]
+      }, [idleTokenHelperAddress, attrs.aTokenAddress, addresses.priceOracleV2]);
 
-    console.log("adding action upgradeAndCall calling _init");
-    proposal.addAction({
-      target: addresses.proxyAdmin,
-      value: toBN("0"),
-      signature: "upgradeAndCall(address,address,bytes)",
-      calldataParams: ["address", "address", "bytes"],
-      calldataValues: [attrs.idleTokenAddress, idleTokenImplementationAddress, initMethodToCall]
-    });
+      console.log("_init params:")
+      console.log("idleTokenAddress:", attrs.idleTokenAddress)
+      console.log("aTokenAddress:", attrs.aTokenAddress)
+
+      console.log("adding action upgradeAndCall calling _init");
+      proposal.addAction({
+        target: addresses.proxyAdmin,
+        value: toBN("0"),
+        signature: "upgradeAndCall(address,address,bytes)",
+        calldataParams: ["address", "address", "bytes"],
+        calldataValues: [attrs.idleTokenAddress, idleTokenImplementationAddress, initMethodToCall]
+      });
+    }
 
     if (attrs.protocolTokens !== undefined) {
       // setAllAvailableTokensAndWrappers
@@ -139,6 +145,29 @@ module.exports = async (deployer, network, accounts) => {
     calldataValues: [addresses.priceOracleV2],
   });
 
+
+  const weth = await IERC20Detailed.at(addresses.WETH[network]);
+  const idle = await IERC20Detailed.at(addresses.IDLE);
+
+  const treasuryMultisigWETHBalance = toBN(await weth.balanceOf(addresses.treasuryMultisig));
+  const treasuryMultisigIDLEBalance = toBN(await idle.balanceOf(addresses.treasuryMultisig));
+
+  proposal.addAction({
+    target: addresses.feeTreasury,
+    value: toBN("0"),
+    signature: "transfer(address,address,uint256)",
+    calldataParams: ["address", "address", "uint256"],
+    calldataValues: [weth.address, addresses.treasuryMultisig, toBN("1")],
+  });
+
+  proposal.addAction({
+    target: addresses.ecosystemFund,
+    value: toBN("0"),
+    signature: "transfer(address,address,uint256)",
+    calldataParams: ["address", "address", "uint256"],
+    calldataValues: [idle.address, addresses.treasuryMultisig, toBN("1")],
+  });
+
   if (network === "live") {
     await askToContinue("continue?");
   }
@@ -165,8 +194,13 @@ module.exports = async (deployer, network, accounts) => {
     ownedContracts: [
       ...allIdleTokens.map(attrs => attrs.idleTokenAddress),
       addresses.proxyAdmin,
+      addresses.feeTreasury,
+      addresses.ecosystemFund,
     ],
   });
+
+  checkIncreased(treasuryMultisigWETHBalance, toBN(await weth.balanceOf(addresses.treasuryMultisig)), "treasury multisig WETH balance should increase");
+  checkIncreased(treasuryMultisigIDLEBalance, toBN(await idle.balanceOf(addresses.treasuryMultisig)), "treasury multisig IDLE balance should increase");
 
   // APR
   if (network === "local") {

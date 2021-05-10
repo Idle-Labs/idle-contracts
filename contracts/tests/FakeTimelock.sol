@@ -14,7 +14,7 @@ contract FakeTimelock {
 
     // solium-disable-next-line security/no-call-value
     (bool success, bytes memory returnData) = target.call(callData);
-    require(success, "Timelock::executeTransaction: Transaction execution reverted.");
+    require(success, "FakeTimelock::executeTransaction: Transaction execution reverted.");
 
     return returnData;
   }

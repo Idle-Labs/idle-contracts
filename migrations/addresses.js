@@ -613,4 +613,6 @@ module.exports = {
   lastIdleTokenImplementation: '0x2854a270fe9c839ffe453e9178d1cfef109d6b8e',
   priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
   mainnetProposer: '',
+  feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
+  treasuryMultisig: "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
 };
