@@ -73,11 +73,13 @@ module.exports = async (deployer, network, accounts) => {
     },
     {
       upgrade: true,
+      initialize: true,
       idleTokenAddress: addresses.idleSUSDV4,
       aTokenAddress: addresses.aSUSDV2[network],
     },
     {
       upgrade: true,
+      initialize: true,
       idleTokenAddress: addresses.idleTUSDV4,
       aTokenAddress: addresses.aTUSDV2[network],
     },
