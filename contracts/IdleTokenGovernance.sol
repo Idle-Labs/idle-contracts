@@ -800,23 +800,23 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       }
 
       uint256 maxUnlentBalance = _getCurrentPoolValue().mul(maxUnlentPerc).div(FULL_ALLOC);
-      if (balance > maxUnlentBalance) {
-        // mint the difference
-        _mintWithAmounts(rebalancerLastAllocations, balance.sub(maxUnlentBalance));
-      }
 
       if (areAllocationsEqual) {
+        if (balance > maxUnlentBalance) {
+          // mint the difference
+          _mintWithAmounts(rebalancerLastAllocations, balance.sub(maxUnlentBalance));
+        }
         return false;
       }
 
       // Instead of redeeming everything during rebalance we redeem and mint only what needs
       // to be reallocated
+
       // get current allocations in underlying (it does not count unlent underlying)
       (uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
 
-      if (balance == 0 && maxUnlentPerc > 0) {
-        totalInUnderlying = totalInUnderlying.sub(maxUnlentBalance);
-      }
+      // calculate the total amount in underlying that needs to be reallocated
+      totalInUnderlying = totalInUnderlying.add(balance).sub(maxUnlentBalance);
 
       (uint256[] memory toMintAllocations, uint256 totalToMint, bool lowLiquidity) = _redeemAllNeeded(
         amounts,
