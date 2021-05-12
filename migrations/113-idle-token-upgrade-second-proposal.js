@@ -208,7 +208,7 @@ module.exports = async (deployer, network, accounts) => {
     value: toBN("0"),
     signature: "transfer(address,address,uint256)",
     calldataParams: ["address", "address", "uint256"],
-    calldataValues: [weth.address, addresses.treasuryMultisig, IDLEtoTransfer],
+    calldataValues: [weth.address, addresses.treasuryMultisig, WETHtoTransfer],
   });
 
   proposal.addAction({
@@ -216,7 +216,7 @@ module.exports = async (deployer, network, accounts) => {
     value: toBN("0"),
     signature: "transfer(address,address,uint256)",
     calldataParams: ["address", "address", "uint256"],
-    calldataValues: [idle.address, addresses.treasuryMultisig, WETHtoTransfer],
+    calldataValues: [idle.address, addresses.treasuryMultisig, IDLEtoTransfer],
   });
 
   if (network === "live") {
