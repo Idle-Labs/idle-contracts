@@ -198,8 +198,10 @@ module.exports = async (deployer, network, accounts) => {
   const treasuryMultisigIDLEBalance = toBN(await idle.balanceOf(addresses.treasuryMultisig));
 
   // TODO update value
-  const IDLEtoTransfer = toBN("1");
-  const WETHtoTransfer = toBN("1");
+  const IDLEtoTransfer = toBN(web3.utils.toWei("11008", "ether")); // 11,008 IDLE
+  const WETHtoTransfer = toBN(web3.utils.toWei("6.38", "ether")); // 6.38 ETH
+  console.log("IDLEtoTransfer", IDLEtoTransfer.toString());
+  console.log("WETHtoTransfer", WETHtoTransfer.toString());
 
   proposal.addAction({
     target: addresses.feeTreasury,
