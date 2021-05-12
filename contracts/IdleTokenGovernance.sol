@@ -816,7 +816,11 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       (uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
 
       // calculate the total amount in underlying that needs to be reallocated
-      totalInUnderlying = totalInUnderlying.add(balance).sub(maxUnlentBalance);
+      totalInUnderlying = totalInUnderlying.add(balance);
+
+      if (totalInUnderlying > maxUnlentPerc) {
+        totalInUnderlying = totalInUnderlying.sub(maxUnlentBalance);
+      }
 
       (uint256[] memory toMintAllocations, uint256 totalToMint, bool lowLiquidity) = _redeemAllNeeded(
         amounts,
