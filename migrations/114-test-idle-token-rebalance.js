@@ -22,13 +22,13 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   const idleTokens = [
-    // addresses.idleDAIV4,
+    addresses.idleDAIV4,
     addresses.idleUSDCV4,
     addresses.idleUSDTV4,
-    // addresses.idleSUSDV4,
-    // addresses.idleTUSDV4,
-    // addresses.idleWBTCV4,
-    // addresses.idleWETHV4,
+    addresses.idleSUSDV4,
+    addresses.idleTUSDV4,
+    addresses.idleWBTCV4,
+    addresses.idleWETHV4,
   ]
 
   await web3.eth.sendTransaction({ from: addresses.whale, to: addresses.timelock, value: "1000000000000000000" });

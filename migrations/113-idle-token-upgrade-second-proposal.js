@@ -197,7 +197,6 @@ module.exports = async (deployer, network, accounts) => {
   const treasuryMultisigWETHBalance = toBN(await weth.balanceOf(addresses.treasuryMultisig));
   const treasuryMultisigIDLEBalance = toBN(await idle.balanceOf(addresses.treasuryMultisig));
 
-  // TODO update value
   const IDLEtoTransfer = toBN(web3.utils.toWei("11008", "ether")); // 11,008 IDLE
   const WETHtoTransfer = toBN(web3.utils.toWei("6.38", "ether")); // 6.38 ETH
   console.log("IDLEtoTransfer", IDLEtoTransfer.toString());
