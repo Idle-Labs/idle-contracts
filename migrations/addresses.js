@@ -610,7 +610,7 @@ module.exports = {
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
-  lastIdleTokenImplementation: '0x2854a270fe9c839ffe453e9178d1cfef109d6b8e',
+  lastIdleTokenImplementation: '0xd133552be9724b501e1ee9c257e34e07317b5db6',
   priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
   mainnetProposer: '',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
