@@ -28,9 +28,8 @@ module.exports = async (deployer, network, accounts) => {
   let idleTokenImplementation;
 
   if (network == 'live') {
-    // TODO deploy new impl
-    // idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
-    // idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
+    idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
+    idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
     console.log('Using IdleTokenGovernance at ', idleTokenImplementationAddress)
     if (!idleTokenImplementationAddress) {
       return;
