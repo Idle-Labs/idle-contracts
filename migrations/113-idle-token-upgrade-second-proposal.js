@@ -26,6 +26,12 @@ module.exports = async (deployer, network, accounts) => {
   let idleTokenImplementationAddress;
   let idleTokenImplementation;
 
+  const proposer = network === 'live' ?
+    addresses.mainnetProposer : addresses.forkProposer;
+
+  console.log('Proposer: ', proposer);
+
+
   if (network == 'live') {
     idleTokenImplementationAddress = addresses.lastIdleTokenImplementation;
     idleTokenImplementation = await IdleTokenGovernance.at(idleTokenImplementationAddress);
@@ -105,7 +111,7 @@ module.exports = async (deployer, network, accounts) => {
   ]
 
   const description = '#IIP-7 [Part 2] Activate stkAAVE in WETH, upgrade IdleTokenGovernance best yield contract, transfer leagues funds \n Upgrade of IdleTokenGovernance contract to include rebalance optimizations, activate stkAAVE distribution and get IDLE and WETH for the Dev and treasury Leagues. For more info: https://gov.idle.finance/t/iip-7-idletoken-upgrade-stkaave-distribution/466';
-  const proposal = new Proposal(web3, description, addresses.forkProposer);
+  const proposal = new Proposal(web3, description, proposer);
 
   // call upgradeAndCall on proxyAdmin
   for (var i = 0; i < allIdleTokens.length; i++) {
