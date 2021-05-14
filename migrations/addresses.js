@@ -615,4 +615,5 @@ module.exports = {
   mainnetProposer: '',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
   treasuryMultisig: "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
+  devLeagueMultisig: "0xe8eA8bAE250028a8709A3841E0Ae1a44820d677b"
 };

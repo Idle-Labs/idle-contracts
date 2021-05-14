@@ -23,7 +23,6 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
-  const newOracle = addresses.priceOracleV2;
   let idleTokenImplementationAddress;
   let idleTokenImplementation;
 
@@ -105,7 +104,7 @@ module.exports = async (deployer, network, accounts) => {
     },
   ]
 
-  const description = '#Update idleWETH, idleSUSD, and idleTUSD implementation';
+  const description = '#IIP-7 [Part 2] Activate stkAAVE in WETH, upgrade IdleTokenGovernance best yield contract, transfer leagues funds \n Upgrade of IdleTokenGovernance contract to include rebalance optimizations, activate stkAAVE distribution and get IDLE and WETH for the Dev and treasury Leagues. For more info: https://gov.idle.finance/t/iip-7-idletoken-upgrade-stkaave-distribution/466';
   const proposal = new Proposal(web3, description, addresses.forkProposer);
 
   // call upgradeAndCall on proxyAdmin
@@ -193,7 +192,7 @@ module.exports = async (deployer, network, accounts) => {
   const weth = await IERC20Detailed.at(addresses.WETH[network]);
   const idle = await IERC20Detailed.at(addresses.IDLE);
 
-  const treasuryMultisigWETHBalance = toBN(await weth.balanceOf(addresses.treasuryMultisig));
+  const devMultisigWETHBalance = toBN(await weth.balanceOf(addresses.devLeagueMultisig));
   const treasuryMultisigIDLEBalance = toBN(await idle.balanceOf(addresses.treasuryMultisig));
 
   const IDLEtoTransfer = toBN(web3.utils.toWei("11008", "ether")); // 11,008 IDLE
@@ -206,7 +205,7 @@ module.exports = async (deployer, network, accounts) => {
     value: toBN("0"),
     signature: "transfer(address,address,uint256)",
     calldataParams: ["address", "address", "uint256"],
-    calldataValues: [weth.address, addresses.treasuryMultisig, WETHtoTransfer],
+    calldataValues: [weth.address, addresses.devLeagueMultisig, WETHtoTransfer],
   });
 
   proposal.addAction({
@@ -248,7 +247,7 @@ module.exports = async (deployer, network, accounts) => {
     ],
   });
 
-  checkIncreased(treasuryMultisigWETHBalance, toBN(await weth.balanceOf(addresses.treasuryMultisig)), "treasury multisig WETH balance should increase");
+  checkIncreased(devMultisigWETHBalance, toBN(await weth.balanceOf(addresses.devLeagueMultisig)), "treasury multisig WETH balance should increase");
   checkIncreased(treasuryMultisigIDLEBalance, toBN(await idle.balanceOf(addresses.treasuryMultisig)), "treasury multisig IDLE balance should increase");
 
   // APR
