@@ -30,6 +30,37 @@
       {
         "indexed": true,
         "internalType": "address",
+        "name": "target",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "initiator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "premium",
+        "type": "uint256"
+      }
+    ],
+    "name": "FlashLoan",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "previousOwner",
         "type": "address"
       },
@@ -362,6 +393,21 @@
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "flashLoanFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "payable": false,
@@ -764,6 +810,21 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "stkAAVE",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "symbol",
     "outputs": [
       {
@@ -780,6 +841,21 @@
     "constant": true,
     "inputs": [],
     "name": "token",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "tokenHelper",
     "outputs": [
       {
         "internalType": "address",
@@ -891,14 +967,14 @@
         "type": "address[]"
       },
       {
-        "internalType": "uint256[]",
-        "name": "allocations",
-        "type": "uint256[]"
+        "internalType": "address[]",
+        "name": "_newGovTokens",
+        "type": "address[]"
       },
       {
-        "internalType": "bool",
-        "name": "keepAllocations",
-        "type": "bool"
+        "internalType": "address[]",
+        "name": "_newGovTokensEqualLen",
+        "type": "address[]"
       }
     ],
     "name": "setAllAvailableTokensAndWrappers",
@@ -911,17 +987,57 @@
     "constant": false,
     "inputs": [
       {
-        "internalType": "address[]",
-        "name": "_newGovTokens",
-        "type": "address[]"
-      },
-      {
-        "internalType": "address[]",
-        "name": "_protocolTokens",
-        "type": "address[]"
+        "internalType": "uint256",
+        "name": "_flashFee",
+        "type": "uint256"
       }
     ],
-    "name": "setGovTokens",
+    "name": "setFlashLoanFee",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_cToken",
+        "type": "address"
+      }
+    ],
+    "name": "setCToken",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_aToken",
+        "type": "address"
+      }
+    ],
+    "name": "setAToken",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_tokenHelper",
+        "type": "address"
+      }
+    ],
+    "name": "setTokenHelper",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -1006,21 +1122,6 @@
     "constant": false,
     "inputs": [
       {
-        "internalType": "bool",
-        "name": "_isRiskAdjusted",
-        "type": "bool"
-      }
-    ],
-    "name": "setIsRiskAdjusted",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
         "internalType": "uint256[]",
         "name": "_allocations",
         "type": "uint256[]"
@@ -1050,6 +1151,78 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "getGovTokens",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getAllAvailableTokens",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_protocolToken",
+        "type": "address"
+      }
+    ],
+    "name": "getProtocolTokenToGov",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "tokenPriceWithFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "priceWFee",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "tokenPrice",
     "outputs": [
       {
@@ -1069,12 +1242,12 @@
     "outputs": [
       {
         "internalType": "address[]",
-        "name": "addresses",
+        "name": "",
         "type": "address[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "aprs",
+        "name": "",
         "type": "uint256[]"
       }
     ],
@@ -1185,7 +1358,7 @@
       },
       {
         "internalType": "bool",
-        "name": "_skipRebalance",
+        "name": "",
         "type": "bool"
       },
       {
@@ -1219,7 +1392,33 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "redeemedTokens",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "_skipGovTokenRedeem",
+        "type": "bool[]"
+      }
+    ],
+    "name": "redeemIdleTokenSkipGov",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1245,21 +1444,6 @@
   {
     "constant": false,
     "inputs": [],
-    "name": "rebalanceWithGST",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
     "name": "rebalance",
     "outputs": [
       {
@@ -1273,25 +1457,82 @@
     "type": "function"
   },
   {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "flashFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      }
+    ],
+    "name": "maxFlashLoan",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "constant": false,
     "inputs": [
       {
-        "internalType": "uint256[]",
-        "name": "_newAllocations",
-        "type": "uint256[]"
+        "internalType": "contract IERC3156FlashBorrower",
+        "name": "_receiver",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_params",
+        "type": "bytes"
       }
     ],
-    "name": "openRebalance",
+    "name": "flashLoan",
     "outputs": [
       {
         "internalType": "bool",
         "name": "",
         "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "avgApr",
-        "type": "uint256"
       }
     ],
     "payable": false,
