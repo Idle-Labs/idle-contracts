@@ -46,6 +46,8 @@ const aDAIV2 = {
   'live-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3', // needed for truffle
   'kovan': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
   'kovan-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3', // needed for truffle
+  'mumbai': '0x639cB7b21ee2161DF9c882483C9D55c90c20Ca3e',
+  'matic': '0x27F8D03b3a2196956ED754baDc28D73be8830A6e',
   'local': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
   'local-fork': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
   'test': '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
@@ -73,6 +75,8 @@ const DAI = {
   'live-fork': '0x6B175474E89094C44Da98b954EedeAC495271d0F', // needed for truffle
   'kovan': '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa',
   'kovan-fork': '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa', // needed for truffle
+  'mumbai': '0x001B3B4d0F3714Ca98ba10F6042DaEbF0B1B7b6F',
+  'matic': '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
   'local': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'local-fork': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
   'test': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
@@ -159,6 +163,7 @@ const aUSDC = {
 const aUSDCV2 = {
   'live': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
   'live-fork': '0xBcca60bB61934080951369a648Fb03DF4F96263C', // needed for truffle
+  'matic': '0x1a13F4Ca1d028320A707D99520AbFefca3998b7F',
   'kovan': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
   'kovan-fork': '0xBcca60bB61934080951369a648Fb03DF4F96263C', // needed for truffle
   'local': '0xBcca60bB61934080951369a648Fb03DF4F96263C',
@@ -172,6 +177,7 @@ const aUSDCV2 = {
 const USDC = {
   'live': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   'live-fork': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // needed for truffle
+  'matic': '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
   'kovan': '0x75B0622Cec14130172EaE9Cf166B92E5C112FaFF',
   'kovan-fork': '0x75B0622Cec14130172EaE9Cf166B92E5C112FaFF', // needed for truffle
   'local': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -493,6 +499,10 @@ const aRAI = {
   'coverage': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
   'deploy': '0xc9bc48c72154ef3e5425641a3c747242112a46af', // used for truffle Teams deploy, now kovan
 };
+const WMATIC = {
+  'matic': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+  'mumbai': '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889',
+};
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 const idleUSDCV4 = '0x5274891bEC421B39D23760c04A6755eCB444797C';
@@ -506,6 +516,9 @@ const idleDAISafeV4 = '0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16';
 const idleUSDCSafeV4 = '0x3391bc034f2935ef0e1e41619445f998b2680d35';
 const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
 const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
+
+const mumbaiIdleDAIV4 = '0x45a3598Ac8aDb2c6233979f710DC6a3D006238E0';
+const maticIdleDAIV4 = '0x8a999F5A3546F8243205b2c0eCb0627cC10003ab';
 
 const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
@@ -525,7 +538,13 @@ const allIdleTokens = [
   idleUSDTSafeV4,
 ];
 
-const minimalInitializableProxyFactory = "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8";
+const minimalInitializableProxyFactory = {
+  "mainnet": "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8",
+  "local": "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8",
+  "mumbai": "0xaE905A2895676F589C4A9E934845521B17e5387E",
+  "matic": "0xad27d10eF37E809B67B1a7e74f65E781Cc5A693D",
+};
+
 const idleAaveV2Implementation = "0x01A3688D7d01390677e85256406B3156aCd59C64";
 const idleAaveV2DAI = idleAaveV2Implementation;
 const idleAaveV2USDC = "0xC9f16B7496843A82e51457aA84002d55036d8aA2";
@@ -538,6 +557,11 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
+
+const priceOracleV2 = {
+  'live': '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
+  'matic': '0xB0312BC1fF9D5d4D9661b6dC58cCB72b903b2070',
+};
 
 module.exports = {
   creator: process.env.CREATOR,
@@ -583,6 +607,7 @@ module.exports = {
   WETH: WETH,
   RAI: RAI,
   crRAI: crRAI,
+  WMATIC: WMATIC,
   fuseRAI: fuseRAI,
   aRAI: aRAI,
   idleDAIV4: idleDAIV4,
@@ -596,12 +621,18 @@ module.exports = {
   idleDAISafeV4: idleDAISafeV4,
   idleUSDCSafeV4: idleUSDCSafeV4,
   idleUSDTSafeV4: idleUSDTSafeV4,
+  mumbaiIdleDAIV4: mumbaiIdleDAIV4,
+  maticIdleDAIV4: maticIdleDAIV4,
   IDLE: IDLE,
   timelock: timelock,
   proxyAdmin: proxyAdmin,
   proxyAdminETH: proxyAdminETH,
   allIdleTokens: allIdleTokens,
-  aaveAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+  aaveAddressesProvider: {
+    'mainnet': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    'mumbai': '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
+    'matic': '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
+  },
   minimalInitializableProxyFactory,
   idleAaveV2Implementation,
   idleAaveV2DAI,
@@ -626,8 +657,8 @@ module.exports = {
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
   lastIdleTokenImplementation: '0xd133552be9724b501e1ee9c257e34e07317b5db6',
-  priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
-  mainnetProposer: '0xE5Dab8208c1F4cce15883348B72086dBace3e64B',
+  priceOracleV2: priceOracleV2,
+  mainnetProposer: '',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
   treasuryMultisig: "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
   devLeagueMultisig: "0xe8eA8bAE250028a8709A3841E0Ae1a44820d677b",
