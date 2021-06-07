@@ -39,10 +39,13 @@ module.exports = async (deployer, network, accounts) => {
     const tokenDecimals = await underlyingContract.decimals();
     // console.log('tokenDecimals', tokenDecimals.toString());
     const oneToken = toBN(`1e${tokenDecimals}`);
+    console.log(`decimale: ${tokenDecimals}`)
     console.log("total supply", (await idleToken.totalSupply()).toString());
 
     if (unlent) {
+      console.log('whale transfer, balance is', (await underlyingContract.balanceOf(addresses.whale)).toString());
       const amount = oneToken.times(toBN(unlent));
+      console.log(`amount: ${amount}`)
       await underlyingContract.transfer(idleToken.address, amount, {from: addresses.whale}); // whale
       console.log('whale transfer complete');
     }
