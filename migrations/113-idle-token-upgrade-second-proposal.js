@@ -207,7 +207,6 @@ module.exports = async (deployer, network, accounts) => {
   console.log("WETHtoTransfer", WETHtoTransfer.toString());
 
   proposal.addAction({
-    description: "foo",
     target: addresses.feeTreasury,
     value: toBN("0"),
     signature: "transfer(address,address,uint256)",
@@ -216,7 +215,6 @@ module.exports = async (deployer, network, accounts) => {
   });
 
   proposal.addAction({
-    description: "bar",
     target: addresses.ecosystemFund,
     value: toBN("0"),
     signature: "transfer(address,address,uint256)",
@@ -245,7 +243,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // CREATE PROPOSAL
   await createProposal(network, proposal, {
-    skipTimelock: true,
+    skipTimelock: false,
     deployer: deployer,
     ownedContracts: [
       ...allIdleTokens.map(attrs => attrs.idleTokenAddress),
