@@ -13,7 +13,7 @@ import "./interfaces/PriceOracle.sol";
 import "./interfaces/ILendingProtocol.sol";
 import "./interfaces/IIdleTokenGovernance.sol";
 
-contract IdleTokenHelper {
+contract IdleTokenHelperMatic {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 

@@ -518,7 +518,9 @@ const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
 const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
 
 const mumbaiIdleDAIV4 = '0x45a3598Ac8aDb2c6233979f710DC6a3D006238E0';
+
 const maticIdleDAIV4 = '0x8a999F5A3546F8243205b2c0eCb0627cC10003ab';
+const maticIdleUSDCV4 = '0x1ee6470CD75D5686d0b2b90C0305Fa46fb0C89A1';
 
 const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
@@ -558,9 +560,18 @@ const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
 
+const maticIdleAaveV2Implementation = "0x6958d9088CE32491B11D22Cb358FC2ea6D5a463B";
+const maticIdleAaveV2DAI = "0xA2C19beA882cc0B1749361Ac56118486336c300f";
+const maticIdleAaveV2USDC = "0xa3734Ea6A5522d1eA24751ABED18232A1bfb8F59";
+
 const priceOracleV2 = {
   'live': '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
   'matic': '0xB0312BC1fF9D5d4D9661b6dC58cCB72b903b2070',
+};
+
+const idleTokenHelper = {
+  "mainnet": "0x5B7400cC634a49650Cb3212D882512424fED00ed",
+  "matic":   "0x17e0D3F5CAEdE03c97bEcaC4Ecb27739A15E9485",
 };
 
 module.exports = {
@@ -623,6 +634,7 @@ module.exports = {
   idleUSDTSafeV4: idleUSDTSafeV4,
   mumbaiIdleDAIV4: mumbaiIdleDAIV4,
   maticIdleDAIV4: maticIdleDAIV4,
+  maticIdleUSDCV4: maticIdleUSDCV4,
   IDLE: IDLE,
   timelock: timelock,
   proxyAdmin: proxyAdmin,
@@ -645,6 +657,9 @@ module.exports = {
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
   idleAaveV2RAI,
+  maticIdleAaveV2Implementation,
+  maticIdleAaveV2DAI,
+  maticIdleAaveV2USDC,
   addr0: '0x0000000000000000000000000000000000000000',
   idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE',
   governorAlpha: '0x2256b25CFC8E35c3135664FD03E77595042fe31B',
@@ -655,7 +670,7 @@ module.exports = {
   bountyAddressForEB: '0x394495a3800d1504b5686d398836baefebd0c5b7',
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
-  idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
+  idleTokenHelper: idleTokenHelper,
   lastIdleTokenImplementation: '0xd133552be9724b501e1ee9c257e34e07317b5db6',
   priceOracleV2: priceOracleV2,
   mainnetProposer: '',

@@ -39,7 +39,7 @@ module.exports = async (deployer, network, accounts) => {
     const tokenDecimals = await underlyingContract.decimals();
     // console.log('tokenDecimals', tokenDecimals.toString());
     const oneToken = toBN(`1e${tokenDecimals}`);
-    console.log(`decimale: ${tokenDecimals}`)
+    console.log(`decimals: ${tokenDecimals}`)
     console.log("total supply", (await idleToken.totalSupply()).toString());
 
     if (unlent) {

@@ -14,27 +14,23 @@ const MinimalInitializableProxyFactory = artifacts.require("MinimalInitializable
 const BigNumber = require('bignumber.js');
 const BNify = s => new BigNumber(String(s));
 
-const {
-  creator, rebalancerManager, feeAddress, gstAddress,
-  cDAI, iDAI, aDAI, CHAI, DAI, yxDAI, idleDAIV4, idleDAISafeV4,
-  cUSDC, iUSDC, aUSDC, USDC, yxUSDC, idleUSDCV4, idleUSDCSafeV4,
-  cUSDT, iUSDT, aUSDT, USDT, idleUSDTV4, idleUSDTSafeV4,
-  aTUSD, TUSD, idleTUSDV4,
-  aSUSD, SUSD, idleSUSDV4, aDAIV2,
-  cWBTC, iWBTC, aWBTC, WBTC, idleWBTCV4,
-  COMP, IDLE, aWETH, WETH, cWETH, RAI, crRAI, fuseRAI, addr0,
-  timelock, idleMultisig, proxyAdmin, aaveAddressesProvider,
-  minimalInitializableProxyFactory,
-  maticIdleDAIV4
-} = require('./addresses.js');
-
+const addresses = require('./addresses.js');
 
 module.exports = async function(deployer, network, accounts) {
   if (network === 'test' ||  network === 'soliditycoverage') {
     return;
   }
 
+  network = "matic";
   const chainId = await web3.eth.getChainId();
+
+  const decimals = 6;
+  const one = BNify('1000000');
+
+  console.log('Network', network);
+  console.log('USDC address: ', addresses.USDC[network]);
+  console.log('aUSDC address: ', addresses.aUSDCV2[network]);
+  console.log('##################');
 
   const deployWrapperProxy = async (proxyFactory, implementationAddress, tokenAddress, aaveV2AddressesProvider, idleTokenAddress, from) => {
     const initSig = "initialize(address,address,address)";
@@ -51,51 +47,37 @@ module.exports = async function(deployer, network, accounts) {
     return wrapperAddress;
   }
 
-  const decimals = 18;
-  const one = BNify('1000000000000000000');
-
-  console.log('Network', network);
-  console.log('DAI address: ', DAI[network]);
-  console.log('aDAI address: ', aDAIV2[network]);
-  console.log('##################');
-
   // #######################
 
-  const idleTokenAddress = maticIdleDAIV4;
+  const idleTokenAddress = addresses.maticIdleUSDCV4;
   const idleToken = await IdleTokenV3_1.at(idleTokenAddress);
 
-  const proxyFactory = await MinimalInitializableProxyFactory.at(minimalInitializableProxyFactory[network]);
+  const proxyFactory = await MinimalInitializableProxyFactory.at(addresses.minimalInitializableProxyFactory[network]);
 
   console.log('idleTokenAddress', idleTokenAddress);
-
-  // deploy IdleAaveV2 implementation
-  let idleAaveV2Instance;
-  console.log("deploying IdleAaveV2 instance");
-  await deployer.deploy(IdleAaveV2, {from: creator, chainId: chainId}).then(instance => idleAaveV2Instance = instance)
-  console.log("idleAaveV2Instance instance deployed ", idleAaveV2Instance.address);
 
   // deploy wrapper proxies
   // aave
   console.log("deploying aave wrapper via proxy factory");
-  const aaveV2WrapperAddress = await deployWrapperProxy(proxyFactory, idleAaveV2Instance.address, aDAIV2[network], aaveAddressesProvider[network], idleTokenAddress, creator);
-  console.log("aaveV2WrapperAddress", aaveV2WrapperAddress);
+  const aaveV2WrapperAddress = await deployWrapperProxy(proxyFactory, addresses.maticIdleAaveV2Implementation, addresses.aUSDCV2[network], addresses.aaveAddressesProvider[network], idleTokenAddress, addresses.creator);
+  console.log("idleAaveV2USDC deployed", aaveV2WrapperAddress);
 
-  const idleADAIV2Instance = await IdleAaveV2.at(aaveV2WrapperAddress);
-  const idleADAIV2Apr = await idleADAIV2Instance.getAPR.call();
-  console.log('idleADAIV2Apr', BNify(idleADAIV2Apr).div(one).toString());
+  const idleAaveV2USDC = await IdleAaveV2.at(aaveV2WrapperAddress);
+  const idleAaveV2USDCApr = await idleAaveV2USDC.getAPR.call();
+  console.log('idleAaveV2USDCApr', BNify(idleAaveV2USDCApr).div(one).toString());
 
   console.log("calling idleToken.manualInitialize");
   await idleToken.manualInitialize(
     [], // govTokens, no IDLE initially
-    [aDAIV2[network]],
+    [addresses.aUSDCV2[network]],
     [aaveV2WrapperAddress],
     [BNify('100000')], // lastRebalancerAllocations
     false,
-    addr0, // cToken
-    { from: creator, chainId: chainId }
+    addresses.addr0, // cToken
+    { from: addresses.creator, chainId: chainId }
   );
 
-  console.log('manually initialized idleDAI');
-  console.log('[WETH] IdleADAIV2 address:', aaveV2WrapperAddress);
-  console.log('#### IdleDAIYield Address: ', idleTokenAddress);
+  console.log('manually initialized idleUSDC');
+  console.log('[WETH] IdleAaveUSDCV2 address:', aaveV2WrapperAddress);
+  console.log('#### IdleUSDCYield Address: ', idleTokenAddress);
 };
