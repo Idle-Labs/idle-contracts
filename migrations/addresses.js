@@ -426,6 +426,7 @@ const aWETH = {
   'live': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
   'proxy': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
   'live-fork': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e', // needed for truffle
+  'matic': '0x28424507fefb6f7f8E9D3860F56504E4e5f5f390',
   'kovan': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
   'kovan-fork': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e', // needed for truffle
   'local': '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e',
@@ -439,6 +440,7 @@ const WETH = {
   'live': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   'proxy': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   'live-fork': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // needed for truffle
+  'matic': '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
   'kovan': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   'kovan-fork': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // needed for truffle
   'local': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
@@ -521,6 +523,7 @@ const mumbaiIdleDAIV4 = '0x45a3598Ac8aDb2c6233979f710DC6a3D006238E0';
 
 const maticIdleDAIV4 = '0x8a999F5A3546F8243205b2c0eCb0627cC10003ab';
 const maticIdleUSDCV4 = '0x1ee6470CD75D5686d0b2b90C0305Fa46fb0C89A1';
+const maticIdleWETHV4 = '0xfdA25D931258Df948ffecb66b5518299Df6527C4';
 
 const IDLE = '0x875773784Af8135eA0ef43b5a374AaD105c5D39e';
 const timelock = '0xD6dABBc2b275114a2366555d6C481EF08FDC2556';
@@ -563,10 +566,11 @@ const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
 const maticIdleAaveV2Implementation = "0x6958d9088CE32491B11D22Cb358FC2ea6D5a463B";
 const maticIdleAaveV2DAI = "0xA2C19beA882cc0B1749361Ac56118486336c300f";
 const maticIdleAaveV2USDC = "0xa3734Ea6A5522d1eA24751ABED18232A1bfb8F59";
+const maticIdleAaveV2WETH = "0x8482946A24e83FE15732b88dB07eEeBFA8776b05";
 
 const priceOracleV2 = {
   'live': '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
-  'matic': '0xB0312BC1fF9D5d4D9661b6dC58cCB72b903b2070',
+  'matic': '0x27F06D00d73Ec426193473726BB0671267Fd27F0',
 };
 
 const idleTokenHelper = {
@@ -635,6 +639,7 @@ module.exports = {
   mumbaiIdleDAIV4: mumbaiIdleDAIV4,
   maticIdleDAIV4: maticIdleDAIV4,
   maticIdleUSDCV4: maticIdleUSDCV4,
+  maticIdleWETHV4: maticIdleWETHV4,
   IDLE: IDLE,
   timelock: timelock,
   proxyAdmin: proxyAdmin,
@@ -660,6 +665,7 @@ module.exports = {
   maticIdleAaveV2Implementation,
   maticIdleAaveV2DAI,
   maticIdleAaveV2USDC,
+  maticIdleAaveV2WETH,
   addr0: '0x0000000000000000000000000000000000000000',
   idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE',
   governorAlpha: '0x2256b25CFC8E35c3135664FD03E77595042fe31B',
