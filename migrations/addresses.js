@@ -481,6 +481,18 @@ const fuseRAI = {
 
   'deploy': '0x752F119bD4Ee2342CE35E2351648d21962c7CAfE', // used for truffle Teams deploy, now kovan
 };
+const aRAI = {
+  'live': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'proxy': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'live-fork': '0xc9bc48c72154ef3e5425641a3c747242112a46af', // needed for truffle
+  'kovan': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'kovan-fork': '0xc9bc48c72154ef3e5425641a3c747242112a46af', // needed for truffle
+  'local': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'local-fork': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'test': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'coverage': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
+  'deploy': '0xc9bc48c72154ef3e5425641a3c747242112a46af', // used for truffle Teams deploy, now kovan
+};
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 const idleUSDCV4 = '0x5274891bEC421B39D23760c04A6755eCB444797C';
@@ -525,6 +537,7 @@ const idleAaveV2WBTC = "0x69435730D6Af2249265C4fF578D89Ec4c827C475";
 const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
+const idleAaveV2RAI = undefined;
 
 module.exports = {
   creator: process.env.CREATOR,
@@ -571,6 +584,7 @@ module.exports = {
   RAI: RAI,
   crRAI: crRAI,
   fuseRAI: fuseRAI,
+  aRAI: aRAI,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
@@ -599,6 +613,7 @@ module.exports = {
   idleAaveV2DAISafe,
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
+  idleAaveV2RAI,
   addr0: '0x0000000000000000000000000000000000000000',
   idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE',
   governorAlpha: '0x2256b25CFC8E35c3135664FD03E77595042fe31B',
