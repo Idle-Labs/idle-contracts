@@ -29,7 +29,6 @@ import "./interfaces/Comptroller.sol";
 import "./interfaces/CERC20.sol";
 import "./interfaces/AToken.sol";
 import "./interfaces/IdleController.sol";
-import "./interfaces/PriceOracle.sol";
 import "./interfaces/IIdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
@@ -139,14 +138,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   // 8 = error on flash loan execution
   // 9 = Reentrancy
 
-  function _init(address _tokenHelper, address _aToken, address _newOracle) external {
-    require(tokenHelper == address(0), '1');
-    tokenHelper = _tokenHelper;
-    flashLoanFee = 80; // 0.08%
-    aToken = _aToken;
-    oracle = _newOracle;
-  }
-
   // onlyOwner
   /**
    * It allows owner to modify allAvailableTokens array in case of emergency
@@ -215,6 +206,16 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function setAToken(address _aToken)
     external onlyOwner {
       require((aToken = _aToken) != address(0), "0");
+  }
+
+  /**
+   * It allows owner to set the tokenHelper address
+   *
+   * @param _tokenHelper : new tokenHelper address
+   */
+  function setTokenHelper(address _tokenHelper)
+    external onlyOwner {
+      require((tokenHelper = _tokenHelper) != address(0), "0");
   }
 
   /**
@@ -375,7 +376,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
    * @return avgApr: current weighted avg apr
    */
   function getAvgAPR()
-    public view
+    external view
     returns (uint256) {
     return IIdleTokenHelper(tokenHelper).getAPR(address(this), cToken, aToken);
   }

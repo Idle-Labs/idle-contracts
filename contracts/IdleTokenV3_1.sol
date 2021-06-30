@@ -143,9 +143,11 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     address[] calldata _wrappers,
     uint256[] calldata _lastRebalancerAllocations,
     bool _isRiskAdjusted,
-    address _cToken
+    address _cToken,
+    address _aToken
   ) external onlyOwner {
     cToken = _cToken;
+    aToken = _aToken;
     isRiskAdjusted = _isRiskAdjusted;
     // set all available tokens and set the protocolWrappers mapping in the for loop
     allAvailableTokens = _protocolTokens;
@@ -181,12 +183,14 @@ contract IdleTokenV3_1 is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, 
     ReentrancyGuard.initialize();
     // Initialize storage variables
     maxUnlentPerc = 1000;
+    flashLoanFee = 80;
     token = _token;
     tokenDecimals = ERC20Detailed(_token).decimals();
     // end of old initialize method
     oracle = address(0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
     feeAddress = address(0xBecC659Bfc6EDcA552fa1A67451cC6b38a0108E4);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
+    tokenHelper = address(0x5B7400cC634a49650Cb3212D882512424fED00ed);
     fee = 10000;
     iToken = address(0);
   }
