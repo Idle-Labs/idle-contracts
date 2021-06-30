@@ -537,7 +537,7 @@ const idleAaveV2WBTC = "0x69435730D6Af2249265C4fF578D89Ec4c827C475";
 const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
-const idleAaveV2RAI = undefined;
+const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
 
 module.exports = {
   creator: process.env.CREATOR,
