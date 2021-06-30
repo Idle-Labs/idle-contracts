@@ -89,7 +89,7 @@ module.exports = async (deployer, network, accounts) => {
     console.log("\n\n********************************* testing", await idleToken.name());
     console.log('idleToken price pre', (await idleToken.tokenPrice()).toString());
     // await setAllocationsAndRebalance(idleToken, [100000, 0, 0, 0], 0);
-    const amount = [addresses.idleWBTCV4, addresses.idleWETHV4].includes(idleTokenAddress) ? 100 : 1000000;
+    const amount = [addresses.idleWBTCV4, addresses.idleWETHV4].includes(idleTokenAddress) ? 10 : 1000000;
     await setAllocationsAndRebalance(idleToken, await idleToken.getAllocations(), amount);
     console.log('idleToken price after', (await idleToken.tokenPrice()).toString());
   }

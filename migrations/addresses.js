@@ -612,8 +612,9 @@ module.exports = {
   idleTokenHelper: '0x5B7400cC634a49650Cb3212D882512424fED00ed',
   lastIdleTokenImplementation: '0xd133552be9724b501e1ee9c257e34e07317b5db6',
   priceOracleV2: '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
-  mainnetProposer: '',
+  mainnetProposer: '0xE5Dab8208c1F4cce15883348B72086dBace3e64B',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
   treasuryMultisig: "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
-  devLeagueMultisig: "0xe8eA8bAE250028a8709A3841E0Ae1a44820d677b"
+  devLeagueMultisig: "0xe8eA8bAE250028a8709A3841E0Ae1a44820d677b",
+  rebalancerHelper: '0x735a3792AC5655B21c0cae47D1c75184705dAA52'
 };
