@@ -83,7 +83,7 @@ const executeProposalDirectly = async (network, ownedContracts, deployer, propos
   };
 
   for (var i = 0; i < proposal.targets.length; i++) {
-    console.log(`skipping timelock and executing directly proposal action ${i+1} of ${proposal.targets.length}`);
+    console.log(`skipping timelock and executing directly proposal action ${i+1} of ${proposal.targets.length} (${proposal.descriptions[i]})`);
     const target = proposal.targets[i];
     const value = proposal.values[i];
     const signature = proposal.signatures[i];
@@ -179,6 +179,7 @@ class Proposal {
     this.description = description;
     this.from = from;
 
+    this.descriptions = [];
     this.targets = [];
     this.values = [];
     this.signatures = [];
@@ -187,7 +188,8 @@ class Proposal {
     this.calldatas = [];
   }
 
-  addAction({target, value, signature, calldataParams, calldataValues}) {
+  addAction({description, target, value, signature, calldataParams, calldataValues}) {
+    this.descriptions.push(description);
     this.targets.push(target);
     this.values.push(value);
     this.signatures.push(signature);
@@ -210,6 +212,27 @@ class Proposal {
   }
 }
 
+const tokenUtils = (decimals) => {
+  const one = toBN("10").pow(toBN(decimals));
+  const toUnits = v => toBN(v).div(one);
+  const toUnitString = v => toUnits(toBN(v)).toString();
+  const fromUnits = u => toBN(u).times(one);
+
+  return {
+    toUnits,
+    toUnitString,
+    fromUnits,
+  }
+}
+
+const log = function() {
+  const args = [];
+  for (var i = 0; i < arguments.length; i++) {
+    args.push((arguments[i].toString()));
+  };
+  console.log(...args);
+}
+
 module.exports = {
   prompt,
   check,
@@ -220,4 +243,6 @@ module.exports = {
   advanceBlocks,
   askToContinue,
   Proposal,
+  tokenUtils,
+  log,
 };
