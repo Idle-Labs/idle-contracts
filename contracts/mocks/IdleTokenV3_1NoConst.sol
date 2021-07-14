@@ -144,12 +144,14 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     ReentrancyGuard.initialize();
     // Initialize storage variables
     maxUnlentPerc = 1000;
+    flashLoanFee = 80;
     token = _token;
     tokenDecimals = ERC20Detailed(_token).decimals();
     // end of old initialize method
     oracle = address(0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
     feeAddress = address(0xBecC659Bfc6EDcA552fa1A67451cC6b38a0108E4);
     rebalancer = address(0xB3C8e5534F0063545CBbb7Ce86854Bf42dB8872B);
+    tokenHelper = address(0x5B7400cC634a49650Cb3212D882512424fED00ed);
     fee = 10000;
     iToken = address(0);
   }
@@ -163,48 +165,50 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
    * @param _lastRebalancerAllocations : array of allocations
    * @param _isRiskAdjusted : flag whether is risk adjusted or not
    */
-  function manualInitialize(
-    address[] calldata _newGovTokens,
-    address[] calldata _protocolTokens,
-    address[] calldata _wrappers,
-    uint256[] calldata _lastRebalancerAllocations,
-    bool _isRiskAdjusted,
-    address _cToken
-  ) external onlyOwner {
-    cToken = _cToken;
-    isRiskAdjusted = _isRiskAdjusted;
-    // set all available tokens and set the protocolWrappers mapping in the for loop
-    allAvailableTokens = _protocolTokens;
-    // same as setGovTokens, copied to avoid make the method public and save on bytecode size
-    govTokens = _newGovTokens;
-    // set protocol token to gov token mapping
-    for (uint256 i = 0; i < _protocolTokens.length; i++) {
-      protocolWrappers[_protocolTokens[i]] = _wrappers[i];
-      if (i < _newGovTokens.length) {
-        if (_newGovTokens[i] == IDLE) { continue; }
-        protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
-      }
-    }
+   function manualInitialize(
+     address[] calldata _newGovTokens,
+     address[] calldata _protocolTokens,
+     address[] calldata _wrappers,
+     uint256[] calldata _lastRebalancerAllocations,
+     bool _isRiskAdjusted,
+     address _cToken,
+     address _aToken
+   ) external onlyOwner {
+     cToken = _cToken;
+     aToken = _aToken;
+     isRiskAdjusted = _isRiskAdjusted;
+     // set all available tokens and set the protocolWrappers mapping in the for loop
+     allAvailableTokens = _protocolTokens;
+     // same as setGovTokens, copied to avoid make the method public and save on bytecode size
+     govTokens = _newGovTokens;
+     // set protocol token to gov token mapping
+     for (uint256 i = 0; i < _protocolTokens.length; i++) {
+       protocolWrappers[_protocolTokens[i]] = _wrappers[i];
+       if (i < _newGovTokens.length) {
+         if (_newGovTokens[i] == IDLE) { continue; }
+         protocolTokenToGov[_protocolTokens[i]] = _newGovTokens[i];
+       }
+     }
 
-    lastRebalancerAllocations = _lastRebalancerAllocations;
-    lastAllocations = _lastRebalancerAllocations;
-    // Idle multisig
-    addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
-    // Remove pause ability from msg.sender
-    // renouncePauser();
-  }
+     lastRebalancerAllocations = _lastRebalancerAllocations;
+     lastAllocations = _lastRebalancerAllocations;
+     // Idle multisig
+     addPauser(address(0xaDa343Cb6820F4f5001749892f6CAA9920129F2A));
+     // Remove pause ability from msg.sender
+     // renouncePauser();
+   }
 
   // ####################################################
   // ################# INIT METHODS #####################
   // ####################################################
 
-  function _init(address _tokenHelper, address _aToken, address _newOracle) external {
-    require(tokenHelper == address(0), 'DONE');
-    tokenHelper = _tokenHelper;
-    flashLoanFee = 90;
-    aToken = _aToken;
-    oracle = _newOracle;
-  }
+  // function _init(address _tokenHelper, address _aToken, address _newOracle) external {
+  //   require(tokenHelper == address(0), 'DONE');
+  //   tokenHelper = _tokenHelper;
+  //   flashLoanFee = 90;
+  //   aToken = _aToken;
+  //   oracle = _newOracle;
+  // }
 
   // onlyOwner
   /**
@@ -274,6 +278,16 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
   function setAToken(address _aToken)
     external onlyOwner {
       require((aToken = _aToken) != address(0), "0");
+  }
+
+  /**
+   * It allows owner to set the tokenHelper address
+   *
+   * @param _tokenHelper : new tokenHelper address
+   */
+  function setTokenHelper(address _tokenHelper)
+    external onlyOwner {
+      require((tokenHelper = _tokenHelper) != address(0), "0");
   }
 
   /**

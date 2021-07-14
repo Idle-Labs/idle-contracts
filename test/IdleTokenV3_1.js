@@ -194,9 +194,10 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       [BNify('100000'), BNify('0'), BNify('0'), BNify('0')],
       false, // isRiskAdjusted
       this.cDAIMock.address,
+      this.aDAIMock.address,
       {from: creator}
     );
-    await this.token._init(this.tokenHelper.address, this.aDAIMock.address);
+    await this.token.setTokenHelper(this.tokenHelper.address, {from: creator});
     await this.token.setMaxUnlentPerc(BNify('1000'), {from: creator});
     await this.token.setOracleAddress(this.PriceOracleMock.address, {from: creator});
     await this.token.setIdleControllerAddress(this.IdleControllerMock.address, {from: creator});

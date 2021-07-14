@@ -29,4 +29,8 @@ contract AaveIncentivesControllerMock is IAaveIncentivesController {
   function getUserUnclaimedRewards(address) external view returns (uint256) {
     return rewards;
   }
+
+  function getAssetData(address asset) external view returns (uint256, uint256, uint256) {
+    
+  }
 }

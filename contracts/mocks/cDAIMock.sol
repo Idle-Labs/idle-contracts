@@ -81,4 +81,6 @@ contract cDAIMock is ERC20Detailed, ERC20, CERC20 {
   function comptroller() external view returns (address) {
     return _comptroller;
   }
+
+  function underlying() external view returns (address) {}
 }

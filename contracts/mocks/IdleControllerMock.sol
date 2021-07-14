@@ -32,4 +32,6 @@ contract IdleControllerMock is IdleController {
   function getAllMarkets() external view returns (address[] memory) {}
   function _addIdleMarkets(address[] calldata) external {}
   function _supportMarkets(address[] calldata) external {}
+  function _setPriceOracle(address) external {}
+  function admin() external view returns(address) {}
 }
