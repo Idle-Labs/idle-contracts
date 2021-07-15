@@ -7,14 +7,8 @@ contract IdleTokenHelperMock is IdleTokenHelperNoConst {
   uint256[] public sellReceivedMinTokenOut;
   uint256 public sellReceivedMinTokenOutCount;
 
-  constructor(address _idle, address _comp, address _uni_router) public {
+  constructor(address _idle, address _comp) public {
     IDLE = _idle;
     COMP = _comp;
-  }
-
-  function sellGovTokens(address _idleToken, uint256[] calldata _minTokenOut) external {
-    sellReceivedIdleToken = _idleToken;
-    sellReceivedMinTokenOut = _minTokenOut;
-    sellReceivedMinTokenOutCount = _minTokenOut.length;
   }
 }

@@ -1,8 +1,6 @@
 /**
- * @title: Idle Token (V3) main contract
- * @summary: ERC20 that holds pooled user funds together
- *           Each token rapresent a share of the underlying pools
- *           and with each token user have the right to redeem a portion of these pools
+ * @title: Idle Token Helper contract
+ * @summary: Includes helper methods for IdleTokenGovernance
  * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity 0.5.16;
@@ -23,9 +21,10 @@ contract IdleTokenHelperNoConst {
   uint256 private constant FULL_ALLOC = 100000;
   address public IDLE = address(0x875773784Af8135eA0ef43b5a374AaD105c5D39e);
   address public COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+  address public stkAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
   address public WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-  function getAPR(address _idleToken, address _cToken) external view returns (uint256 avgApr) {
+  function getAPR(address _idleToken, address _cToken, address _aToken) external view returns (uint256 avgApr) {
     (uint256[] memory amounts, uint256 total) = getCurrentAllocations(_idleToken);
 
     IIdleTokenGovernance idleToken = IIdleTokenGovernance(_idleToken);
@@ -46,7 +45,7 @@ contract IdleTokenHelperNoConst {
       // Add weighted gov tokens apr
       address currGov = idleToken.getProtocolTokenToGov(protocolToken);
       if (idleToken.getGovTokens().length > 0 && currGov != address(0)) {
-        avgApr = avgApr.add(amounts[i].mul(getGovApr(idleToken, _cToken, currGov)));
+        avgApr = avgApr.add(amounts[i].mul(getGovApr(idleToken, _cToken, _aToken, currGov)));
       }
     }
 
@@ -58,10 +57,13 @@ contract IdleTokenHelperNoConst {
    *
    * @return : apr scaled to 1e18
    */
-  function getGovApr(IIdleTokenGovernance idleToken, address _cToken, address _govToken) internal view returns (uint256) {
+  function getGovApr(IIdleTokenGovernance idleToken, address _cToken, address _aToken, address _govToken) internal view returns (uint256) {
     // In case new Gov tokens will be supported this should be updated, no need to add IDLE apr
     if (_govToken == COMP && _cToken != address(0)) {
       return PriceOracle(idleToken.oracle()).getCompApr(_cToken, idleToken.token());
+    }
+    if (_govToken == stkAAVE && _aToken != address(0)) {
+      return PriceOracle(idleToken.oracle()).getStkAaveApr(_aToken, idleToken.token());
     }
   }
 

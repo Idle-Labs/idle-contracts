@@ -140,7 +140,7 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
       manager,
       { from: creator }
     );
-    this.tokenHelper = await IdleTokenHelperMock.new(this.IDLEMock.address, this.COMPMock.address, this.ETHAddr, {from: creator});
+    this.tokenHelper = await IdleTokenHelperMock.new(this.IDLEMock.address, this.COMPMock.address, {from: creator});
     this.token = await IdleTokenV3_1Mock.new(
       'IdleDAI',
       'IDLEDAI',

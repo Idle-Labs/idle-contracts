@@ -144,7 +144,7 @@ contract IdleTokenV3_1NoConst is Initializable, ERC20, ERC20Detailed, Reentrancy
     ReentrancyGuard.initialize();
     // Initialize storage variables
     maxUnlentPerc = 1000;
-    flashLoanFee = 80;
+    flashLoanFee = 90;
     token = _token;
     tokenDecimals = ERC20Detailed(_token).decimals();
     // end of old initialize method
