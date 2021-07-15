@@ -505,6 +505,15 @@ const WMATIC = {
   'matic': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
   'mumbai': '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889',
 };
+const crDAI = {
+  'matic': '0x4eCEDdF62277eD78623f9A94995c680f8fd6C00e',
+};
+const crUSDC = {
+  'matic': '0x73CF8c5D14Aa0EbC89f18272A568319F5BAB6cBD',
+};
+const crWETH = {
+  'matic': '0x7ef18d0a9C3Fb1A716FF6c3ED0Edf52a2427F716',
+};
 
 const idleDAIV4 = '0x3fE7940616e5Bc47b0775a0dccf6237893353bB4';
 const idleUSDCV4 = '0x5274891bEC421B39D23760c04A6755eCB444797C';
@@ -625,6 +634,9 @@ module.exports = {
   WMATIC: WMATIC,
   fuseRAI: fuseRAI,
   aRAI: aRAI,
+  crDAI: crDAI,
+  crUSDC: crUSDC,
+  crWETH: crWETH,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
