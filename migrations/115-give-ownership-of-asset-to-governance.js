@@ -43,6 +43,8 @@ module.exports = async function(deployer, network, accounts) {
   // the IAdminUpgradeabilityProxy
   console.log(`new admin (should be ${governanceProxyAdminAddress})`, await upgradabilityProxy.admin.call({from: governanceProxyAdminAddress}));
   const proxyAdminAll = await IProxyAdmin.at(governanceProxyAdminAddress);
+  console.log(`proxyAdmin impl should be ${addresses.lastIdleTokenImplementation}`, await proxyAdminAll.getProxyImplementation.call(idleTokenAddress));
+  console.log(`proxyAdmin should be ${governanceProxyAdminAddress}`, await proxyAdminAll.getProxyAdmin.call(idleTokenAddress));
   console.log(`proxy admin owner (should be Timelock ${newOwner})`, await proxyAdminAll.owner.call());
   console.log(`new owner (should be Timelock ${newOwner})`, await idleToken.owner());
 };
