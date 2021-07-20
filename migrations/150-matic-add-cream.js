@@ -38,7 +38,7 @@ module.exports = async function(deployer, network, accounts) {
     console.log("initSig", initSig);
     console.log("initData", initData);
 
-    const result = await proxyFactory.createAndCall(implementationAddress, initSig, initData, { from: from });
+    const result = await proxyFactory.createAndCall(implementationAddress, initSig, initData, { from: from, chainId });
     const wrapperAddress = result.logs[0].args.proxy;
     return wrapperAddress;
   }
@@ -46,7 +46,7 @@ module.exports = async function(deployer, network, accounts) {
   // deploy IdleCompoundLike implementation
   let idleCompoundLikeImplementation;
   console.log("deploying IdleCompoundLike implementation");
-  await deployer.deploy(IdleCompoundLike, { from: creator }).then(instance => idleCompoundLikeImplementation = instance);
+  await deployer.deploy(IdleCompoundLike, { from: creator, chainId }).then(instance => idleCompoundLikeImplementation = instance);
   console.log("IdleCompoundLike instance deployed ", idleCompoundLikeImplementation.address);
 
   const tasks = [
@@ -75,7 +75,7 @@ module.exports = async function(deployer, network, accounts) {
 
     console.log("deploying cream wrapper via proxy factory");
     const creamWrapperAddress = await deployWrapperProxy(proxyFactory, idleCompoundLikeImplementation.address, crToken.address, idleToken.address, idleToken.address, creator);
-    console.log("**** 2")
+
     tasks[i].wrapperAddress = creamWrapperAddress;
     console.log("creamWrapperAddress", creamWrapperAddress);
 

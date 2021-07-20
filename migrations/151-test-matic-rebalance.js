@@ -99,9 +99,12 @@ module.exports = async (deployer, network, accounts) => {
     console.log("\n\n********************************* testing", await idleToken.name());
     console.log('idleToken price pre', (await idleToken.tokenPrice()).toString());
     const amount = 1000;
+
+    await setAllocationsAndRebalance(idleToken, [50000, 50000], 0);
+    console.log('idleToken price after', (await idleToken.tokenPrice()).toString());
     await setAllocationsAndRebalance(idleToken, [100000, 0], 0);
     console.log('idleToken price after', (await idleToken.tokenPrice()).toString());
-    await setAllocationsAndRebalance(idleToken, [50000, 50000], 0);
+    await setAllocationsAndRebalance(idleToken, [0, 100000], 0);
     console.log('idleToken price after', (await idleToken.tokenPrice()).toString());
   }
 }
