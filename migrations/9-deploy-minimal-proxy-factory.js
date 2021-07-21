@@ -10,7 +10,10 @@ module.exports = async (deployer, network, accounts) => {
     return;
   }
 
-  const result = await deployer.deploy(MinimalInitializableProxyFactory);
+  const chainId = await web3.eth.getChainId();
+  console.log(`chainId: ${chainId}`);
+
+  const result = await deployer.deploy(MinimalInitializableProxyFactory, { from: addresses.creator, chainId: chainId });
   const proxyFactory = await MinimalInitializableProxyFactory.deployed();
   console.log("MinimalInitializableProxyFactory deployed at", proxyFactory.address);
 }

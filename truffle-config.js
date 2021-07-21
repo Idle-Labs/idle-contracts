@@ -27,7 +27,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 1
+          runs: 999999
         }
       }
     }
@@ -78,7 +78,7 @@ module.exports = {
       network_id: 137,
       gas: 3000000,
       // gas: 250000,
-      gasPrice: 1 * 1e9, // 90 gwei
+      gasPrice: 20 * 1e9,
       skipDryRun: true
     },
     proxy: {
