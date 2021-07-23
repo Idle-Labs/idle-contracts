@@ -213,15 +213,35 @@ class Proposal {
 }
 
 const tokenUtils = (decimals) => {
+  const decimalsNumber = parseInt(decimals.toString());
   const one = toBN("10").pow(toBN(decimals));
   const toUnits = v => toBN(v).div(one);
   const toUnitString = v => toUnits(toBN(v)).toString();
   const fromUnits = u => toBN(u).times(one);
 
+  // pretty balance
+  const pb = (_n) => {
+    let n = _n.toString();
+    let s = "";
+    for (var i = n.length; i <= decimalsNumber; i++) n = "0" + n;
+
+    for (let i = 0; i < n.length; i++) {
+      if (i != 0 && i % 3 == 0) {
+        const sep = i === decimalsNumber ? "." : "_";
+        s = sep + s;
+      }
+
+      s = n[n.length - 1 - i] + s;
+    };
+
+  return s;
+}
+
   return {
     toUnits,
     toUnitString,
     fromUnits,
+    pb,
   }
 }
 
