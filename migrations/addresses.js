@@ -501,6 +501,42 @@ const aRAI = {
   'coverage': '0xc9bc48c72154ef3e5425641a3c747242112a46af',
   'deploy': '0xc9bc48c72154ef3e5425641a3c747242112a46af', // used for truffle Teams deploy, now kovan
 };
+const FEI = {
+  'live': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'proxy': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'live-fork': '0x956f47f50a910163d8bf957cf5846d573e7f87ca', // needed for truffle
+  'kovan': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'kovan-fork': '0x956f47f50a910163d8bf957cf5846d573e7f87ca', // needed for truffle
+  'local': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'local-fork': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'test': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'coverage': '0x956f47f50a910163d8bf957cf5846d573e7f87ca',
+  'deploy': '0x956f47f50a910163d8bf957cf5846d573e7f87ca', // used for truffle Teams deploy, now kovan
+};
+const crFEI = {
+  'live': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'proxy': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'live-fork': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91', // needed for truffle
+  'kovan': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'kovan-fork': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91', // needed for truffle
+  'local': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'local-fork': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'test': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'coverage': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91',
+  'deploy': '0x8C3B7a4320ba70f8239F83770c4015B5bc4e6F91', // used for truffle Teams deploy, now kovan
+};
+const fuseFEI = {
+  'live': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'proxy': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'live-fork': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945', // needed for truffle
+  'kovan': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'kovan-fork': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945', // needed for truffle
+  'local': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'local-fork': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'test': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'coverage': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
+  'deploy': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945', // used for truffle Teams deploy, now kovan
+};
 const WMATIC = {
   'matic': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
   'mumbai': '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889',
@@ -523,9 +559,11 @@ const idleTUSDV4 = '0xc278041fDD8249FE4c1Aad1193876857EEa3D68c';
 const idleWBTCV4 = '0x8C81121B15197fA0eEaEE1DC75533419DcfD3151';
 const idleWETHV4 = '0xC8E6CA6E96a326dC448307A5fDE90a0b21fd7f80';
 const idleRAIV4 = '0x5C960a3DCC01BE8a0f49c02A8ceBCAcf5D07fABe';
+const idleFEIV4 = '0xb2d5CB72A621493fe83C6885E4A776279be595bC';
 const idleDAISafeV4 = '0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16';
 const idleUSDCSafeV4 = '0x3391bc034f2935ef0e1e41619445f998b2680d35';
 const idleUSDTSafeV4 = '0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5';
+
 const idleMultisig = '0xaDa343Cb6820F4f5001749892f6CAA9920129F2A';
 
 const mumbaiIdleDAIV4 = '0x45a3598Ac8aDb2c6233979f710DC6a3D006238E0';
@@ -553,6 +591,7 @@ const allIdleTokens = [
 ];
 
 const minimalInitializableProxyFactory = {
+  "live": "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8",
   "mainnet": "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8",
   "local": "0x91baced76e3e327ba7850ef82a7a8251f6e43fb8",
   "mumbai": "0xaE905A2895676F589C4A9E934845521B17e5387E",
@@ -571,6 +610,10 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
+
+// IdleCompoundLike
+const idleCREAMImplementation = "0x8aff17b2c4951be77ae74db0ca77903389d9943a";
+const idleFUSEImplementation = "0x8788050c3026557C539a2b8fCe146E27fA4ACc4F";
 
 const maticIdleAaveV2Implementation = "0x6958d9088CE32491B11D22Cb358FC2ea6D5a463B";
 const maticIdleAaveV2DAI = "0xA2C19beA882cc0B1749361Ac56118486336c300f";
@@ -637,6 +680,9 @@ module.exports = {
   crDAI: crDAI,
   crUSDC: crUSDC,
   crWETH: crWETH,
+  FEI: FEI,
+  crFEI: crFEI,
+  fuseFEI: fuseFEI,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
@@ -645,6 +691,7 @@ module.exports = {
   idleWBTCV4: idleWBTCV4,
   idleWETHV4: idleWETHV4,
   idleRAIV4: idleRAIV4,
+  idleFEIV4: idleFEIV4,
   idleDAISafeV4: idleDAISafeV4,
   idleUSDCSafeV4: idleUSDCSafeV4,
   idleUSDTSafeV4: idleUSDTSafeV4,
@@ -678,6 +725,8 @@ module.exports = {
   maticIdleAaveV2DAI,
   maticIdleAaveV2USDC,
   maticIdleAaveV2WETH,
+  idleCREAMImplementation,
+  idleFUSEImplementation,
   addr0: '0x0000000000000000000000000000000000000000',
   idleController: '0x275DA8e61ea8E02d51EDd8d0DC5c0E62b4CDB0BE',
   governorAlpha: '0x2256b25CFC8E35c3135664FD03E77595042fe31B',
