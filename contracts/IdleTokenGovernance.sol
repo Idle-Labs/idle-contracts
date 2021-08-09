@@ -815,18 +815,13 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
 
       // get current allocations in underlying (it does not count unlent underlying)
       (uint256[] memory amounts, uint256 totalInUnderlying) = _getCurrentAllocations();
-
       // calculate the total amount in underlying that needs to be reallocated
       totalInUnderlying = totalInUnderlying.add(balance);
-
-      if (totalInUnderlying > maxUnlentPerc) {
-        totalInUnderlying = totalInUnderlying.sub(maxUnlentBalance);
-      }
 
       (uint256[] memory toMintAllocations, uint256 totalToMint, bool lowLiquidity) = _redeemAllNeeded(
         amounts,
         // calculate new allocations given the total (not counting unlent balance)
-        _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying)
+        _amountsFromAllocations(rebalancerLastAllocations, totalInUnderlying.sub(maxUnlentBalance))
       );
       // if some protocol has liquidity that we should redeem, we do not update
       // lastAllocations to force another rebalance next time
@@ -838,7 +833,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
 
       uint256 totalRedeemd = _contractBalanceOf(token);
 
-      if (totalRedeemd <= maxUnlentBalance) {
+      if (totalRedeemd <= maxUnlentBalance || totalToMint == 0) {
         return false;
       }
 
@@ -852,7 +847,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
       // partial amounts
       _mintWithAmounts(tempAllocations, totalRedeemd.sub(maxUnlentBalance));
 
-      emit Rebalance(msg.sender, totalInUnderlying.add(maxUnlentBalance));
+      emit Rebalance(msg.sender, totalInUnderlying);
 
       return true; // hasRebalanced
   }
