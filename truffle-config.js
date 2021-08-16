@@ -27,7 +27,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 999999
+          runs: 1
         }
       }
     }
@@ -59,8 +59,8 @@ module.exports = {
       // provider: () => new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/" + process.env.INFURA_KEY),
       provider: () => new LedgerWalletProvider({...ledgerOptions, networkId: 1}, 'https://mainnet.infura.io/v3/' + process.env.INFURA_KEY),
       network_id: 1,
-      gas: 3500000,
-      gasPrice: 100 * 1e9, // 90 gwei
+      gas: 450000,
+      gasPrice: 48 * 1e9, // 48 gwei
       skipDryRun: true
     },
     mumbai: {
@@ -69,7 +69,7 @@ module.exports = {
       network_id: 80001,
       gas: 8500000,
       // gas: 250000,
-      gasPrice: 5 * 1e9, // 90 gwei
+      gasPrice: 5 * 1e9, // 5 gwei
       skipDryRun: true
     },
     matic: {
