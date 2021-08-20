@@ -1082,7 +1082,8 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
         uint256 availableLiquidity = protocol.availableLiquidity();
         if (availableLiquidity < toRedeem) {
           lowLiquidity = true;
-          toRedeem = availableLiquidity;
+          // remove 1% to be sure it's really available (eg for compound-like protocols)
+          toRedeem = availableLiquidity.mul(FULL_ALLOC-1000).div(FULL_ALLOC);
         }
         // redeem the difference
         _redeemProtocolTokens(
