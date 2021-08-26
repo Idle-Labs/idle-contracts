@@ -22,3 +22,15 @@ then
 ```
 truffle test
 ```
+
+Contributing
+============
+
+Idle protocol is always open to new contributors from our community -- check out the [Idle Grants Program](https://idlelabs.notion.site/Idle-Grants-Program-f9242236e1ea4d19abe6a3b0e161e85e).
+
+Discussion
+----------
+
+For any concerns with the protocol, open an issue or visit us on [Discord](https://discord.gg/fJaBYmS) to discuss.
+
+For security concerns, please email [security@idle.finance](mailto:security@idle.finance).
