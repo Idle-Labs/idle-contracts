@@ -738,7 +738,7 @@ module.exports = {
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: idleTokenHelper,
-  lastIdleTokenImplementation: '0xd133552be9724b501e1ee9c257e34e07317b5db6',
+  lastIdleTokenImplementation: '0xb776dd8f1f86c78260f9a43920cbc72d78de322c',
   priceOracleV2: priceOracleV2,
   mainnetProposer: '',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
