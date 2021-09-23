@@ -138,6 +138,11 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   // 8 = error on flash loan execution
   // 9 = Reentrancy
 
+  function _init() public {
+    require(oracle == 0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
+    oracle = 0x758C10272A15f0E9D50Cbc035ff9a046945da0F2;
+  }
+
   // onlyOwner
   /**
    * It allows owner to modify allAvailableTokens array in case of emergency
