@@ -70,11 +70,12 @@ module.exports = async function(deployer, network, accounts) {
     { from: addresses.creator }
   );
 
-  const newProtocolTokens = (await idleToken.getAPRs())["0"];
+  const aprs = await idleToken.getAPRs();
+  const newProtocolTokens = aprs["0"];
   console.log("New tokens and wrappers:");
   for (var i = 0; i < newProtocolTokens.length; i++) {
     const token = await IERC20.at(newProtocolTokens[i]);
     const wrapper = await idleToken.protocolWrappers(token.address);
-    console.log(await token.name(), token.address, " => ", wrapper);
+    console.log(await token.name(), token.address, " => ", wrapper, "apr", aprs["1"][i].toString());
   };
 };
