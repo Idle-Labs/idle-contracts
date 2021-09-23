@@ -141,6 +141,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   function _init() public {
     require(oracle == 0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
     oracle = 0x758C10272A15f0E9D50Cbc035ff9a046945da0F2;
+    flashLoanFee = 20;
   }
 
   // onlyOwner
@@ -181,16 +182,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     }
 
     allAvailableTokens = protocolTokens;
-  }
-
-  /**
-   * It allows owner to set the flash loan fee
-   *
-   * @param _flashFee : new flash loan fee. Max is FULL_ALLOC
-   */
-  function setFlashLoanFee(uint256 _flashFee)
-    external onlyOwner {
-      require((flashLoanFee = _flashFee) < FULL_ALLOC, "4");
   }
 
   /**
