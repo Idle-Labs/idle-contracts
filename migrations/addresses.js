@@ -537,6 +537,10 @@ const fuseFEI = {
   'coverage': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
   'deploy': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945', // used for truffle Teams deploy, now kovan
 };
+const aFEI = {
+  'live': '0x683923dB55Fead99A79Fa01A27EeC3cB19679cC3',
+  'local': '0x683923dB55Fead99A79Fa01A27EeC3cB19679cC3',
+};
 const WMATIC = {
   'matic': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
   'mumbai': '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889',
@@ -683,6 +687,7 @@ module.exports = {
   FEI: FEI,
   crFEI: crFEI,
   fuseFEI: fuseFEI,
+  aFEI: aFEI,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
@@ -706,8 +711,9 @@ module.exports = {
   allIdleTokens: allIdleTokens,
   aaveAddressesProvider: {
     'mainnet': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
-    'mumbai': '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
-    'matic': '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
+    'local':   '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    'mumbai':  '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
+    'matic':   '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
   },
   minimalInitializableProxyFactory,
   idleAaveV2Implementation,
