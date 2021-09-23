@@ -614,6 +614,7 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
+const idleAaveV2FEI = undefined;
 
 // IdleCompoundLike
 const idleCREAMImplementation = "0x8aff17b2c4951be77ae74db0ca77903389d9943a";
@@ -727,6 +728,7 @@ module.exports = {
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
   idleAaveV2RAI,
+  idleAaveV2FEI,
   maticIdleAaveV2Implementation,
   maticIdleAaveV2DAI,
   maticIdleAaveV2USDC,
