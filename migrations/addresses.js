@@ -537,6 +537,10 @@ const fuseFEI = {
   'coverage': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945',
   'deploy': '0xd8553552f8868C1Ef160eEdf031cF0BCf9686945', // used for truffle Teams deploy, now kovan
 };
+const aFEI = {
+  'live': '0x683923dB55Fead99A79Fa01A27EeC3cB19679cC3',
+  'local': '0x683923dB55Fead99A79Fa01A27EeC3cB19679cC3',
+};
 const WMATIC = {
   'matic': '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
   'mumbai': '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889',
@@ -610,6 +614,7 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
+const idleAaveV2FEI = "0x30B3361433ce17336F78a8C0B621B0e8c409e086";
 
 // IdleCompoundLike
 const idleCREAMImplementation = "0x8aff17b2c4951be77ae74db0ca77903389d9943a";
@@ -683,6 +688,7 @@ module.exports = {
   FEI: FEI,
   crFEI: crFEI,
   fuseFEI: fuseFEI,
+  aFEI: aFEI,
   idleDAIV4: idleDAIV4,
   idleUSDCV4: idleUSDCV4,
   idleUSDTV4: idleUSDTV4,
@@ -706,8 +712,10 @@ module.exports = {
   allIdleTokens: allIdleTokens,
   aaveAddressesProvider: {
     'mainnet': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
-    'mumbai': '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
-    'matic': '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
+    'live': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    'local':   '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    'mumbai':  '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
+    'matic':   '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
   },
   minimalInitializableProxyFactory,
   idleAaveV2Implementation,
@@ -721,6 +729,7 @@ module.exports = {
   idleAaveV2USDCSafe,
   idleAaveV2USDTSafe,
   idleAaveV2RAI,
+  idleAaveV2FEI,
   maticIdleAaveV2Implementation,
   maticIdleAaveV2DAI,
   maticIdleAaveV2USDC,
