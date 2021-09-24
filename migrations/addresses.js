@@ -614,7 +614,7 @@ const idleAaveV2DAISafe = "0xb7e6b842fdc0F2F5563c575dea271BB2F37AB09f";
 const idleAaveV2USDCSafe = "0x9Ceb46147dc9E9cBBdD350EC53Ab143f6F20ECCD";
 const idleAaveV2USDTSafe = "0xf834443C84235aB0C79Da83Fa5b18e32E1A7F271";
 const idleAaveV2RAI = "0xA1f0aED05C063c201Dcf63e28B19Bd260D8561A8";
-const idleAaveV2FEI = undefined;
+const idleAaveV2FEI = "0x30B3361433ce17336F78a8C0B621B0e8c409e086";
 
 // IdleCompoundLike
 const idleCREAMImplementation = "0x8aff17b2c4951be77ae74db0ca77903389d9943a";
@@ -712,6 +712,7 @@ module.exports = {
   allIdleTokens: allIdleTokens,
   aaveAddressesProvider: {
     'mainnet': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    'live': '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
     'local':   '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
     'mumbai':  '0x178113104fEcbcD7fF8669a0150721e231F0FD4B',
     'matic':   '0xd05e3E715d945B59290df0ae8eF85c1BdB684744',
