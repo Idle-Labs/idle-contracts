@@ -629,6 +629,9 @@ const priceOracleV2 = {
   'live': '0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5',
   'matic': '0x27F06D00d73Ec426193473726BB0671267Fd27F0',
 };
+const priceOracleV3 = {
+  'live': '0x758C10272A15f0E9D50Cbc035ff9a046945da0F2'
+};
 
 const idleTokenHelper = {
   "mainnet": "0x5B7400cC634a49650Cb3212D882512424fED00ed",
@@ -747,8 +750,12 @@ module.exports = {
   mintRedeemTestUser: '0xF1363D3D55d9e679cC6aa0a0496fD85BDfCF7464',
   idleWETHUser: '0xe4E69ef860D3018B61A25134D60678be8628f780',
   idleTokenHelper: idleTokenHelper,
-  lastIdleTokenImplementation: '0xb776dd8f1f86c78260f9a43920cbc72d78de322c',
+  // up until 09/2021
+  // lastIdleTokenImplementation: '0xb776dd8f1f86c78260f9a43920cbc72d78de322c',
+  // from end of 09/2021
+  lastIdleTokenImplementation: '0xEa091ed7146e2c3CF3AC11FA296e206E55177B30',
   priceOracleV2: priceOracleV2,
+  priceOracleV3: priceOracleV3,
   mainnetProposer: '',
   feeTreasury: "0x69a62C24F16d4914a48919613e8eE330641Bcb94",
   treasuryMultisig: "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
