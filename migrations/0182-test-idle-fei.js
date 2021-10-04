@@ -23,7 +23,7 @@ module.exports = async function(deployer, network, accounts) {
   const feiUtils = tokenUtils(await fei.decimals());
   const pb = feiUtils.pb;
   const whale = "0x9544a83a8cb74062c836aa11565d4bb4a54fe40d";
-  const owner = "0x70dC4C04f48a794964e97dE7250e16f8d38b9a03";
+  const owner = addresses.creator;
 
   const balance = x => {
     return `${pb(x)} - (${x.toString()})`;

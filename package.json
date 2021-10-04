@@ -41,7 +41,7 @@
     "@openzeppelin/contracts-ethereum-package": "^2.5.0",
     "@openzeppelin/test-helpers": "^0.5.3",
     "@truffle/hdwallet-provider": "^1.0.25",
-    "@umaprotocol/truffle-ledger-provider": "^1.0.3",
+    "@umaprotocol/truffle-ledger-provider": "^1.0.5",
     "dotenv": "^6.2.0",
     "scrypt": "github:barrysteyn/node-scrypt#fb60a8d3c158fe115a624b5ffa7480f3a24b03fb",
     "solidity-coverage": "^0.7.16",
@@ -61,5 +61,10 @@
     "node-fetch": "^2.6.0",
     "truffle-assertions": "^0.9.1",
     "web3": "^1.2.6"
+  },
+  "resolutions": {
+    "@ledgerhq/hw-app-eth": "5.47.1",
+    "@ledgerhq/hw-transport": "5.46.0",
+    "@ledgerhq/hw-transport-u2f": "5.36.0-deprecated"
   }
 }
