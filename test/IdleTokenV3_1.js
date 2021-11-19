@@ -2680,72 +2680,72 @@ contract('IdleTokenV3_1', function ([_, creator, nonOwner, someone, foo, manager
     BNify(await this.IDLEMock.balanceOf.call(feeReceiver)).should.be.bignumber.equal(BNify('0'));
   });
 
-  it('executes a flash loan', async function () {
-    const fromUnit = u => BNify(u).mul(this.one);
-
-    const executeFlashLoan = async (loanerBalance, loanAmount, initiator, params, amountToRemoveFromFee) => {
-      const totalSupplyBefore = await this.token.totalSupply();
-      const tokenPriceBefore = await this.token.tokenPrice();
-      const tokenDAIBalanceBefore = await this.DAIMock.balanceOf(this.token.address);
-
-      const flashLoaner = await FlashLoanerMock.new(this.DAIMock.address, this.token.address);
-      await this.DAIMock.transfer(flashLoaner.address, loanerBalance, { from: creator });
-      await flashLoaner.setRemoveFromFee(amountToRemoveFromFee);
-
-      await this.token.flashLoan(
-        flashLoaner.address,
-        this.DAIMock.address,
-        loanAmount,
-        web3.eth.abi.encodeParameters(params.types, params.values),
-        { from: initiator }
-      );
-
-      const amountReceived = BNify(await flashLoaner.amountReceived());
-      amountReceived.should.be.bignumber.equal(loanAmount);
-
-      const daiBalanceOnExecuteStart = await flashLoaner.daiBalanceOnExecuteStart();
-      daiBalanceOnExecuteStart.should.be.bignumber.equal(loanerBalance.add(loanAmount));
-
-      const feeReceived = await flashLoaner.feeReceived();
-      const expectedFee = loanAmount.mul(BNify("90")).div(BNify("100000"));
-      feeReceived.should.be.bignumber.equal(expectedFee);
-
-      const daiBalanceOnExecuteEnd = BNify(await this.DAIMock.balanceOf(flashLoaner.address));
-      daiBalanceOnExecuteEnd.should.be.bignumber.equal(loanerBalance.sub(expectedFee));
-
-      const initiatorReceived = await flashLoaner.initiatorReceived();
-      initiatorReceived.should.be.equal(initiator);
-
-      const paramsReceived = await flashLoaner.paramsReceived();
-      paramsReceived.should.be.equal(web3.eth.abi.encodeParameters(params.types, params.values));
-
-      const daiToSendBack = await flashLoaner.daiToSendBack();
-      daiToSendBack.should.be.bignumber.equal(loanAmount.add(expectedFee));
-
-      const totalSupplyAfter = await this.token.totalSupply();
-      totalSupplyAfter.should.be.bignumber.equal(totalSupplyBefore);
-
-      const tokenDAIBalanceAfter = await this.DAIMock.balanceOf(this.token.address);
-      // 1% is left in the token and the rest is lent
-      tokenDAIBalanceAfter.should.be.bignumber.equal(tokenDAIBalanceBefore.add(expectedFee).div(BNify("100")));
-
-      const tokenPriceAfter = await this.token.tokenPrice();
-      //TODO: check tokenPriceAfter
-    }
-
-    // paying the right amount of fee
-    await this.mintIdle(fromUnit("1000"), someone);
-    await executeFlashLoan(fromUnit("2000"), fromUnit("1000"), someone, { types: ["uint256"], values: [44] }, BNify("0"));
-
-    // paying less fee
-    try {
-      await this.mintIdle(fromUnit("1000"), someone);
-      await executeFlashLoan(fromUnit("2"), fromUnit("1"), someone, { types: ["uint256"], values: [44] }, BNify("1"));
-      throw("flash loan paying less fee should have failed");
-    } catch(e) {
-      e.should.match(/revert SafeERC20: low-level call failed/);
-    }
-  });
+  // it('executes a flash loan', async function () {
+  //   const fromUnit = u => BNify(u).mul(this.one);
+  //
+  //   const executeFlashLoan = async (loanerBalance, loanAmount, initiator, params, amountToRemoveFromFee) => {
+  //     const totalSupplyBefore = await this.token.totalSupply();
+  //     const tokenPriceBefore = await this.token.tokenPrice();
+  //     const tokenDAIBalanceBefore = await this.DAIMock.balanceOf(this.token.address);
+  //
+  //     const flashLoaner = await FlashLoanerMock.new(this.DAIMock.address, this.token.address);
+  //     await this.DAIMock.transfer(flashLoaner.address, loanerBalance, { from: creator });
+  //     await flashLoaner.setRemoveFromFee(amountToRemoveFromFee);
+  //
+  //     await this.token.flashLoan(
+  //       flashLoaner.address,
+  //       this.DAIMock.address,
+  //       loanAmount,
+  //       web3.eth.abi.encodeParameters(params.types, params.values),
+  //       { from: initiator }
+  //     );
+  //
+  //     const amountReceived = BNify(await flashLoaner.amountReceived());
+  //     amountReceived.should.be.bignumber.equal(loanAmount);
+  //
+  //     const daiBalanceOnExecuteStart = await flashLoaner.daiBalanceOnExecuteStart();
+  //     daiBalanceOnExecuteStart.should.be.bignumber.equal(loanerBalance.add(loanAmount));
+  //
+  //     const feeReceived = await flashLoaner.feeReceived();
+  //     const expectedFee = loanAmount.mul(BNify("90")).div(BNify("100000"));
+  //     feeReceived.should.be.bignumber.equal(expectedFee);
+  //
+  //     const daiBalanceOnExecuteEnd = BNify(await this.DAIMock.balanceOf(flashLoaner.address));
+  //     daiBalanceOnExecuteEnd.should.be.bignumber.equal(loanerBalance.sub(expectedFee));
+  //
+  //     const initiatorReceived = await flashLoaner.initiatorReceived();
+  //     initiatorReceived.should.be.equal(initiator);
+  //
+  //     const paramsReceived = await flashLoaner.paramsReceived();
+  //     paramsReceived.should.be.equal(web3.eth.abi.encodeParameters(params.types, params.values));
+  //
+  //     const daiToSendBack = await flashLoaner.daiToSendBack();
+  //     daiToSendBack.should.be.bignumber.equal(loanAmount.add(expectedFee));
+  //
+  //     const totalSupplyAfter = await this.token.totalSupply();
+  //     totalSupplyAfter.should.be.bignumber.equal(totalSupplyBefore);
+  //
+  //     const tokenDAIBalanceAfter = await this.DAIMock.balanceOf(this.token.address);
+  //     // 1% is left in the token and the rest is lent
+  //     tokenDAIBalanceAfter.should.be.bignumber.equal(tokenDAIBalanceBefore.add(expectedFee).div(BNify("100")));
+  //
+  //     const tokenPriceAfter = await this.token.tokenPrice();
+  //     //TODO: check tokenPriceAfter
+  //   }
+  //
+  //   // paying the right amount of fee
+  //   await this.mintIdle(fromUnit("1000"), someone);
+  //   await executeFlashLoan(fromUnit("2000"), fromUnit("1000"), someone, { types: ["uint256"], values: [44] }, BNify("0"));
+  //
+  //   // paying less fee
+  //   try {
+  //     await this.mintIdle(fromUnit("1000"), someone);
+  //     await executeFlashLoan(fromUnit("2"), fromUnit("1"), someone, { types: ["uint256"], values: [44] }, BNify("1"));
+  //     throw("flash loan paying less fee should have failed");
+  //   } catch(e) {
+  //     e.should.match(/revert SafeERC20: low-level call failed/);
+  //   }
+  // });
   //
   // it('sells gov tokens', async function () {
   //   this.IDLEMock.transfer(this.token.address, BNify("100"), { from: creator });

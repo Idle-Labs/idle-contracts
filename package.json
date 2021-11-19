@@ -61,10 +61,5 @@
     "node-fetch": "^2.6.0",
     "truffle-assertions": "^0.9.1",
     "web3": "^1.2.6"
-  },
-  "resolutions": {
-    "@ledgerhq/hw-app-eth": "5.47.1",
-    "@ledgerhq/hw-transport": "5.46.0",
-    "@ledgerhq/hw-transport-u2f": "5.36.0-deprecated"
   }
 }

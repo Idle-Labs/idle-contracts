@@ -138,12 +138,6 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
   // 8 = error on flash loan execution
   // 9 = Reentrancy
 
-  function _init() public {
-    require(oracle == 0xB5A8f07dD4c3D315869405d702ee8F6EA695E8C5);
-    oracle = 0x758C10272A15f0E9D50Cbc035ff9a046945da0F2;
-    flashLoanFee = 20;
-  }
-
   // onlyOwner
   /**
    * It allows owner to modify allAvailableTokens array in case of emergency
@@ -660,83 +654,7 @@ contract IdleTokenGovernance is Initializable, ERC20, ERC20Detailed, ReentrancyG
     address _token,
     uint256 _amount,
     bytes calldata _params
-  ) external whenNotPaused nonReentrant returns (bool) {
-    address receiverAddr = address(_receiver);
-    require(_token == token, "7");
-    require(receiverAddr != address(0) && _amount > 0, "0");
-
-    // get current underlying unlent balance
-    uint256 balance = _contractBalanceOf(token);
-
-    if (_amount > balance) {
-      // Unlent is not enough, some funds needs to be redeemed from underlying protocols
-      uint256 toRedeem = _amount.sub(balance);
-      uint256 _toRedeemAux;
-      address currToken;
-      uint256 currBalanceUnderlying;
-      uint256 availableLiquidity;
-      uint256 redeemed;
-      uint256 protocolTokenPrice;
-      ILendingProtocol protocol;
-      bool isEnough;
-      bool haveWeInvestedEnough;
-
-      // We cycle through interest bearing tokens currently in use (eg [cDAI, aDAI])
-      // (ie we cycle each lending protocol where we have some funds currently deposited)
-      for (uint256 i = 0; i < allAvailableTokens.length; i++) {
-        currToken = allAvailableTokens[i];
-        protocol = ILendingProtocol(protocolWrappers[currToken]);
-        protocolTokenPrice = protocol.getPriceInToken();
-        availableLiquidity = protocol.availableLiquidity();
-        currBalanceUnderlying = _contractBalanceOf(currToken).mul(protocolTokenPrice).div(ONE_18);
-        // We need to check:
-        // 1. if Idle has invested enough in that protocol to cover the user request
-        haveWeInvestedEnough = currBalanceUnderlying >= toRedeem;
-        // 2. if the current lending protocol has enough liquidity available (not borrowed) to cover the user requested amount
-        isEnough = availableLiquidity >= toRedeem;
-        // in order to calculate `_toRedeemAux` which is the amount of underlying (eg DAI)
-        // that we have to redeem from that lending protocol
-        _toRedeemAux = haveWeInvestedEnough ?
-          // if we lent enough and that protocol has enough liquidity we redeem `toRedeem` and we are done, otherwise we redeem `availableLiquidity`
-          (isEnough ? toRedeem : availableLiquidity) :
-          // if we did not lent enough and that liquidity is available then we redeem all what we deposited, otherwise we redeem `availableLiquidity`
-          (currBalanceUnderlying <= availableLiquidity ? currBalanceUnderlying : availableLiquidity);
-
-        // do the actual redeem on the lending protocol
-        redeemed = _redeemProtocolTokens(
-          currToken,
-          // convert amount from underlying to protocol token
-          _toRedeemAux.mul(ONE_18).div(protocolTokenPrice)
-        );
-        // tokens are now in this contract
-        if (haveWeInvestedEnough && isEnough) {
-          break;
-        }
-
-        toRedeem = toRedeem.sub(redeemed);
-      }
-    }
-
-    require(_contractBalanceOf(token) >= _amount, "3");
-    // transfer funds
-    _transferTokens(token, receiverAddr, _amount);
-    // calculate fee
-    uint256 _flashFee = flashFee(token, _amount);
-    // call _receiver `onFlashLoan`
-    require(
-      _receiver.onFlashLoan(msg.sender, token, _amount, _flashFee, _params) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
-      "8"
-    );
-    // transfer _amount + _flashFee from _receiver
-    IERC20(token).safeTransferFrom(receiverAddr, address(this), _amount.add(_flashFee));
-
-    // Put underlyings in lending once again with rebalance
-    _rebalance();
-
-    emit FlashLoan(receiverAddr, msg.sender, _amount, _flashFee);
-
-    return true;
-  }
+  ) external whenNotPaused nonReentrant returns (bool) {}
 
   // internal
   /**
