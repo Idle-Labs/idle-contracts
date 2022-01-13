@@ -32,6 +32,7 @@ import "./interfaces/IdleController.sol";
 import "./interfaces/IIdleTokenHelper.sol";
 
 import "./GST2ConsumerV2.sol";
+import "./interfaces/IUniswapV2Router02.sol";
 
 contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, ReentrancyGuard, Ownable, Pausable, IIdleTokenV3_1, GST2ConsumerV2 {
   using SafeERC20 for IERC20;
@@ -125,6 +126,9 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
   address public constant stkAAVE = address(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
   address private aToken;
   // ########## End IdleToken V5 updates
+
+  uint256 public lastHarvestedBalance;
+  uint256 public lastHarvestBlock;
 
   // ERROR MESSAGES:
   // 0 = is 0
@@ -381,7 +385,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
    * @return : flag whether transfer was successful or not
    */
   function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-    _updateUserGovIdxTransfer(sender, recipient, amount);
     _transfer(sender, recipient, amount);
     _approve(sender, msg.sender, allowance(sender, msg.sender).sub(amount, "ERC20: transfer amount exceeds allowance"));
     _updateUserFeeInfo(recipient, amount, userAvgPrices[sender]);
@@ -397,44 +400,9 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
    * @return : flag whether transfer was successful or not
    */
   function transfer(address recipient, uint256 amount) public returns (bool) {
-    _updateUserGovIdxTransfer(msg.sender, recipient, amount);
     _transfer(msg.sender, recipient, amount);
     _updateUserFeeInfo(recipient, amount, userAvgPrices[msg.sender]);
     return true;
-  }
-
-  /**
-   * Helper method for transfer and transferFrom, updates recipient gov indexes
-   *
-   * @param _from : sender account
-   * @param _to : recipient account
-   * @param amount : value to transfer
-   */
-  function _updateUserGovIdxTransfer(address _from, address _to, uint256 amount) internal {
-    address govToken;
-    uint256 govTokenIdx;
-    uint256 sharePerTokenFrom;
-    uint256 shareTo;
-    uint256 balanceTo = balanceOf(_to);
-    for (uint256 i = 0; i < govTokens.length; i++) {
-      govToken = govTokens[i];
-      if (balanceTo == 0) {
-        usersGovTokensIndexes[govToken][_to] = usersGovTokensIndexes[govToken][_from];
-      } else {
-        govTokenIdx = govTokensIndexes[govToken];
-        // calc 1 idleToken value in gov shares for user `_from`
-        sharePerTokenFrom = govTokenIdx.sub(usersGovTokensIndexes[govToken][_from]);
-        // calc current gov shares (before transfer) for user `_to`
-        shareTo = balanceTo.mul(govTokenIdx.sub(usersGovTokensIndexes[govToken][_to])).div(ONE_18);
-        // user `_to` should have -> shareTo + (sharePerTokenFrom * amount / 1e18) = (balanceTo + amount) * (govTokenIdx - userIdx) / 1e18
-        // so userIdx = govTokenIdx - ((shareTo * 1e18 + (sharePerTokenFrom * amount)) / (balanceTo + amount))
-        usersGovTokensIndexes[govToken][_to] = govTokenIdx.sub(
-          shareTo.mul(ONE_18).add(sharePerTokenFrom.mul(amount)).div(
-            balanceTo.add(amount)
-          )
-        );
-      }
-    }
   }
 
   /**
@@ -444,13 +412,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
    * @return : array of amounts for each gov token
    */
   function getGovTokensAmounts(address _usr) external view returns (uint256[] memory _amounts) {
-    address govToken;
-    uint256 usrBal = balanceOf(_usr);
-    _amounts = new uint256[](govTokens.length);
-    for (uint256 i = 0; i < _amounts.length; i++) {
-      govToken = govTokens[i];
-      _amounts[i] = usrBal.mul(govTokensIndexes[govToken].sub(usersGovTokensIndexes[govToken][_usr])).div(ONE_18);
-    }
   }
 
   // external
@@ -469,7 +430,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     external nonReentrant whenNotPaused
     returns (uint256 mintedTokens) {
     _minterBlock = keccak256(abi.encodePacked(tx.origin, block.number));
-    _redeemGovTokens(msg.sender);
     // Get current IdleToken price
     uint256 idlePrice = _tokenPrice();
     // transfer tokens to this contract
@@ -478,34 +438,10 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     mintedTokens = _amount.mul(ONE_18).div(idlePrice);
     _mint(msg.sender, mintedTokens);
 
-    // Update avg price and user idx for each gov tokens
-    _updateUserInfo(msg.sender, mintedTokens);
     _updateUserFeeInfo(msg.sender, mintedTokens, idlePrice);
 
     if (_referral != address(0)) {
       emit Referral(_amount, _referral);
-    }
-  }
-
-  /**
-   * Helper method for mintIdleToken, updates minter gov indexes and avg price
-   *
-   * @param _to : minter account
-   * @param _mintedTokens : number of newly minted tokens
-   */
-  function _updateUserInfo(address _to, uint256 _mintedTokens) internal {
-    address govToken;
-    uint256 usrBal = balanceOf(_to);
-    uint256 _usrIdx;
-
-    for (uint256 i = 0; i < govTokens.length; i++) {
-      govToken = govTokens[i];
-      _usrIdx = usersGovTokensIndexes[govToken][_to];
-
-      // calculate user idx
-      usersGovTokensIndexes[govToken][_to] = _usrIdx.add(
-        _mintedTokens.mul(govTokensIndexes[govToken].sub(_usrIdx)).div(usrBal)
-      );
     }
   }
 
@@ -546,7 +482,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     internal nonReentrant
     returns (uint256 redeemedTokens) {
       _checkMintRedeemSameTx();
-      _redeemGovTokensInternal(msg.sender, _skipGovTokenRedeem);
 
       if (_amount != 0) {
         uint256 price = _tokenPrice();
@@ -597,8 +532,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     external nonReentrant whenPaused {
       _checkMintRedeemSameTx();
 
-      _redeemGovTokens(msg.sender);
-
       for (uint256 i = 0; i < allAvailableTokens.length; i++) {
         _transferTokens(allAvailableTokens[i], msg.sender, _amount.mul(_contractBalanceOf(allAvailableTokens[i])).div(totalSupply()));
       }
@@ -617,6 +550,27 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
    */
   function rebalance() external returns (bool) {
     return _rebalance();
+  }
+
+  /**
+   * Dynamic allocate all the pool across different lending protocols if needed,
+   * and sell all accrued rewards
+   *
+   * NOTE: this method can be paused
+   *
+   * @return _swappedAmounts : array of govTokens amount sold
+   * @return _tokens : total `token` received
+   * @return _rebalanced : whether has rebalanced or not
+   */
+  function rebalanceAndHarvest(uint256[] calldata _amounts, uint256[] calldata _minAmounts)
+    external
+    returns (uint256[] memory _swappedAmounts, uint256 _tokens, bool _rebalanced) {
+    require(msg.sender == rebalancer || msg.sender == owner(), "6");
+
+    (_swappedAmounts, _tokens) = sellRewards(_amounts, _minAmounts);
+    lastHarvestedBalance = _tokens;
+    lastHarvestBlock = block.timestamp;
+    _rebalanced = _rebalance();
   }
 
   /**
@@ -669,7 +623,9 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     }
 
     address currToken;
-    uint256 totNav = _contractBalanceOf(token).mul(ONE_18); // eventual underlying unlent balance
+    uint256 _lockedBal = _lockedBalance();
+    uint256 _contractBal = _contractBalanceOf(token);
+    uint256 totNav = (_contractBal > _lockedBal ? _contractBal.sub(_lockedBal) : 0).mul(ONE_18); // eventual underlying unlent balance
     address[] memory _allAvailableTokens = allAvailableTokens;
     for (uint256 i = 0; i < _allAvailableTokens.length; i++) {
       currToken = _allAvailableTokens[i];
@@ -682,6 +638,21 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
     }
 
     price = totNav.div(totSupply); // idleToken price in token wei
+  }
+
+  /**
+   * Get the current locked balance after harvest
+   *
+   * @return _locked: amount of `token` not redeemable
+   */
+  function _lockedBalance() internal view returns (uint256 _locked) {
+    uint256 _releaseBlocksPeriod = 1500; // about 6 hours
+    uint256 _blocksSinceLastHarvest = block.number - lastHarvestBlock;
+
+    if (_blocksSinceLastHarvest < _releaseBlocksPeriod) {
+      // progressively release harvested rewards
+      _locked = lastHarvestedBalance * (_releaseBlocksPeriod - _blocksSinceLastHarvest) / _releaseBlocksPeriod;
+    }
   }
 
   /**
@@ -764,88 +735,6 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
       emit Rebalance(msg.sender, totalInUnderlying);
 
       return true; // hasRebalanced
-  }
-
-  /**
-   * Redeem unclaimed governance tokens and update governance global index and user index if needed
-   * if called during redeem it will send all gov tokens accrued by a user to the user
-   *
-   * @param _to : user address
-   */
-  function _redeemGovTokens(address _to) internal {
-    _redeemGovTokensInternal(_to, new bool[](govTokens.length));
-  }
-
-  /**
-   * Redeem unclaimed governance tokens and update governance global index and user index if needed
-   * if called during redeem it will send all gov tokens accrued by a user to the user
-   *
-   * @param _to : user address
-   * @param _skipGovTokenRedeem : array of flag for redeeming or not gov tokens
-   */
-  function _redeemGovTokensInternal(address _to, bool[] memory _skipGovTokenRedeem) internal {
-    address[] memory _govTokens = govTokens;
-    if (_govTokens.length == 0) {
-      return;
-    }
-    uint256 supply = totalSupply();
-    uint256 usrBal = balanceOf(_to);
-    address govToken;
-
-    if (supply > 0) {
-      for (uint256 i = 0; i < _govTokens.length; i++) {
-        govToken = _govTokens[i];
-
-        _redeemGovTokensFromProtocol(govToken);
-
-        // get current gov token balance
-        uint256 govBal = _contractBalanceOf(govToken);
-        if (govBal > 0) {
-          // update global index with ratio of govTokens per idleToken
-          govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
-            // check how much gov tokens for each idleToken we gained since last update
-            govBal.sub(govTokensLastBalances[govToken]).mul(ONE_18).div(supply)
-          );
-          // update global var with current govToken balance
-          govTokensLastBalances[govToken] = govBal;
-        }
-
-        if (usrBal > 0) {
-          uint256 usrIndex = usersGovTokensIndexes[govToken][_to];
-          // check if user has accrued something
-          uint256 delta = govTokensIndexes[govToken].sub(usrIndex);
-          if (delta != 0) {
-            uint256 share = usrBal.mul(delta).div(ONE_18);
-            uint256 bal = _contractBalanceOf(govToken);
-            // To avoid rounding issue
-            if (share > bal) {
-              share = bal;
-            }
-            if (_skipGovTokenRedeem[i]) { // -> gift govTokens[i] accrued to the pool
-              // update global index with ratio of govTokens per idleToken
-              govTokensIndexes[govToken] = govTokensIndexes[govToken].add(
-                // check how much gov tokens for each idleToken we gained since last update
-                share.mul(ONE_18).div(supply.sub(usrBal))
-              );
-            } else {
-              uint256 feeDue;
-              // no fee for IDLE governance token
-              if (feeAddress != address(0) && fee > 0 && govToken != IDLE) {
-                feeDue = share.mul(fee).div(FULL_ALLOC);
-                // Transfer gov token fee to feeAddress
-                _transferTokens(govToken, feeAddress, feeDue);
-              }
-              // Transfer gov token to user
-              _transferTokens(govToken, _to, share.sub(feeDue));
-              // Update last balance
-              govTokensLastBalances[govToken] = _contractBalanceOf(govToken);
-            }
-          }
-        }
-        // save current index for this gov token
-        usersGovTokensIndexes[govToken][_to] = govTokensIndexes[govToken];
-      }
-    }
   }
 
   /**
@@ -1055,6 +944,73 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
 
       // add unlent balance
       total = total.add(_contractBalanceOf(token));
+  }
+
+  /**
+   * Sell all govTokens
+   *
+   * @param _amounts : array of govTokens amount to sell
+   * @param _minAmounts : array of min amount to `token` to receive when selling govToken
+   * @return _swappedAmounts : array of govTokens amount sold
+   * @return _tokens : total `token` received
+   */
+  function sellRewards(uint256[] memory _amounts, uint256[] memory _minAmounts) public
+    returns (uint256[] memory _swappedAmounts, uint256 _tokens) {
+    address[] memory _govTokens = govTokens;
+    require(msg.sender == rebalancer || msg.sender == owner(), "6");
+    require(_amounts.length == _govTokens.length && _minAmounts.length == _govTokens.length, "2");
+
+    uint256 _out;
+    uint256 _in;
+    address govToken;
+    for (uint256 i = 0; i < _govTokens.length; i++) {
+      govToken = _govTokens[i];
+
+      _redeemGovTokensFromProtocol(govToken);
+      (_out, _in) = _sellReward(govToken, _amounts[i], _minAmounts[i]);
+      _swappedAmounts[i] = _out;
+      _tokens += _in;
+    }
+  }
+
+  /**
+   * Sell a govToken for `token`
+   *
+   * @param _rewardToken : address of the gov token to sell
+   * @param _amount : amount of gov token to sell
+   * @param _minAmount : min amount of `token` to receive
+   * @return : amount of govToken sold
+   * @return : amount of `token` received
+   */
+  function _sellReward(address _rewardToken, uint256 _amount, uint256 _minAmount)
+    internal
+    returns (uint256, uint256) {
+    // If 0 is passed as sell amount, we get the whole contract balance
+    if (_amount == 0) {
+      _amount = _contractBalanceOf(_rewardToken);
+    }
+    if (_amount == 0) {
+      return (0, 0);
+    }
+
+    address[] memory _path = new address[](3);
+    _path[0] = _rewardToken;
+    _path[1] = address(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619); // weth
+    _path[2] = token;
+
+    IUniswapV2Router02 _sushiRouter = IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
+    // approve the uniswap router to spend our reward
+    IERC20(_rewardToken).safeIncreaseAllowance(address(_sushiRouter), _amount);
+    // do the trade with all `_rewardToken` in this contract
+    uint256[] memory _amounts = _sushiRouter.swapExactTokensForTokens(
+      _amount,
+      _minAmount,
+      _path,
+      address(this),
+      block.timestamp + 1
+    );
+    // return the amount swapped and the amount received
+    return (_amounts[0], _amounts[_amounts.length - 1]);
   }
 
   /**
