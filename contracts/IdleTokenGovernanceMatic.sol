@@ -871,7 +871,14 @@ contract IdleTokenGovernanceMatic is Initializable, ERC20, ERC20Detailed, Reentr
         tokens[0] = aToken;
         IAaveIncentivesController _ctrl = IAaveIncentivesController(AToken(tokens[0]).getIncentivesController());
         uint256 _rewards = _ctrl.getRewardsBalance(tokens, address(this));
-        if (_rewards <= IERC20(_govToken).balanceOf(_ctrl.getRewardsVault())) {
+        address _rewardVault = _ctrl.getRewardsVault();
+
+        if (
+          // has enough balance
+          _rewards <= IERC20(_govToken).balanceOf(_rewardVault) &&
+          // has enough allowance
+          _rewards <= IERC20(_govToken).allowance(_rewardVault, address(_ctrl))
+        ) {
           _ctrl.claimRewards(tokens, _rewards, address(this));
         }
         return;
